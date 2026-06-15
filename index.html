@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Färjeräknare</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+:root {
+  --bg: #0b1220;
+  --surface: #182135;
+  --surface2: #1e2d47;
+  --text: #eef2f8;
+  --muted: #7a90b0;
+  --border: #2a3f5e;
+}
+html, body {
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.hdr-title { font-size: 16px; font-weight: 700; }
+.hdr-date  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.hdr-time  { font-size: 22px; font-weight: 300; color: var(--muted); letter-spacing: -0.5px; }
+
+/* ── VIEWS ── */
+.view {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.view.active {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── COUNT VIEW ── */
+.btn-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 9px;
+  padding: 9px;
+  flex: 1;
+}
+.v-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  touch-action: manipulation;
+  overflow: hidden;
+  gap: 5px;
+  transition: transform 0.08s, filter 0.08s;
+  padding: 12px 6px 10px;
+}
+.v-btn:active {
+  transform: scale(0.93);
+  filter: brightness(0.75);
+}
+.v-btn-emoji { font-size: 28px; line-height: 1; pointer-events: none; }
+.v-btn-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.93);
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+.v-btn-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  background: rgba(0,0,0,0.38);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  pointer-events: none;
+}
+/* Ripple flash on tap */
+.v-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.22);
+  opacity: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.v-btn.flash::after { animation: flash 0.28s ease-out; }
+@keyframes flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Footer bar */
+.count-footer {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.footer-total-label { font-size: 13px; color: var(--muted); }
+.footer-total-num   { font-size: 32px; font-weight: 800; letter-spacing: -1px; }
+.undo-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 8px 16px;
+  border-radius: 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.undo-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+/* ── STATS VIEW ── */
+.stats-wrap { padding: 14px 14px 24px; }
+.sec-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.cat-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+.cat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.cat-emoji   { font-size: 18px; width: 26px; text-align: center; flex-shrink: 0; }
+.cat-name    { flex: 1; font-size: 14px; }
+.cat-bar-bg  { width: 72px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.cat-bar     { height: 100%; border-radius: 3px; transition: width 0.35s; }
+.cat-count   { font-size: 16px; font-weight: 800; width: 28px; text-align: right; flex-shrink: 0; }
+
+.hour-list   { display: flex; flex-direction: column; }
+.hour-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hour-time   { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; width: 44px; flex-shrink: 0; }
+.hour-num    { font-size: 15px; font-weight: 700; width: 26px; text-align: right; flex-shrink: 0; }
+.hour-bar-bg { flex: 1; height: 18px; background: var(--surface); border-radius: 5px; overflow: hidden; }
+.hour-bar    { height: 100%; background: #3B82F6; border-radius: 5px; }
+.hour-rate   { font-size: 11px; color: var(--muted); width: 42px; text-align: right; flex-shrink: 0; }
+
+/* ── SUMMARY VIEW ── */
+.sum-wrap { padding: 14px 14px 32px; }
+.total-card {
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 28px 20px 22px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.total-big { font-size: 72px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+.total-sub { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.peak-card {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.peak-lbl { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.peak-val { font-size: 16px; font-weight: 700; }
+.peak-right { text-align: right; }
+.reset-btn {
+  display: block;
+  width: 100%;
+  margin-top: 30px;
+  padding: 15px;
+  background: #7f1d1d;
+  border: 1px solid #991b1b;
+  color: #fca5a5;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+}
+.reset-btn:active { background: #991b1b; }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 28px 0;
+}
+
+/* ── NAV ── */
+nav {
+  flex-shrink: 0;
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0 7px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  gap: 3px;
+  cursor: pointer;
+  transition: color 0.15s;
+  letter-spacing: 0.03em;
+}
+.nav-btn.active { color: #60A5FA; }
+.nav-icon { font-size: 22px; line-height: 1; }
+
+/* ── MODAL ── */
+.modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.modal-bg.show { display: flex; }
+.modal-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 26px 22px 22px;
+  margin: 24px;
+  max-width: 340px;
+  width: 100%;
+}
+.modal-title { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+.modal-body  { font-size: 14px; color: var(--muted); line-height: 1.55; margin-bottom: 22px; }
+.modal-btns  { display: flex; gap: 10px; }
+.modal-cancel {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modal-ok {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: #DC2626;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="hdr-title">⛴ Färjeräknare</div>
+    <div class="hdr-date" id="hdrDate"></div>
+  </div>
+  <div class="hdr-time" id="hdrTime"></div>
+</header>
+
+<!-- COUNT VIEW -->
+<div class="view active" id="vCount">
+  <div class="btn-grid" id="btnGrid"></div>
+  <div class="count-footer">
+    <div>
+      <div class="footer-total-label">Totalt idag</div>
+      <div class="footer-total-num" id="footerTotal">0</div>
+    </div>
+    <button class="undo-btn" id="undoBtn" onclick="undoLast()">Ångra</button>
+  </div>
+</div>
+
+<!-- STATS VIEW -->
+<div class="view" id="vStats">
+  <div class="stats-wrap">
+    <div class="sec-title">Per kategori</div>
+    <div class="cat-list" id="statsCatList"></div>
+    <div class="sec-title">Per timme</div>
+    <div class="hour-list" id="statsHourList"></div>
+  </div>
+</div>
+
+<!-- SUMMARY VIEW -->
+<div class="view" id="vSummary">
+  <div class="sum-wrap">
+    <div class="total-card">
+      <div class="total-big" id="sumTotal">0</div>
+      <div class="total-sub">fordon totalt idag</div>
+    </div>
+    <div class="peak-card">
+      <div>
+        <div class="peak-lbl">Toppimme</div>
+        <div class="peak-val" id="peakHour">—</div>
+      </div>
+      <div class="peak-right">
+        <div class="peak-lbl">Fordon</div>
+        <div class="peak-val" id="peakCount">—</div>
+      </div>
+    </div>
+    <div class="sec-title">Per kategori</div>
+    <div class="cat-list" id="sumCatList"></div>
+    <button class="reset-btn" onclick="confirmReset()">Återställ dagen</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <button class="nav-btn active" id="navCount" onclick="goView('Count')">
+    <span class="nav-icon">✚</span>
+    <span>Räkna</span>
+  </button>
+  <button class="nav-btn" id="navStats" onclick="goView('Stats')">
+    <span class="nav-icon">📊</span>
+    <span>Statistik</span>
+  </button>
+  <button class="nav-btn" id="navSummary" onclick="goView('Summary')">
+    <span class="nav-icon">📋</span>
+    <span>Summering</span>
+  </button>
+</nav>
+
+<!-- RESET MODAL -->
+<div class="modal-bg" id="resetModal">
+  <div class="modal-box">
+    <div class="modal-title">Återställ dagen?</div>
+    <div class="modal-body">All data för dagens trafikräkning raderas permanent. Åtgärden kan inte ångras.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="hideReset()">Avbryt</button>
+      <button class="modal-ok" onclick="doReset()">Återställ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATS = [
+  { id: 'personbil',  label: 'Personbil',  emoji: '🚗',  color: '#1D4ED8' },
+  { id: 'paketbil',   label: 'Paketbil',   emoji: '🚐',  color: '#6D28D9' },
+  { id: 'lastbil',    label: 'Lastbil',     emoji: '🚛',  color: '#B91C1C' },
+  { id: 'traktor',    label: 'Traktor',     emoji: '🚜',  color: '#92400E' },
+  { id: 'cykel',      label: 'Cykel',       emoji: '🚲',  color: '#065F46' },
+  { id: 'mc',         label: 'MC',          emoji: '🏍️',  color: '#C2410C' },
+  { id: 'fotgangare', label: 'Fotgängare',  emoji: '🚶',  color: '#0E7490' },
+  { id: 'moped',      label: 'Moped',       emoji: '🛵',  color: '#9D174D' },
+  { id: 'fyrhjuling', label: 'Fyrhjuling',  emoji: '🏎️',  color: '#3730A3' },
+];
+
+const KEY = 'farjeraknare_v1';
+
+function localDate() {
+  const n = new Date();
+  return `${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function load() {
+  try {
+    const r = localStorage.getItem(KEY);
+    if (!r) return { date: localDate(), logs: [] };
+    const d = JSON.parse(r);
+    return d.date === localDate() ? d : { date: localDate(), logs: [] };
+  } catch { return { date: localDate(), logs: [] }; }
+}
+
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+
+function counts() {
+  const d = load();
+  const c = {};
+  CATS.forEach(cat => c[cat.id] = 0);
+  d.logs.forEach(l => { if (c[l.type] !== undefined) c[l.type]++; });
+  return c;
+}
+
+function hourlyData() {
+  const d = load();
+  const h = {};
+  d.logs.forEach(l => {
+    const hr = new Date(l.ts).getHours();
+    if (!h[hr]) h[hr] = {};
+    if (!h[hr][l.type]) h[hr][l.type] = 0;
+    h[hr][l.type]++;
+  });
+  return h;
+}
+
+function hourTotal(hObj) {
+  return Object.values(hObj).reduce((a, b) => a + b, 0);
+}
+
+// ── BUILD BUTTONS ──
+function buildGrid() {
+  const grid = document.getElementById('btnGrid');
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'v-btn';
+    btn.id = 'btn_' + cat.id;
+    btn.style.backgroundColor = cat.color;
+    btn.innerHTML =
+      `<span class="v-btn-emoji">${cat.emoji}</span>` +
+      `<span class="v-btn-label">${cat.label}</span>` +
+      `<span class="v-btn-badge" id="b_${cat.id}">0</span>`;
+    btn.addEventListener('click', () => tap(cat.id, btn));
+    grid.appendChild(btn);
+  });
+}
+
+function tap(catId, btn) {
+  const d = load();
+  d.logs.push({ type: catId, ts: Date.now() });
+  save(d);
+  if (navigator.vibrate) navigator.vibrate(12);
+  btn.classList.remove('flash');
+  void btn.offsetWidth;
+  btn.classList.add('flash');
+  renderCount();
+}
+
+function undoLast() {
+  const d = load();
+  if (!d.logs.length) return;
+  d.logs.pop();
+  save(d);
+  renderCount();
+}
+
+// ── RENDER: COUNT VIEW ──
+function renderCount() {
+  const c = counts();
+  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  CATS.forEach(cat => {
+    const el = document.getElementById('b_' + cat.id);
+    if (el) el.textContent = c[cat.id];
+  });
+  document.getElementById('footerTotal').textContent = total;
+  document.getElementById('undoBtn').disabled = (load().logs.length === 0);
+}
+
+// ── RENDER: STATS VIEW ──
+function renderStats() {
+  const c = counts();
+  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  const maxCat = Math.max(...Object.values(c), 1);
+
+  const cl = document.getElementById('statsCatList');
+  cl.innerHTML = '';
+  CATS.forEach(cat => {
+    const n = c[cat.id];
+    const bw = Math.round(n / maxCat * 100);
+    cl.innerHTML +=
+      `<div class="cat-row">` +
+        `<span class="cat-emoji">${cat.emoji}</span>` +
+        `<span class="cat-name">${cat.label}</span>` +
+        `<div class="cat-bar-bg"><div class="cat-bar" style="width:${bw}%;background:${cat.color}"></div></div>` +
+        `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
+      `</div>`;
+  });
+
+  const h = hourlyData();
+  const hl = document.getElementById('statsHourList');
+  hl.innerHTML = '';
+  const hrs = Object.keys(h).map(Number).sort((a, b) => a - b);
+
+  if (!hrs.length) {
+    hl.innerHTML = '<div class="empty">Inga fordon loggade än.</div>';
+    return;
+  }
+
+  const maxH = Math.max(...hrs.map(hr => hourTotal(h[hr])), 1);
+  hrs.forEach(hr => {
+    const n = hourTotal(h[hr]);
+    const bw = Math.round(n / maxH * 100);
+    hl.innerHTML +=
+      `<div class="hour-row">` +
+        `<span class="hour-time">${pad(hr)}:00</span>` +
+        `<span class="hour-num">${n}</span>` +
+        `<div class="hour-bar-bg"><div class="hour-bar" style="width:${bw}%"></div></div>` +
+        `<span class="hour-rate">${n}/tim</span>` +
+      `</div>`;
+  });
+}
+
+// ── RENDER: SUMMARY VIEW ──
+function renderSummary() {
+  const c = counts();
+  const total = Object.values(c).reduce((a, b) => a + b, 0);
+  document.getElementById('sumTotal').textContent = total;
+
+  const h = hourlyData();
+  const hrs = Object.keys(h).map(Number);
+  if (hrs.length) {
+    const peak = hrs.reduce((best, hr) => hourTotal(h[hr]) > hourTotal(h[best]) ? hr : best, hrs[0]);
+    const pn = hourTotal(h[peak]);
+    document.getElementById('peakHour').textContent =
+      `${pad(peak)}:00 – ${pad(peak+1 < 24 ? peak+1 : 0)}:00`;
+    document.getElementById('peakCount').textContent = `${pn} fordon`;
+  } else {
+    document.getElementById('peakHour').textContent = '—';
+    document.getElementById('peakCount').textContent = '—';
+  }
+
+  const cl = document.getElementById('sumCatList');
+  cl.innerHTML = '';
+  CATS.forEach(cat => {
+    const n = c[cat.id];
+    cl.innerHTML +=
+      `<div class="cat-row">` +
+        `<span class="cat-emoji">${cat.emoji}</span>` +
+        `<span class="cat-name">${cat.label}</span>` +
+        `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
+      `</div>`;
+  });
+}
+
+// ── VIEW SWITCHING ──
+const VIEWS = ['Count', 'Stats', 'Summary'];
+function goView(name) {
+  VIEWS.forEach(v => {
+    document.getElementById('v' + v).classList.toggle('active', v === name);
+    document.getElementById('nav' + v).classList.toggle('active', v === name);
+  });
+  if (name === 'Stats')   renderStats();
+  if (name === 'Summary') renderSummary();
+}
+
+// ── RESET ──
+function confirmReset() { document.getElementById('resetModal').classList.add('show'); }
+function hideReset()    { document.getElementById('resetModal').classList.remove('show'); }
+function doReset() {
+  save({ date: localDate(), logs: [] });
+  hideReset();
+  renderCount();
+  goView('Count');
+}
+
+// ── CLOCK ──
+function tick() {
+  const n = new Date();
+  document.getElementById('hdrTime').textContent =
+    n.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('hdrDate').textContent =
+    n.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+buildGrid();
+renderCount();
+tick();
+setInterval(tick, 10000);
+</script>
+</body>
+</html>
