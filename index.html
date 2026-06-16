@@ -190,19 +190,9 @@ header {
 .cat-bar     { height: 100%; border-radius: 3px; transition: width 0.35s; }
 .cat-count   { font-size: 16px; font-weight: 800; width: 28px; text-align: right; flex-shrink: 0; }
 
-.hour-list   { display: flex; flex-direction: column; }
-.hour-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border);
-}
-.hour-time   { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; width: 44px; flex-shrink: 0; }
-.hour-num    { font-size: 15px; font-weight: 700; width: 26px; text-align: right; flex-shrink: 0; }
-.hour-bar-bg { flex: 1; height: 18px; background: var(--surface); border-radius: 5px; overflow: hidden; }
-.hour-bar    { height: 100%; background: #3B82F6; border-radius: 5px; }
-.hour-rate   { font-size: 11px; color: var(--muted); width: 42px; text-align: right; flex-shrink: 0; }
+.hour-chart      { width: 100%; height: 200px; display: block; overflow: visible; }
+.hour-chart-avg  { font-size: 12px; color: var(--muted); text-align: right; margin-top: 8px; }
+.hour-chart-avg strong { color: var(--text); font-weight: 700; }
 
 /* ── SUMMARY VIEW ── */
 .sum-wrap { padding: 14px 14px 32px; }
@@ -356,7 +346,7 @@ nav {
     <div class="sec-title">Per kategori</div>
     <div class="cat-list" id="statsCatList"></div>
     <div class="sec-title">Per timme</div>
-    <div class="hour-list" id="statsHourList"></div>
+    <div id="statsHourList"></div>
   </div>
 </div>
 
@@ -468,6 +458,45 @@ function hourTotal(hObj) {
   return Object.values(hObj).reduce((a, b) => a + b, 0);
 }
 
+// Smooth cubic-bezier path through points (Catmull-Rom style)
+function smoothPath(xs, ys) {
+  let d = `M${xs[0].toFixed(1)},${ys[0].toFixed(1)}`;
+  const smoothing = 0.2;
+  for (let i = 0; i < xs.length - 1; i++) {
+    const x0 = i > 0 ? xs[i-1] : xs[i];
+    const y0 = i > 0 ? ys[i-1] : ys[i];
+    const x1 = xs[i], y1 = ys[i];
+    const x2 = xs[i+1], y2 = ys[i+1];
+    const x3 = i < xs.length - 2 ? xs[i+2] : x2;
+    const y3 = i < xs.length - 2 ? ys[i+2] : y2;
+    const cp1x = x1 + (x2 - x0) * smoothing;
+    const cp1y = y1 + (y2 - y0) * smoothing;
+    const cp2x = x2 - (x3 - x1) * smoothing;
+    const cp2y = y2 - (y3 - y1) * smoothing;
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}`;
+  }
+  return d;
+}
+
+let hourTipTimer = null;
+function showHourTip(cx, cy, label) {
+  const tip = document.getElementById('hourTip');
+  const text = document.getElementById('hourTipText');
+  const rect = document.getElementById('hourTipRect');
+  if (!tip || !text || !rect) return;
+  text.setAttribute('x', cx);
+  text.setAttribute('y', cy - 12);
+  text.textContent = label;
+  const bbox = text.getBBox();
+  rect.setAttribute('x', bbox.x - 6);
+  rect.setAttribute('y', bbox.y - 4);
+  rect.setAttribute('width', bbox.width + 12);
+  rect.setAttribute('height', bbox.height + 8);
+  tip.style.opacity = '1';
+  clearTimeout(hourTipTimer);
+  hourTipTimer = setTimeout(() => { tip.style.opacity = '0'; }, 2200);
+}
+
 // ── BUILD BUTTONS ──
 function buildGrid() {
   const grid = document.getElementById('btnGrid');
@@ -558,7 +587,6 @@ function renderStats() {
 
   const h = hourlyData();
   const hl = document.getElementById('statsHourList');
-  hl.innerHTML = '';
   const hrs = Object.keys(h).map(Number).sort((a, b) => a - b);
 
   if (!hrs.length) {
@@ -566,18 +594,65 @@ function renderStats() {
     return;
   }
 
-  const maxH = Math.max(...hrs.map(hr => hourTotal(h[hr])), 1);
-  hrs.forEach(hr => {
-    const n = hourTotal(h[hr]);
-    const bw = Math.round(n / maxH * 100);
-    hl.innerHTML +=
-      `<div class="hour-row">` +
-        `<span class="hour-time">${pad(hr)}:00</span>` +
-        `<span class="hour-num">${n}</span>` +
-        `<div class="hour-bar-bg"><div class="hour-bar" style="width:${bw}%"></div></div>` +
-        `<span class="hour-rate">${n}/tim</span>` +
-      `</div>`;
+  // Hour range: data hours padded by one hour before/after, clamped to 0–23
+  const minH = Math.max(0, hrs[0] - 1);
+  const maxH = Math.min(23, hrs[hrs.length - 1] + 1);
+  const range = [];
+  for (let hr = minH; hr <= maxH; hr++) range.push(hr);
+
+  const values = range.map(hr => h[hr] ? hourTotal(h[hr]) : 0);
+  const maxV = Math.max(...values, 1);
+  const totalData = hrs.reduce((sum, hr) => sum + hourTotal(h[hr]), 0);
+  const avg = totalData / hrs.length;
+
+  const W = 320, H = 200;
+  const padL = 28, padR = 10, padT = 14, padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const baseY = padT + plotH;
+
+  const stepX = plotW / (range.length - 1);
+  const xs = range.map((_, i) => padL + i * stepX);
+  const ys = values.map(v => padT + plotH - (v / maxV) * plotH);
+  const yAvg = padT + plotH - (avg / maxV) * plotH;
+
+  const linePath = smoothPath(xs, ys);
+  const fillPath = `${linePath} L${xs[xs.length-1].toFixed(1)},${baseY} L${xs[0].toFixed(1)},${baseY} Z`;
+
+  let xLabels = '';
+  let points = '';
+  range.forEach((hr, i) => {
+    const n = values[i];
+    const x = xs[i].toFixed(1), y = ys[i].toFixed(1);
+    const tip = `${pad(hr)}:00 — ${n} fordon`;
+    xLabels += `<text x="${x}" y="${H - 6}" text-anchor="middle" style="font-size:9px; fill:var(--muted);">${hr}</text>`;
+    points +=
+      `<circle cx="${x}" cy="${y}" r="13" fill="transparent" style="cursor:pointer;" onclick="showHourTip(${x},${y},'${tip}')" onmouseenter="showHourTip(${x},${y},'${tip}')"></circle>` +
+      `<circle cx="${x}" cy="${y}" r="3.5" style="fill:#3B82F6; stroke:var(--surface); stroke-width:1.5; pointer-events:none;"></circle>`;
   });
+
+  hl.innerHTML =
+    `<svg class="hour-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
+      `<defs>` +
+        `<linearGradient id="hourFillGrad" x1="0" y1="0" x2="0" y2="1">` +
+          `<stop offset="0%" stop-color="#3B82F6" stop-opacity="0.4"></stop>` +
+          `<stop offset="100%" stop-color="#3B82F6" stop-opacity="0"></stop>` +
+        `</linearGradient>` +
+      `</defs>` +
+      `<line x1="${padL}" y1="${baseY}" x2="${W - padR}" y2="${baseY}" style="stroke:var(--border); stroke-width:1;"></line>` +
+      `<line x1="${padL}" y1="${yAvg.toFixed(1)}" x2="${W - padR}" y2="${yAvg.toFixed(1)}" style="stroke:var(--muted); stroke-width:1; stroke-dasharray:4 3;"></line>` +
+      `<path d="${fillPath}" fill="url(#hourFillGrad)"></path>` +
+      `<path d="${linePath}" fill="none" style="stroke:#3B82F6; stroke-width:2.5;"></path>` +
+      points +
+      `<text x="${padL - 5}" y="${baseY + 3}" text-anchor="end" style="font-size:9px; fill:var(--muted);">0</text>` +
+      `<text x="${padL - 5}" y="${padT + 7}" text-anchor="end" style="font-size:9px; fill:var(--muted);">${maxV}</text>` +
+      xLabels +
+      `<g id="hourTip" style="opacity:0; transition:opacity .15s; pointer-events:none;">` +
+        `<rect id="hourTipRect" rx="4" ry="4" style="fill:var(--surface2); stroke:var(--border);"></rect>` +
+        `<text id="hourTipText" text-anchor="middle" style="font-size:11px; font-weight:700; fill:var(--text);"></text>` +
+      `</g>` +
+    `</svg>` +
+    `<div class="hour-chart-avg">Snitt: <strong>${Math.round(avg)}</strong> fordon/tim</div>`;
 }
 
 // ── RENDER: SUMMARY VIEW ──
