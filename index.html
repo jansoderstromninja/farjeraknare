@@ -172,6 +172,19 @@ header {
   transition: opacity 0.2s;
 }
 .undo-btn:disabled { opacity: 0.3; pointer-events: none; }
+.footer-actions { display: flex; align-items: center; gap: 8px; }
+.kortom-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.kortom-btn:disabled { opacity: 0.3; pointer-events: none; }
 
 /* ── STATS VIEW ── */
 .stats-wrap { padding: 14px 14px 24px; }
@@ -244,6 +257,17 @@ header {
 .peak-lbl { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
 .peak-val { font-size: 16px; font-weight: 700; }
 .peak-right { text-align: right; }
+.co2-card {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.co2-row { display: flex; justify-content: space-between; align-items: center; }
+.co2-compare { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
+.co2-compare strong { color: var(--text); font-weight: 700; }
+.period-avg { font-size: 13px; color: var(--muted); text-align: center; margin-top: 4px; }
+.period-avg strong { color: var(--text); font-weight: 700; }
 .reset-btn {
   display: block;
   width: 100%;
@@ -264,13 +288,14 @@ header {
 .day-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   background: var(--surface);
   border-radius: 12px;
   padding: 10px 12px;
 }
-.day-date  { font-size: 14px; }
+.day-date  { flex: 1; font-size: 14px; }
 .day-count { font-size: 16px; font-weight: 800; color: #3B82F6; }
+.day-co2   { font-size: 12px; color: var(--muted); min-width: 56px; text-align: right; }
 
 /* ── EMPTY STATE ── */
 .empty {
@@ -355,6 +380,28 @@ nav {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ── DEPARTURE BANNER ── */
+.departure-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #0f2a5c;
+  border: 1px solid #3B82F6;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 800;
+  padding: 22px 30px;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 1001;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.departure-banner.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -378,7 +425,10 @@ nav {
       <div class="footer-total-label">Totalt idag</div>
       <div class="footer-total-num" id="footerTotal">0</div>
     </div>
-    <button class="undo-btn" id="undoBtn" onclick="undoLast()">Ångra</button>
+    <div class="footer-actions">
+      <button class="kortom-btn" id="korTomBtn" onclick="korTom()">Kör tom</button>
+      <button class="undo-btn" id="undoBtn" onclick="undoLast()">Ångra</button>
+    </div>
   </div>
 </div>
 
@@ -416,6 +466,19 @@ nav {
           <div class="peak-lbl">Fordon</div>
           <div class="peak-val" id="peakCount">—</div>
         </div>
+      </div>
+      <div class="co2-card">
+        <div class="co2-row">
+          <div>
+            <div class="peak-lbl">Turer idag</div>
+            <div class="peak-val" id="sumTripCount">0</div>
+          </div>
+          <div class="peak-right">
+            <div class="peak-lbl">CO2 idag</div>
+            <div class="peak-val" id="sumCO2">0.0 kg</div>
+          </div>
+        </div>
+        <div class="co2-compare" id="sumCO2Compare">≈ 0 km bilkörning</div>
       </div>
       <div class="sec-title">Per kategori</div>
       <div class="cat-list" id="sumCatList"></div>
@@ -464,6 +527,9 @@ nav {
   </div>
 </div>
 
+<!-- DEPARTURE BANNER -->
+<div class="departure-banner" id="departureBanner">⛴ Avgång registrerad</div>
+
 <!-- Firebase SDK (compat build, loaded from CDN; app falls back to local-only if unavailable) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -483,6 +549,13 @@ const CATS = [
 
 const KEY = 'farjeraknare_v1';
 
+// CO2 per avgång: 2 dieselmotorer, ~5 min, fast uppskattat värde (oavsett antal fordon)
+const CO2_PER_TRIP = 8.7;
+// Jämförelsevärde: kg CO2 per km bilkörning
+const CO2_PER_KM_CAR = 0.12;
+const TRIP_GAP_MS = 7 * 60 * 1000;
+const KORTOM_LOCK_MS = 5 * 60 * 1000;
+
 // ── FIREBASE SYNC ──
 const firebaseConfig = {
   apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
@@ -494,7 +567,7 @@ const firebaseConfig = {
   databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
-let db = null, logsRef = null;
+let db = null, logsRef = null, tripsRef = null;
 
 function setSyncStatus(state) {
   const dot = document.querySelector('#hdrSync .sync-dot');
@@ -510,6 +583,7 @@ function initFirebase() {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
     logsRef = db.ref('days/' + localDate() + '/logs');
+    tripsRef = db.ref('turer/' + localDate());
     setSyncStatus('connecting');
 
     // Connection state
@@ -525,11 +599,27 @@ function initFirebase() {
         logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta });
       });
       logs.sort((a, b) => a.ts - b.ts);
-      save({ date: localDate(), logs });
+      const d = load();
+      d.logs = logs;
+      save(d);
       refreshAll();
     }, () => setSyncStatus('error'));
+
+    tripsRef.on('value', snap => {
+      const trips = [];
+      snap.forEach(ch => {
+        const v = ch.val();
+        trips.push({ id: ch.key, ts: v.ts });
+      });
+      trips.sort((a, b) => a.ts - b.ts);
+      const d = load();
+      d.trips = trips;
+      save(d);
+      refreshAll();
+      updateKorTomLock();
+    }, () => setSyncStatus('error'));
   } catch (e) {
-    db = null; logsRef = null;
+    db = null; logsRef = null; tripsRef = null;
     setSyncStatus('local');
   }
 }
@@ -544,10 +634,12 @@ function pad(n) { return String(n).padStart(2, '0'); }
 function load() {
   try {
     const r = localStorage.getItem(KEY);
-    if (!r) return { date: localDate(), logs: [] };
+    if (!r) return { date: localDate(), logs: [], trips: [] };
     const d = JSON.parse(r);
-    return d.date === localDate() ? d : { date: localDate(), logs: [] };
-  } catch { return { date: localDate(), logs: [] }; }
+    if (d.date !== localDate()) return { date: localDate(), logs: [], trips: [] };
+    if (!d.trips) d.trips = [];
+    return d;
+  } catch { return { date: localDate(), logs: [], trips: [] }; }
 }
 
 function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
@@ -694,6 +786,12 @@ function tap(catId, btn) {
   btn.classList.add('flash');
 
   const ts = Date.now();
+  const lastActivity = lastActivityTs();
+  if (lastActivity && (ts - lastActivity) >= TRIP_GAP_MS) {
+    recordDeparture(ts);
+    showDepartureBanner();
+  }
+
   const d = load();
   if (db && logsRef) {
     // push() returns the key synchronously → optimistic local write, then sync
@@ -729,6 +827,75 @@ function removeOne(catId, btn) {
     save(d);
   }
   renderCount();
+}
+
+// ── TRIPS (turer) & CO2 ──
+function recordDeparture(ts) {
+  const d = load();
+  if (db) {
+    const ref = db.ref('turer/' + localDate()).push();
+    d.trips.push({ id: ref.key, ts });
+    save(d);
+    ref.set({ ts }).catch(() => {
+      // Server rejected the write (e.g. security rules) — undo the optimistic local entry
+      const cur = load();
+      cur.trips = cur.trips.filter(t => t.id !== ref.key);
+      save(cur);
+      updateKorTomLock();
+      setSyncStatus('error');
+    });
+  } else {
+    d.trips.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts });
+    save(d);
+  }
+}
+
+let bannerTimer = null;
+function showDepartureBanner() {
+  const el = document.getElementById('departureBanner');
+  if (!el) return;
+  el.classList.add('show');
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function tripsToday() {
+  return load().trips.length;
+}
+
+function fetchDayTrips(dStr) {
+  if (!db) {
+    if (dStr === localDate()) return Promise.resolve(tripsToday());
+    return Promise.resolve(0);
+  }
+  return db.ref('turer/' + dStr).once('value')
+    .then(snap => snap.numChildren())
+    .catch(() => 0);
+}
+
+function lastDepartureTs() {
+  const trips = load().trips;
+  return trips.length ? Math.max(...trips.map(t => t.ts)) : 0;
+}
+
+// Most recent vehicle tap OR departure (Kör tom also counts as activity, so it
+// doesn't get immediately followed by a duplicate auto-detected departure)
+function lastActivityTs() {
+  const logs = load().logs;
+  const lastLogTs = logs.length ? logs[logs.length - 1].ts : 0;
+  return Math.max(lastLogTs, lastDepartureTs());
+}
+
+function updateKorTomLock() {
+  const btn = document.getElementById('korTomBtn');
+  if (!btn) return;
+  const last = lastDepartureTs();
+  btn.disabled = !!last && (Date.now() - last < KORTOM_LOCK_MS);
+}
+
+function korTom() {
+  recordDeparture(Date.now());
+  updateKorTomLock();
 }
 
 function undoLast() {
@@ -878,6 +1045,13 @@ function renderSummary() {
         `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
       `</div>`;
   });
+
+  const trips = tripsToday();
+  const co2 = trips * CO2_PER_TRIP;
+  document.getElementById('sumTripCount').textContent = trips;
+  document.getElementById('sumCO2').textContent = co2.toFixed(1) + ' kg';
+  document.getElementById('sumCO2Compare').innerHTML =
+    `≈ <strong>${Math.round(co2 / CO2_PER_KM_CAR)}</strong> km bilkörning`;
 }
 
 // ── RENDER: SUMMARY HISTORY (Vecka / Månad) ──
@@ -926,10 +1100,16 @@ function fetchDayTotal(dStr) {
     .catch(() => 0);
 }
 
-function dayListHtml(dates, totals) {
+function dayListHtml(dates, totals, trips) {
   let rows = '';
   dates.forEach((dStr, i) => {
-    rows += `<div class="day-row"><span class="day-date">${fmtDayLabel(dStr)}</span><span class="day-count">${totals[i]}</span></div>`;
+    const co2 = trips[i] * CO2_PER_TRIP;
+    rows +=
+      `<div class="day-row">` +
+        `<span class="day-date">${fmtDayLabel(dStr)}</span>` +
+        `<span class="day-count">${totals[i]}</span>` +
+        `<span class="day-co2">${co2.toFixed(1)} kg</span>` +
+      `</div>`;
   });
   return `<div class="day-list">${rows}</div>`;
 }
@@ -938,15 +1118,18 @@ function renderWeek() {
   const container = document.getElementById('sumVeckaContent');
   container.innerHTML = '<div class="empty">Hämtar data…</div>';
   const dates = last7Days();
-  Promise.all(dates.map(fetchDayTotal)).then(totals => {
+  Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
     if (summaryTab !== 'Vecka') return;
     const total = totals.reduce((a, b) => a + b, 0);
+    const co2 = trips.reduce((a, b) => a + b, 0) * CO2_PER_TRIP;
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
         `<div class="total-sub">fordon senaste 7 dagarna</div>` +
+        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong> (≈ ${Math.round(co2 / CO2_PER_KM_CAR)} km bilkörning)</div>` +
       `</div>` +
-      dayListHtml(dates, totals);
+      dayListHtml(dates, totals, trips) +
+      `<div class="period-avg">Snitt CO2: <strong>${(co2 / dates.length).toFixed(1)}</strong> kg/dag</div>`;
   });
 }
 
@@ -954,18 +1137,21 @@ function renderMonth() {
   const container = document.getElementById('sumManadContent');
   container.innerHTML = '<div class="empty">Hämtar data…</div>';
   const dates = currentMonthDays();
-  Promise.all(dates.map(fetchDayTotal)).then(totals => {
+  Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
     if (summaryTab !== 'Manad') return;
     const total = totals.reduce((a, b) => a + b, 0);
     const avg = total / dates.length;
+    const co2 = trips.reduce((a, b) => a + b, 0) * CO2_PER_TRIP;
     const monthName = new Date().toLocaleDateString('sv-SE', { month: 'long' });
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
         `<div class="total-sub">fordon i ${monthName}</div>` +
         `<div class="total-avg">Snitt: <strong>${Math.round(avg)}</strong> fordon/dag</div>` +
+        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong> (≈ ${Math.round(co2 / CO2_PER_KM_CAR)} km bilkörning)</div>` +
       `</div>` +
-      dayListHtml(dates, totals);
+      dayListHtml(dates, totals, trips) +
+      `<div class="period-avg">Snitt CO2: <strong>${(co2 / dates.length).toFixed(1)}</strong> kg/dag</div>`;
   });
 }
 
@@ -1006,10 +1192,14 @@ function refreshAll() {
 function confirmReset() { document.getElementById('resetModal').classList.add('show'); }
 function hideReset()    { document.getElementById('resetModal').classList.remove('show'); }
 function doReset() {
-  if (db) db.ref('days/' + localDate()).remove().catch(() => {});
-  save({ date: localDate(), logs: [] });
+  if (db) {
+    db.ref('days/' + localDate()).remove().catch(() => {});
+    db.ref('turer/' + localDate()).remove().catch(() => {});
+  }
+  save({ date: localDate(), logs: [], trips: [] });
   hideReset();
   renderCount();
+  updateKorTomLock();
   goView('Count');
 }
 
@@ -1020,6 +1210,7 @@ function tick() {
     n.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
   document.getElementById('hdrDate').textContent =
     n.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+  updateKorTomLock();
 }
 
 buildGrid();
