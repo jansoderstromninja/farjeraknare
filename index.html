@@ -80,7 +80,7 @@ header {
   cursor: pointer;
   touch-action: manipulation;
   overflow: hidden;
-  gap: 5px;
+  gap: 2px;
   transition: transform 0.08s, filter 0.08s;
   padding: 12px 6px 10px;
 }
@@ -88,13 +88,22 @@ header {
   transform: scale(0.93);
   filter: brightness(0.75);
 }
-.v-btn-emoji { font-size: 28px; line-height: 1; pointer-events: none; }
+.v-btn-emoji { font-size: 28px; line-height: 1; pointer-events: none; margin-bottom: 3px; }
 .v-btn-label {
-  font-size: 11px;
+  font-size: 19px;
   font-weight: 800;
   color: rgba(255,255,255,0.93);
   text-align: center;
   text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+.v-btn-label-fi {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.72);
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
   pointer-events: none;
   letter-spacing: 0.02em;
 }
@@ -404,15 +413,15 @@ nav {
 
 <script>
 const CATS = [
-  { id: 'personbil',  label: 'Personbil',  emoji: '🚗',  color: '#1D4ED8' },
-  { id: 'paketbil',   label: 'Paketbil',   emoji: '🚐',  color: '#6D28D9' },
-  { id: 'lastbil',    label: 'Lastbil',     emoji: '🚛',  color: '#B91C1C' },
-  { id: 'traktor',    label: 'Traktor',     emoji: '🚜',  color: '#92400E' },
-  { id: 'cykel',      label: 'Cykel',       emoji: '🚲',  color: '#065F46' },
-  { id: 'mc',         label: 'MC',          emoji: '🏍️',  color: '#C2410C' },
-  { id: 'fotgangare', label: 'Fotgängare',  emoji: '🚶',  color: '#0E7490' },
-  { id: 'moped',      label: 'Moped',       emoji: '🛵',  color: '#9D174D' },
-  { id: 'fyrhjuling', label: 'Fyrhjuling',  emoji: '🏎️',  color: '#3730A3' },
+  { id: 'personbil',  label: 'Personbil',  labelFi: 'Henkilöauto',   emoji: '🚗',  color: '#1D4ED8' },
+  { id: 'paketbil',   label: 'Paketbil',   labelFi: 'Pakettiauto',   emoji: '🚐',  color: '#6D28D9' },
+  { id: 'lastbil',    label: 'Lastbil',     labelFi: 'Kuorma-auto',   emoji: '🚛',  color: '#B91C1C' },
+  { id: 'traktor',    label: 'Traktor',     labelFi: 'Traktori',      emoji: '🚜',  color: '#92400E' },
+  { id: 'cykel',      label: 'Cykel',       labelFi: 'Polkupyörä',    emoji: '🚲',  color: '#065F46' },
+  { id: 'mc',         label: 'MC',          labelFi: 'Moottoripyörä', emoji: '🏍️',  color: '#C2410C' },
+  { id: 'fotgangare', label: 'Fotgängare',  labelFi: 'Jalankulkija',  emoji: '🚶',  color: '#0E7490' },
+  { id: 'moped',      label: 'Moped',       labelFi: 'Mopo',          emoji: '🛵',  color: '#9D174D' },
+  { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
 const KEY = 'farjeraknare_v1';
@@ -470,10 +479,29 @@ function buildGrid() {
     btn.innerHTML =
       `<span class="v-btn-emoji">${cat.emoji}</span>` +
       `<span class="v-btn-label">${cat.label}</span>` +
+      `<span class="v-btn-label-fi">${cat.labelFi}</span>` +
       `<span class="v-btn-badge" id="b_${cat.id}">0</span>`;
     btn.addEventListener('click', () => tap(cat.id, btn));
     grid.appendChild(btn);
   });
+}
+
+let audioCtx = null;
+function playClick() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+  } catch (e) {}
 }
 
 function tap(catId, btn) {
@@ -481,6 +509,7 @@ function tap(catId, btn) {
   d.logs.push({ type: catId, ts: Date.now() });
   save(d);
   if (navigator.vibrate) navigator.vibrate(12);
+  playClick();
   btn.classList.remove('flash');
   void btn.offsetWidth;
   btn.classList.add('flash');
