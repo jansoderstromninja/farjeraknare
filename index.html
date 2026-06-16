@@ -142,6 +142,7 @@ header {
   pointer-events: none;
 }
 .v-btn.flash::after { animation: flash 0.28s ease-out; }
+.v-btn.flash-remove::after { background: rgba(239,68,68,0.45); animation: flash 0.28s ease-out; }
 @keyframes flash {
   0%   { opacity: 1; }
   100% { opacity: 0; }
@@ -521,7 +522,7 @@ function initFirebase() {
       const logs = [];
       snap.forEach(ch => {
         const v = ch.val();
-        logs.push({ id: ch.key, type: v.type, ts: v.ts });
+        logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta });
       });
       logs.sort((a, b) => a.ts - b.ts);
       save({ date: localDate(), logs });
@@ -555,7 +556,8 @@ function counts() {
   const d = load();
   const c = {};
   CATS.forEach(cat => c[cat.id] = 0);
-  d.logs.forEach(l => { if (c[l.type] !== undefined) c[l.type]++; });
+  d.logs.forEach(l => { if (c[l.type] !== undefined) c[l.type] += (l.delta || 1); });
+  CATS.forEach(cat => { c[cat.id] = Math.max(0, c[cat.id]); });
   return c;
 }
 
@@ -566,13 +568,13 @@ function hourlyData() {
     const hr = new Date(l.ts).getHours();
     if (!h[hr]) h[hr] = {};
     if (!h[hr][l.type]) h[hr][l.type] = 0;
-    h[hr][l.type]++;
+    h[hr][l.type] += (l.delta || 1);
   });
   return h;
 }
 
 function hourTotal(hObj) {
-  return Object.values(hObj).reduce((a, b) => a + b, 0);
+  return Math.max(0, Object.values(hObj).reduce((a, b) => a + b, 0));
 }
 
 // Smooth cubic-bezier path through points (Catmull-Rom style)
@@ -628,6 +630,40 @@ function buildGrid() {
       `<span class="v-btn-label-fi">${cat.labelFi}</span>` +
       `<span class="v-btn-badge" id="b_${cat.id}">0</span>`;
     btn.addEventListener('click', () => tap(cat.id, btn));
+
+    let pressTimer = null;
+    let longFired = false;
+    let startX = 0, startY = 0;
+
+    btn.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      longFired = false;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        longFired = true;
+        removeOne(cat.id, btn);
+      }, 700);
+    }, { passive: true });
+
+    btn.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      if (Math.abs(t.clientX - startX) > 10 || Math.abs(t.clientY - startY) > 10) {
+        clearTimeout(pressTimer);
+      }
+    }, { passive: true });
+
+    btn.addEventListener('touchend', (e) => {
+      clearTimeout(pressTimer);
+      if (longFired) e.preventDefault();
+    });
+
+    btn.addEventListener('touchcancel', () => {
+      clearTimeout(pressTimer);
+    });
+
     grid.appendChild(btn);
   });
 }
@@ -653,7 +689,7 @@ function playClick() {
 function tap(catId, btn) {
   if (navigator.vibrate) navigator.vibrate(12);
   playClick();
-  btn.classList.remove('flash');
+  btn.classList.remove('flash', 'flash-remove');
   void btn.offsetWidth;
   btn.classList.add('flash');
 
@@ -662,11 +698,34 @@ function tap(catId, btn) {
   if (db && logsRef) {
     // push() returns the key synchronously → optimistic local write, then sync
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: 1 });
     save(d);
-    ref.set({ type: catId, ts }).catch(() => {});
+    ref.set({ type: catId, ts, delta: 1 }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1 });
+    save(d);
+  }
+  renderCount();
+}
+
+function removeOne(catId, btn) {
+  if (counts()[catId] <= 0) return;
+
+  if (navigator.vibrate) navigator.vibrate([15, 50, 15]);
+  playClick();
+  btn.classList.remove('flash', 'flash-remove');
+  void btn.offsetWidth;
+  btn.classList.add('flash-remove');
+
+  const ts = Date.now();
+  const d = load();
+  if (db && logsRef) {
+    const ref = logsRef.push();
+    d.logs.push({ id: ref.key, type: catId, ts, delta: -1 });
+    save(d);
+    ref.set({ type: catId, ts, delta: -1 }).catch(() => {});
+  } else {
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1 });
     save(d);
   }
   renderCount();
@@ -856,7 +915,14 @@ function fetchDayTotal(dStr) {
     return Promise.resolve(0);
   }
   return db.ref('days/' + dStr + '/logs').once('value')
-    .then(snap => snap.numChildren())
+    .then(snap => {
+      const c = {};
+      snap.forEach(ch => {
+        const v = ch.val();
+        c[v.type] = (c[v.type] || 0) + (v.delta || 1);
+      });
+      return Object.values(c).reduce((sum, n) => sum + Math.max(0, n), 0);
+    })
     .catch(() => 0);
 }
 
