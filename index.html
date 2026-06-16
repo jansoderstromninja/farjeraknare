@@ -202,6 +202,23 @@ header {
 .hour-chart-avg strong { color: var(--text); font-weight: 700; }
 
 /* ── SUMMARY VIEW ── */
+.sum-tabs { display: flex; gap: 6px; padding: 14px 14px 0; }
+.sum-tab {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sum-tab.active { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+.sum-panel { display: none; }
+.sum-panel.active { display: block; }
 .sum-wrap { padding: 14px 14px 32px; }
 .total-card {
   background: var(--surface);
@@ -241,6 +258,18 @@ header {
   letter-spacing: 0.01em;
 }
 .reset-btn:active { background: #991b1b; }
+
+.day-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.day-date  { font-size: 14px; }
+.day-count { font-size: 16px; font-weight: 800; color: #3B82F6; }
 
 /* ── EMPTY STATE ── */
 .empty {
@@ -364,25 +393,45 @@ nav {
 
 <!-- SUMMARY VIEW -->
 <div class="view" id="vSummary">
-  <div class="sum-wrap">
-    <div class="total-card">
-      <div class="total-big" id="sumTotal">0</div>
-      <div class="total-sub">fordon totalt idag</div>
-      <div class="total-avg" id="sumAvg">Snitt: — fordon/tim</div>
-    </div>
-    <div class="peak-card">
-      <div>
-        <div class="peak-lbl">Toppimme</div>
-        <div class="peak-val" id="peakHour">—</div>
+  <div class="sum-tabs">
+    <button class="sum-tab active" id="sumTabIdag"  onclick="goSummaryTab('Idag')">Idag</button>
+    <button class="sum-tab" id="sumTabVecka" onclick="goSummaryTab('Vecka')">Vecka</button>
+    <button class="sum-tab" id="sumTabManad" onclick="goSummaryTab('Manad')">Månad</button>
+  </div>
+
+  <div class="sum-panel active" id="sumPanelIdag">
+    <div class="sum-wrap">
+      <div class="total-card">
+        <div class="total-big" id="sumTotal">0</div>
+        <div class="total-sub">fordon totalt idag</div>
+        <div class="total-avg" id="sumAvg">Snitt: — fordon/tim</div>
       </div>
-      <div class="peak-right">
-        <div class="peak-lbl">Fordon</div>
-        <div class="peak-val" id="peakCount">—</div>
+      <div class="peak-card">
+        <div>
+          <div class="peak-lbl">Toppimme</div>
+          <div class="peak-val" id="peakHour">—</div>
+        </div>
+        <div class="peak-right">
+          <div class="peak-lbl">Fordon</div>
+          <div class="peak-val" id="peakCount">—</div>
+        </div>
       </div>
+      <div class="sec-title">Per kategori</div>
+      <div class="cat-list" id="sumCatList"></div>
+      <button class="reset-btn" onclick="confirmReset()">Återställ dagen</button>
     </div>
-    <div class="sec-title">Per kategori</div>
-    <div class="cat-list" id="sumCatList"></div>
-    <button class="reset-btn" onclick="confirmReset()">Återställ dagen</button>
+  </div>
+
+  <div class="sum-panel" id="sumPanelVecka">
+    <div class="sum-wrap" id="sumVeckaContent">
+      <div class="empty">Hämtar data…</div>
+    </div>
+  </div>
+
+  <div class="sum-panel" id="sumPanelManad">
+    <div class="sum-wrap" id="sumManadContent">
+      <div class="empty">Hämtar data…</div>
+    </div>
   </div>
 </div>
 
@@ -772,6 +821,88 @@ function renderSummary() {
   });
 }
 
+// ── RENDER: SUMMARY HISTORY (Vecka / Månad) ──
+function dateStrFromParts(y, m, d) { return `${y}-${pad(m)}-${pad(d)}`; }
+
+function last7Days() {
+  const dates = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    dates.push(dateStrFromParts(d.getFullYear(), d.getMonth() + 1, d.getDate()));
+  }
+  return dates;
+}
+
+function currentMonthDays() {
+  const now = new Date();
+  const dates = [];
+  for (let day = 1; day <= now.getDate(); day++) {
+    dates.push(dateStrFromParts(now.getFullYear(), now.getMonth() + 1, day));
+  }
+  return dates;
+}
+
+function fmtDayLabel(dStr) {
+  const [y, m, d] = dStr.split('-').map(Number);
+  const label = new Date(y, m - 1, d).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Resolve a single day's total: live Firebase count, or local cache for today when offline
+function fetchDayTotal(dStr) {
+  if (!db) {
+    if (dStr === localDate()) return Promise.resolve(Object.values(counts()).reduce((a, b) => a + b, 0));
+    return Promise.resolve(0);
+  }
+  return db.ref('days/' + dStr + '/logs').once('value')
+    .then(snap => snap.numChildren())
+    .catch(() => 0);
+}
+
+function dayListHtml(dates, totals) {
+  let rows = '';
+  dates.forEach((dStr, i) => {
+    rows += `<div class="day-row"><span class="day-date">${fmtDayLabel(dStr)}</span><span class="day-count">${totals[i]}</span></div>`;
+  });
+  return `<div class="day-list">${rows}</div>`;
+}
+
+function renderWeek() {
+  const container = document.getElementById('sumVeckaContent');
+  container.innerHTML = '<div class="empty">Hämtar data…</div>';
+  const dates = last7Days();
+  Promise.all(dates.map(fetchDayTotal)).then(totals => {
+    if (summaryTab !== 'Vecka') return;
+    const total = totals.reduce((a, b) => a + b, 0);
+    container.innerHTML =
+      `<div class="total-card">` +
+        `<div class="total-big">${total}</div>` +
+        `<div class="total-sub">fordon senaste 7 dagarna</div>` +
+      `</div>` +
+      dayListHtml(dates, totals);
+  });
+}
+
+function renderMonth() {
+  const container = document.getElementById('sumManadContent');
+  container.innerHTML = '<div class="empty">Hämtar data…</div>';
+  const dates = currentMonthDays();
+  Promise.all(dates.map(fetchDayTotal)).then(totals => {
+    if (summaryTab !== 'Manad') return;
+    const total = totals.reduce((a, b) => a + b, 0);
+    const avg = total / dates.length;
+    const monthName = new Date().toLocaleDateString('sv-SE', { month: 'long' });
+    container.innerHTML =
+      `<div class="total-card">` +
+        `<div class="total-big">${total}</div>` +
+        `<div class="total-sub">fordon i ${monthName}</div>` +
+        `<div class="total-avg">Snitt: <strong>${Math.round(avg)}</strong> fordon/dag</div>` +
+      `</div>` +
+      dayListHtml(dates, totals);
+  });
+}
+
 // ── VIEW SWITCHING ──
 const VIEWS = ['Count', 'Stats', 'Summary'];
 let currentView = 'Count';
@@ -782,14 +913,27 @@ function goView(name) {
     document.getElementById('nav' + v).classList.toggle('active', v === name);
   });
   if (name === 'Stats')   renderStats();
-  if (name === 'Summary') renderSummary();
+  if (name === 'Summary') goSummaryTab(summaryTab);
+}
+
+const SUMMARY_TABS = ['Idag', 'Vecka', 'Manad'];
+let summaryTab = 'Idag';
+function goSummaryTab(name) {
+  summaryTab = name;
+  SUMMARY_TABS.forEach(t => {
+    document.getElementById('sumTab' + t).classList.toggle('active', t === name);
+    document.getElementById('sumPanel' + t).classList.toggle('active', t === name);
+  });
+  if (name === 'Idag')  renderSummary();
+  if (name === 'Vecka') renderWeek();
+  if (name === 'Manad') renderMonth();
 }
 
 // Re-render whatever is on screen (used by the live Firebase listener)
 function refreshAll() {
   renderCount();
   if (currentView === 'Stats')   renderStats();
-  if (currentView === 'Summary') renderSummary();
+  if (currentView === 'Summary' && summaryTab === 'Idag') renderSummary();
 }
 
 // ── RESET ──
