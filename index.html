@@ -54,6 +54,7 @@ header {
 .sync-dot.connecting { background: #F59E0B; }
 .sync-dot.error      { background: #EF4444; }
 .sync-dot.local      { background: #7a90b0; }
+.sync-version        { font-size: 10px; color: var(--muted); opacity: 0.65; }
 
 /* Language toggle */
 .lang-btn {
@@ -466,6 +467,25 @@ nav {
   transition: opacity 0.3s;
 }
 .departure-banner.show { opacity: 1; }
+
+/* ── COUNTDOWN BAR ── */
+#countdownBar {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 5px 16px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+}
+#countdownText {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
 </style>
 </head>
 <body>
@@ -487,13 +507,14 @@ nav {
   <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
   <div class="hdr-right">
     <div class="hdr-time" id="hdrTime"></div>
-    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span></div>
+    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span></div>
   </div>
 </header>
 
 <!-- COUNT VIEW -->
 <div class="view active" id="vCount">
   <div class="btn-grid" id="btnGrid"></div>
+  <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa tur tidigast om</span> <span id="countdownText">5:00</span></div>
   <div class="count-footer">
     <div>
       <div class="footer-total-label" id="footerTotalLabel">Totalt idag</div>
@@ -621,7 +642,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -676,6 +697,7 @@ const T = {
     snittCO2:       'Snitt CO2',
     kgDag:          'kg/dag',
     fordonEnhet:    'fordon',
+    nästaTur:       'Nästa tur tidigast om',
     locale:         'sv-SE',
   },
   fi: {
@@ -719,6 +741,7 @@ const T = {
     snittCO2:       'Keskim. CO2',
     kgDag:          'kg/pv',
     fordonEnhet:    'ajoneuvoa',
+    nästaTur:       'Seuraava lähtö aikaisintaan',
     locale:         'fi-FI',
   }
 };
@@ -768,6 +791,7 @@ function applyLang() {
   set('modalCancel',      t('avbryt'));
   set('modalOk',          t('aterstallBtn'));
   set('departureBanner',  t('avgangReg'));
+  set('countdownLabel',   t('nästaTur'));
   set('navCountLabel',    t('navCount'));
   set('navStatsLabel',    t('navStats'));
   set('navSummaryLabel',  t('navSummary'));
@@ -779,6 +803,25 @@ function applyLang() {
                   dot.classList.contains('error') ? 'error' : 'local';
     setSyncStatus(state);
   }
+}
+
+// ── COUNTDOWN ──
+function updateCountdown() {
+  const bar = document.getElementById('countdownBar');
+  const txt = document.getElementById('countdownText');
+  if (!bar || !txt) return;
+  const last = lastDepartureTs();
+  if (!last) { bar.style.display = 'none'; return; }
+  const remaining = KORTOM_LOCK_MS - (Date.now() - last);
+  if (remaining <= 0) {
+    bar.style.display = 'none';
+    updateKorTomLock();
+    return;
+  }
+  bar.style.display = 'flex';
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  txt.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
 // ── VERSION CHECK ──
@@ -1467,6 +1510,9 @@ renderCount();
 tick();
 setInterval(tick, 10000);
 initFirebase();
+document.getElementById('versionText').textContent = '· v' + APP_VERSION;
+updateCountdown();
+setInterval(updateCountdown, 1000);
 </script>
 </body>
 </html>
