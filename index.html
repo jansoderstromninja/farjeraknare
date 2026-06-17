@@ -55,6 +55,18 @@ header {
 .sync-dot.error      { background: #EF4444; }
 .sync-dot.local      { background: #7a90b0; }
 
+/* Language toggle */
+.lang-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  padding: 3px 7px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 /* ── VIEWS ── */
 .view {
   display: none;
@@ -113,6 +125,19 @@ header {
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
   pointer-events: none;
   letter-spacing: 0.02em;
+}
+/* Finnish active: swap label prominence */
+body.lang-fi .v-btn-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  text-shadow: none;
+}
+body.lang-fi .v-btn-label-fi {
+  font-size: 19px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.93);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 .v-btn-badge {
   position: absolute;
@@ -266,6 +291,9 @@ header {
 .co2-row { display: flex; justify-content: space-between; align-items: center; }
 .co2-compare { font-size: 12px; color: var(--muted); text-align: center; margin-top: 10px; }
 .co2-compare strong { color: var(--text); font-weight: 700; }
+.co2-compare + .co2-compare { margin-top: 4px; }
+.co2-compare-ev,
+.co2-compare-ev strong { color: #10B981; }
 .period-avg { font-size: 13px; color: var(--muted); text-align: center; margin-top: 4px; }
 .period-avg strong { color: var(--text); font-weight: 700; }
 .reset-btn {
@@ -408,9 +436,10 @@ nav {
 
 <header>
   <div>
-    <div class="hdr-title">⛴ Fordonsräknare</div>
+    <div class="hdr-title" id="hdrTitle">⛴ Fordonsräknare</div>
     <div class="hdr-date" id="hdrDate"></div>
   </div>
+  <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
   <div class="hdr-right">
     <div class="hdr-time" id="hdrTime"></div>
     <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span></div>
@@ -422,7 +451,7 @@ nav {
   <div class="btn-grid" id="btnGrid"></div>
   <div class="count-footer">
     <div>
-      <div class="footer-total-label">Totalt idag</div>
+      <div class="footer-total-label" id="footerTotalLabel">Totalt idag</div>
       <div class="footer-total-num" id="footerTotal">0</div>
     </div>
     <div class="footer-actions">
@@ -435,9 +464,9 @@ nav {
 <!-- STATS VIEW -->
 <div class="view" id="vStats">
   <div class="stats-wrap">
-    <div class="sec-title">Per kategori</div>
+    <div class="sec-title" id="statsPerKatTitle">Per kategori</div>
     <div class="cat-list" id="statsCatList"></div>
-    <div class="sec-title">Per timme</div>
+    <div class="sec-title" id="statsPerTimmeTitle">Per timme</div>
     <div id="statsHourList"></div>
   </div>
 </div>
@@ -454,35 +483,35 @@ nav {
     <div class="sum-wrap">
       <div class="total-card">
         <div class="total-big" id="sumTotal">0</div>
-        <div class="total-sub">fordon totalt idag</div>
+        <div class="total-sub" id="sumTotalSub">fordon totalt idag</div>
         <div class="total-avg" id="sumAvg">Snitt: — fordon/tim</div>
       </div>
       <div class="peak-card">
         <div>
-          <div class="peak-lbl">Toppimme</div>
+          <div class="peak-lbl" id="peakLblHour">Toppimme</div>
           <div class="peak-val" id="peakHour">—</div>
         </div>
         <div class="peak-right">
-          <div class="peak-lbl">Fordon</div>
+          <div class="peak-lbl" id="peakLblFordon">Fordon</div>
           <div class="peak-val" id="peakCount">—</div>
         </div>
       </div>
       <div class="co2-card">
         <div class="co2-row">
           <div>
-            <div class="peak-lbl">Turer idag</div>
+            <div class="peak-lbl" id="co2LblTurer">Turer idag</div>
             <div class="peak-val" id="sumTripCount">0</div>
           </div>
           <div class="peak-right">
-            <div class="peak-lbl">CO2 idag</div>
+            <div class="peak-lbl" id="co2LblCO2">CO2 idag</div>
             <div class="peak-val" id="sumCO2">0.0 kg</div>
           </div>
         </div>
-        <div class="co2-compare" id="sumCO2Compare">≈ 0 km bilkörning</div>
+        <div id="sumCO2Compare"></div>
       </div>
-      <div class="sec-title">Per kategori</div>
+      <div class="sec-title" id="sumPerKatTitle">Per kategori</div>
       <div class="cat-list" id="sumCatList"></div>
-      <button class="reset-btn" onclick="confirmReset()">Återställ dagen</button>
+      <button class="reset-btn" id="resetBtnIdag" onclick="confirmReset()">Återställ dagen</button>
     </div>
   </div>
 
@@ -503,26 +532,26 @@ nav {
 <nav>
   <button class="nav-btn active" id="navCount" onclick="goView('Count')">
     <span class="nav-icon">✚</span>
-    <span>Räkna</span>
+    <span id="navCountLabel">Räkna</span>
   </button>
   <button class="nav-btn" id="navStats" onclick="goView('Stats')">
     <span class="nav-icon">📊</span>
-    <span>Statistik</span>
+    <span id="navStatsLabel">Statistik</span>
   </button>
   <button class="nav-btn" id="navSummary" onclick="goView('Summary')">
     <span class="nav-icon">📋</span>
-    <span>Summering</span>
+    <span id="navSummaryLabel">Summering</span>
   </button>
 </nav>
 
 <!-- RESET MODAL -->
 <div class="modal-bg" id="resetModal">
   <div class="modal-box">
-    <div class="modal-title">Återställ dagen?</div>
-    <div class="modal-body">All data för dagens trafikräkning raderas permanent. Åtgärden kan inte ångras.</div>
+    <div class="modal-title" id="modalTitle">Återställ dagen?</div>
+    <div class="modal-body" id="modalBody">All data för dagens trafikräkning raderas permanent. Åtgärden kan inte ångras.</div>
     <div class="modal-btns">
-      <button class="modal-cancel" onclick="hideReset()">Avbryt</button>
-      <button class="modal-ok" onclick="doReset()">Återställ</button>
+      <button class="modal-cancel" id="modalCancel" onclick="hideReset()">Avbryt</button>
+      <button class="modal-ok" id="modalOk" onclick="doReset()">Återställ</button>
     </div>
   </div>
 </div>
@@ -548,13 +577,163 @@ const CATS = [
 ];
 
 const KEY = 'farjeraknare_v1';
+const LANG_KEY = 'farjeraknare_lang';
+let lang = localStorage.getItem(LANG_KEY) || 'sv';
 
 // CO2 per avgång: 2 dieselmotorer, ~5 min, fast uppskattat värde (oavsett antal fordon)
-const CO2_PER_TRIP = 8.7;
-// Jämförelsevärde: kg CO2 per km bilkörning
-const CO2_PER_KM_CAR = 0.12;
-const TRIP_GAP_MS = 7 * 60 * 1000;
-const KORTOM_LOCK_MS = 5 * 60 * 1000;
+const CO2_PER_TRIP    = 8.7;
+const CO2_PER_KM_CAR  = 0.12;  // kg CO2/km, förbränningsmotor
+const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
+const TRIP_GAP_MS     = 7 * 60 * 1000;
+const KORTOM_LOCK_MS  = 5 * 60 * 1000;
+
+// ── TRANSLATIONS ──
+const T = {
+  sv: {
+    appTitle:       'Fordonsräknare',
+    navCount:       'Räkna',
+    navStats:       'Statistik',
+    navSummary:     'Summering',
+    footerLabel:    'Totalt idag',
+    korTom:         'Kör tom',
+    angra:          'Ångra',
+    perKat:         'Per kategori',
+    perTimme:       'Per timme',
+    ingaFordon:     'Inga fordon loggade än.',
+    hamtar:         'Hämtar data…',
+    fordonidag:     'fordon totalt idag',
+    snitt:          'Snitt',
+    snittTim:       'fordon/tim',
+    snittDag:       'fordon/dag',
+    toppimme:       'Toppimme',
+    fordonLbl:      'Fordon',
+    turerIdag:      'Turer idag',
+    co2idag:        'CO2 idag',
+    aterstall:      'Återställ dagen',
+    modalTitle:     'Återställ dagen?',
+    modalBody:      'All data för dagens trafikräkning raderas permanent. Åtgärden kan inte ångras.',
+    avbryt:         'Avbryt',
+    aterstallBtn:   'Återställ',
+    avgangReg:      '⛴ Avgång registrerad',
+    syncOnline:     'Synkad',
+    syncConnecting: 'Ansluter…',
+    syncError:      'Sync-fel',
+    syncLocal:      'Lokal',
+    tabIdag:        'Idag',
+    tabVecka:       'Vecka',
+    tabManad:       'Månad',
+    weekSub:        'fordon senaste 7 dagarna',
+    iceLabel:       '🚗 ICE',
+    iceDesc:        'förbränningsmotor',
+    evLabel:        '⚡ EL',
+    evDesc:         'elbil',
+    snittCO2:       'Snitt CO2',
+    kgDag:          'kg/dag',
+    fordonEnhet:    'fordon',
+    locale:         'sv-SE',
+  },
+  fi: {
+    appTitle:       'Ajoneuvolaskuri',
+    navCount:       'Laske',
+    navStats:       'Tilastot',
+    navSummary:     'Yhteenveto',
+    footerLabel:    'Yhteensä tänään',
+    korTom:         'Aja tyhjänä',
+    angra:          'Kumoa',
+    perKat:         'Kategorioittain',
+    perTimme:       'Tunneittain',
+    ingaFordon:     'Ei ajoneuvoja vielä.',
+    hamtar:         'Ladataan…',
+    fordonidag:     'ajoneuvoa yhteensä tänään',
+    snitt:          'Keskim.',
+    snittTim:       'ajoneuvoa/h',
+    snittDag:       'ajoneuvoa/pv',
+    toppimme:       'Huipputunti',
+    fordonLbl:      'Ajoneuvot',
+    turerIdag:      'Ylitykset tänään',
+    co2idag:        'CO2 tänään',
+    aterstall:      'Nollaa päivä',
+    modalTitle:     'Nollaa päivä?',
+    modalBody:      'Kaikki tämän päivän liikennetilastodata poistetaan pysyvästi. Toimintoa ei voi perua.',
+    avbryt:         'Peruuta',
+    aterstallBtn:   'Nollaa',
+    avgangReg:      '⛴ Lähtö kirjattu',
+    syncOnline:     'Synkronoitu',
+    syncConnecting: 'Yhdistetään…',
+    syncError:      'Synk.virhe',
+    syncLocal:      'Paikallinen',
+    tabIdag:        'Tänään',
+    tabVecka:       'Viikko',
+    tabManad:       'Kuukausi',
+    weekSub:        'ajoneuvoa viim. 7 pv',
+    iceLabel:       '🚗 ICE',
+    iceDesc:        'polttomoottori',
+    evLabel:        '⚡ EL',
+    evDesc:         'sähköauto',
+    snittCO2:       'Keskim. CO2',
+    kgDag:          'kg/pv',
+    fordonEnhet:    'ajoneuvoa',
+    locale:         'fi-FI',
+  }
+};
+
+function t(key)    { return T[lang][key]; }
+function catName(cat) { return lang === 'fi' ? cat.labelFi : cat.label; }
+
+function co2CompareHtml(co2kg) {
+  const iceKm = Math.round(co2kg / CO2_PER_KM_CAR);
+  const evKm  = Math.round(co2kg / CO2_PER_KM_EV);
+  return `<div class="co2-compare">${t('iceLabel')}: <strong>${iceKm}</strong> km (${t('iceDesc')}, ${CO2_PER_KM_CAR} kg/km)</div>` +
+         `<div class="co2-compare co2-compare-ev">${t('evLabel')}: <strong>${evKm}</strong> km (${t('evDesc')}, ${CO2_PER_KM_EV} kg/km)</div>`;
+}
+
+function toggleLang() {
+  lang = lang === 'sv' ? 'fi' : 'sv';
+  localStorage.setItem(LANG_KEY, lang);
+  applyLang();
+  if (currentView === 'Stats') renderStats();
+  else if (currentView === 'Summary') goSummaryTab(summaryTab);
+  renderCount();
+}
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.body.classList.toggle('lang-fi', lang === 'fi');
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set('hdrTitle',         '⛴ ' + t('appTitle'));
+  set('langBtn',          lang === 'sv' ? '🇫🇮' : '🇸🇪');
+  set('footerTotalLabel', t('footerLabel'));
+  set('korTomBtn',        t('korTom'));
+  set('undoBtn',          t('angra'));
+  set('statsPerKatTitle', t('perKat'));
+  set('statsPerTimmeTitle', t('perTimme'));
+  set('sumTabIdag',       t('tabIdag'));
+  set('sumTabVecka',      t('tabVecka'));
+  set('sumTabManad',      t('tabManad'));
+  set('sumTotalSub',      t('fordonidag'));
+  set('peakLblHour',      t('toppimme'));
+  set('peakLblFordon',    t('fordonLbl'));
+  set('co2LblTurer',      t('turerIdag'));
+  set('co2LblCO2',        t('co2idag'));
+  set('sumPerKatTitle',   t('perKat'));
+  set('resetBtnIdag',     t('aterstall'));
+  set('modalTitle',       t('modalTitle'));
+  set('modalBody',        t('modalBody'));
+  set('modalCancel',      t('avbryt'));
+  set('modalOk',          t('aterstallBtn'));
+  set('departureBanner',  t('avgangReg'));
+  set('navCountLabel',    t('navCount'));
+  set('navStatsLabel',    t('navStats'));
+  set('navSummaryLabel',  t('navSummary'));
+  // Re-sync the current sync status label
+  const dot = document.querySelector('#hdrSync .sync-dot');
+  if (dot) {
+    const state = dot.classList.contains('online') ? 'online' :
+                  dot.classList.contains('connecting') ? 'connecting' :
+                  dot.classList.contains('error') ? 'error' : 'local';
+    setSyncStatus(state);
+  }
+}
 
 // ── FIREBASE SYNC ──
 const firebaseConfig = {
@@ -574,7 +753,7 @@ function setSyncStatus(state) {
   const txt = document.getElementById('syncText');
   if (!dot || !txt) return;
   dot.className = 'sync-dot ' + state;
-  txt.textContent = { online: 'Synkad', connecting: 'Ansluter…', error: 'Sync-fel', local: 'Lokal' }[state] || 'Lokal';
+  txt.textContent = { online: t('syncOnline'), connecting: t('syncConnecting'), error: t('syncError'), local: t('syncLocal') }[state] || t('syncLocal');
 }
 
 function initFirebase() {
@@ -837,7 +1016,7 @@ function recordDeparture(ts) {
     d.trips.push({ id: ref.key, ts });
     save(d);
     ref.set({ ts }).catch(() => {
-      // Server rejected the write (e.g. security rules) — undo the optimistic local entry
+      // Server rejected the write — undo the optimistic local entry
       const cur = load();
       cur.trips = cur.trips.filter(t => t.id !== ref.key);
       save(cur);
@@ -936,7 +1115,7 @@ function renderStats() {
     cl.innerHTML +=
       `<div class="cat-row">` +
         `<span class="cat-emoji">${cat.emoji}</span>` +
-        `<span class="cat-name">${cat.label}</span>` +
+        `<span class="cat-name">${catName(cat)}</span>` +
         `<div class="cat-bar-bg"><div class="cat-bar" style="width:${bw}%;background:${cat.color}"></div></div>` +
         `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
       `</div>`;
@@ -947,7 +1126,7 @@ function renderStats() {
   const hrs = Object.keys(h).map(Number).sort((a, b) => a - b);
 
   if (!hrs.length) {
-    hl.innerHTML = '<div class="empty">Inga fordon loggade än.</div>';
+    hl.innerHTML = `<div class="empty">${t('ingaFordon')}</div>`;
     return;
   }
 
@@ -981,7 +1160,7 @@ function renderStats() {
   range.forEach((hr, i) => {
     const n = values[i];
     const x = xs[i].toFixed(1), y = ys[i].toFixed(1);
-    const tip = `${pad(hr)}:00 — ${n} fordon`;
+    const tip = `${pad(hr)}:00 — ${n} ${t('fordonEnhet')}`;
     xLabels += `<text x="${x}" y="${H - 6}" text-anchor="middle" style="font-size:9px; fill:var(--muted);">${hr}</text>`;
     points +=
       `<circle cx="${x}" cy="${y}" r="13" fill="transparent" style="cursor:pointer;" onclick="showHourTip(${x},${y},'${tip}')" onmouseenter="showHourTip(${x},${y},'${tip}')"></circle>` +
@@ -1009,7 +1188,7 @@ function renderStats() {
         `<text id="hourTipText" text-anchor="middle" style="font-size:11px; font-weight:700; fill:var(--text);"></text>` +
       `</g>` +
     `</svg>` +
-    `<div class="hour-chart-avg">Snitt: <strong>${Math.round(avg)}</strong> fordon/tim</div>`;
+    `<div class="hour-chart-avg">${t('snitt')}: <strong>${Math.round(avg)}</strong> ${t('snittTim')}</div>`;
 }
 
 // ── RENDER: SUMMARY VIEW ──
@@ -1025,13 +1204,13 @@ function renderSummary() {
     const pn = hourTotal(h[peak]);
     document.getElementById('peakHour').textContent =
       `${pad(peak)}:00 – ${pad(peak+1 < 24 ? peak+1 : 0)}:00`;
-    document.getElementById('peakCount').textContent = `${pn} fordon`;
+    document.getElementById('peakCount').textContent = `${pn} ${t('fordonEnhet')}`;
     document.getElementById('sumAvg').innerHTML =
-      `Snitt: <strong>${Math.round(total / hrs.length)}</strong> fordon/tim`;
+      `${t('snitt')}: <strong>${Math.round(total / hrs.length)}</strong> ${t('snittTim')}`;
   } else {
     document.getElementById('peakHour').textContent = '—';
     document.getElementById('peakCount').textContent = '—';
-    document.getElementById('sumAvg').textContent = 'Snitt: — fordon/tim';
+    document.getElementById('sumAvg').textContent = `${t('snitt')}: — ${t('snittTim')}`;
   }
 
   const cl = document.getElementById('sumCatList');
@@ -1041,7 +1220,7 @@ function renderSummary() {
     cl.innerHTML +=
       `<div class="cat-row">` +
         `<span class="cat-emoji">${cat.emoji}</span>` +
-        `<span class="cat-name">${cat.label}</span>` +
+        `<span class="cat-name">${catName(cat)}</span>` +
         `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
       `</div>`;
   });
@@ -1050,8 +1229,7 @@ function renderSummary() {
   const co2 = trips * CO2_PER_TRIP;
   document.getElementById('sumTripCount').textContent = trips;
   document.getElementById('sumCO2').textContent = co2.toFixed(1) + ' kg';
-  document.getElementById('sumCO2Compare').innerHTML =
-    `≈ <strong>${Math.round(co2 / CO2_PER_KM_CAR)}</strong> km bilkörning`;
+  document.getElementById('sumCO2Compare').innerHTML = co2CompareHtml(co2);
 }
 
 // ── RENDER: SUMMARY HISTORY (Vecka / Månad) ──
@@ -1078,7 +1256,7 @@ function currentMonthDays() {
 
 function fmtDayLabel(dStr) {
   const [y, m, d] = dStr.split('-').map(Number);
-  const label = new Date(y, m - 1, d).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' });
+  const label = new Date(y, m - 1, d).toLocaleDateString(t('locale'), { weekday: 'short', day: 'numeric', month: 'short' });
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -1116,7 +1294,7 @@ function dayListHtml(dates, totals, trips) {
 
 function renderWeek() {
   const container = document.getElementById('sumVeckaContent');
-  container.innerHTML = '<div class="empty">Hämtar data…</div>';
+  container.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
   const dates = last7Days();
   Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
     if (summaryTab !== 'Vecka') return;
@@ -1125,33 +1303,36 @@ function renderWeek() {
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
-        `<div class="total-sub">fordon senaste 7 dagarna</div>` +
-        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong> (≈ ${Math.round(co2 / CO2_PER_KM_CAR)} km bilkörning)</div>` +
+        `<div class="total-sub">${t('weekSub')}</div>` +
+        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
+        co2CompareHtml(co2) +
       `</div>` +
       dayListHtml(dates, totals, trips) +
-      `<div class="period-avg">Snitt CO2: <strong>${(co2 / dates.length).toFixed(1)}</strong> kg/dag</div>`;
+      `<div class="period-avg">${t('snittCO2')}: <strong>${(co2 / dates.length).toFixed(1)}</strong> ${t('kgDag')}</div>`;
   });
 }
 
 function renderMonth() {
   const container = document.getElementById('sumManadContent');
-  container.innerHTML = '<div class="empty">Hämtar data…</div>';
+  container.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
   const dates = currentMonthDays();
   Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
     if (summaryTab !== 'Manad') return;
     const total = totals.reduce((a, b) => a + b, 0);
     const avg = total / dates.length;
     const co2 = trips.reduce((a, b) => a + b, 0) * CO2_PER_TRIP;
-    const monthName = new Date().toLocaleDateString('sv-SE', { month: 'long' });
+    const monthName = new Date().toLocaleDateString(t('locale'), { month: 'long' });
+    const monthSub = lang === 'fi' ? `ajoneuvoa tässä kuussa (${monthName})` : `fordon i ${monthName}`;
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
-        `<div class="total-sub">fordon i ${monthName}</div>` +
-        `<div class="total-avg">Snitt: <strong>${Math.round(avg)}</strong> fordon/dag</div>` +
-        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong> (≈ ${Math.round(co2 / CO2_PER_KM_CAR)} km bilkörning)</div>` +
+        `<div class="total-sub">${monthSub}</div>` +
+        `<div class="total-avg">${t('snitt')}: <strong>${Math.round(avg)}</strong> ${t('snittDag')}</div>` +
+        `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
+        co2CompareHtml(co2) +
       `</div>` +
       dayListHtml(dates, totals, trips) +
-      `<div class="period-avg">Snitt CO2: <strong>${(co2 / dates.length).toFixed(1)}</strong> kg/dag</div>`;
+      `<div class="period-avg">${t('snittCO2')}: <strong>${(co2 / dates.length).toFixed(1)}</strong> ${t('kgDag')}</div>`;
   });
 }
 
@@ -1207,13 +1388,14 @@ function doReset() {
 function tick() {
   const n = new Date();
   document.getElementById('hdrTime').textContent =
-    n.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    n.toLocaleTimeString(t('locale'), { hour: '2-digit', minute: '2-digit' });
   document.getElementById('hdrDate').textContent =
-    n.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' });
+    n.toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' });
   updateKorTomLock();
 }
 
 buildGrid();
+applyLang();
 renderCount();
 tick();
 setInterval(tick, 10000);
