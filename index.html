@@ -409,6 +409,42 @@ nav {
   cursor: pointer;
 }
 
+/* ── UPDATE BANNER ── */
+.update-banner {
+  flex-shrink: 0;
+  background: #1e3a5f;
+  border-bottom: 1px solid #3B82F6;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.update-banner-text { flex: 1; }
+.update-banner-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.update-reload-btn {
+  background: #3B82F6;
+  border: none;
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.update-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
 /* ── DEPARTURE BANNER ── */
 .departure-banner {
   position: fixed;
@@ -433,6 +469,15 @@ nav {
 </style>
 </head>
 <body>
+
+<!-- UPDATE BANNER -->
+<div class="update-banner" id="updateBanner" style="display:none">
+  <span class="update-banner-text">🎉 Ny version tillgänglig – ladda om sidan</span>
+  <div class="update-banner-actions">
+    <button class="update-reload-btn" onclick="location.reload()">Ladda om</button>
+    <button class="update-dismiss-btn" onclick="dismissUpdateBanner()">✕</button>
+  </div>
+</div>
 
 <header>
   <div>
@@ -576,6 +621,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
+const APP_VERSION = "1.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -735,6 +781,25 @@ function applyLang() {
   }
 }
 
+// ── VERSION CHECK ──
+function checkVersion() {
+  if (!db) return;
+  db.ref('config/version').once('value').then(snap => {
+    const v = snap.val();
+    if (v && String(v) !== String(APP_VERSION)) showUpdateBanner();
+  }).catch(() => {});
+}
+
+function showUpdateBanner() {
+  const el = document.getElementById('updateBanner');
+  if (el) el.style.display = 'flex';
+}
+
+function dismissUpdateBanner() {
+  const el = document.getElementById('updateBanner');
+  if (el) el.style.display = 'none';
+}
+
 // ── FIREBASE SYNC ──
 const firebaseConfig = {
   apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
@@ -797,6 +862,8 @@ function initFirebase() {
       refreshAll();
       updateKorTomLock();
     }, () => setSyncStatus('error'));
+
+    checkVersion();
   } catch (e) {
     db = null; logsRef = null; tripsRef = null;
     setSyncStatus('local');
