@@ -645,7 +645,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -702,7 +702,8 @@ const T = {
     kgDag:          'kg/dag',
     fordonEnhet:    'fordon',
     ferryLabel:     '🔋 Elfärja',
-    ferryDesc:      'elbilskörning',
+    ferryPre:       'samma CO2 räcker till',
+    ferryPost:      'turer',
     uppskattat:     'uppskattat',
     nästaTur:       'Nästa tur tidigast om',
     locale:         'sv-SE',
@@ -749,7 +750,8 @@ const T = {
     kgDag:          'kg/pv',
     fordonEnhet:    'ajoneuvoa',
     ferryLabel:     '🔋 Sähkölautta',
-    ferryDesc:      'sähköautoajoa',
+    ferryPre:       'sama CO2 riittää',
+    ferryPost:      'ylitystä',
     uppskattat:     'arvio',
     nästaTur:       'Seuraava lähtö aikaisintaan',
     locale:         'fi-FI',
@@ -762,10 +764,10 @@ function catName(cat) { return lang === 'fi' ? cat.labelFi : cat.label; }
 function co2CompareHtml(co2kg) {
   const iceKm     = Math.round(co2kg / CO2_PER_KM_CAR);
   const evKm      = Math.round(co2kg / CO2_PER_KM_EV);
-  const ferryEvKm = Math.round((co2kg / CO2_PER_TRIP) * CO2_PER_TRIP_EV / CO2_PER_KM_EV);
+  const ferryTrips = Math.round(co2kg / CO2_PER_TRIP_EV);
   return `<div class="co2-compare">${t('iceLabel')}: <strong>${iceKm}</strong> km (${t('iceDesc')}, ${CO2_PER_KM_CAR} kg/km)</div>` +
          `<div class="co2-compare co2-compare-ev">${t('evLabel')}: <strong>${evKm}</strong> km (${t('evDesc')}, ${CO2_PER_KM_EV} kg/km)</div>` +
-         `<div class="co2-compare co2-compare-ferry">${t('ferryLabel')}: <strong>${ferryEvKm}</strong> km (${t('ferryDesc')}, ${CO2_PER_KM_EV} kg/km) <span class="co2-est">(${t('uppskattat')})</span></div>`;
+         `<div class="co2-compare co2-compare-ferry">${t('ferryLabel')}: ${t('ferryPre')} <strong>${ferryTrips}</strong> ${t('ferryPost')} <span class="co2-est">(${t('uppskattat')})</span></div>`;
 }
 
 function toggleLang() {
