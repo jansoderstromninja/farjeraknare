@@ -645,7 +645,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.5";
+const APP_VERSION = "1.6";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -655,8 +655,8 @@ const CO2_PER_TRIP    = 8.7;
 const CO2_PER_KM_CAR  = 0.12;  // kg CO2/km, förbränningsmotor
 const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
 const CO2_PER_TRIP_EV = 0.1;   // kg CO2/tur, hypotetisk elfärja (uppskattad)
-const TRIP_GAP_MS     = 7 * 60 * 1000;
-const KORTOM_LOCK_MS  = 5 * 60 * 1000;
+const TRIP_GAP_MS     = 2 * 60 * 1000;
+const KORTOM_LOCK_MS  = 2 * 60 * 1000;
 
 // ── TRANSLATIONS ──
 const T = {
@@ -1090,7 +1090,7 @@ function tap(catId, btn) {
 
   const ts = Date.now();
   const lastActivity = lastActivityTs();
-  if (lastActivity && (ts - lastActivity) >= TRIP_GAP_MS) {
+  if (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS) {
     recordDeparture(ts);
     showDepartureBanner();
   }
