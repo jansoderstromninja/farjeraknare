@@ -625,6 +625,7 @@ nav {
         </div>
         <div id="sumCO2Compare"></div>
       </div>
+      <div id="sumDeptStatsIdag"></div>
       <div class="sec-title" id="sumPerKatTitle">Per kategori</div>
       <div class="cat-list" id="sumCatList"></div>
       <button class="reset-btn" id="resetBtnIdag" onclick="confirmReset()">Återställ dagen</button>
@@ -708,7 +709,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.8";
+const APP_VERSION = "2.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -786,6 +787,13 @@ const T = {
     testMode:       'Testläge 🧪',
     windLabel:      'Vind',
     gustLabel:      'Byar',
+    avgStatsTitle:  'Avgångsstatistik',
+    avgSnitt:       'Snitt/avgång',
+    avgMax:         'Max/avgång',
+    avgTomma:       'Tomturer',
+    avgPerTimme:    'Avg/tim',
+    avgSnittPerDag: 'Snitt avg/dag',
+    avgTommaTotal:  'Tomturer totalt',
     locale:         'sv-SE',
   },
   fi: {
@@ -844,6 +852,13 @@ const T = {
     testMode:       'Testitila 🧪',
     windLabel:      'Tuuli',
     gustLabel:      'Puuskat',
+    avgStatsTitle:  'Lähtötilastot',
+    avgSnitt:       'Keskim./lähtö',
+    avgMax:         'Max/lähtö',
+    avgTomma:       'Tyhjälähdöt',
+    avgPerTimme:    'Lähtöjä/h',
+    avgSnittPerDag: 'Keskim. lähtöjä/pv',
+    avgTommaTotal:  'Tyhjälähdöt yht.',
     locale:         'fi-FI',
   }
 };
@@ -1293,6 +1308,34 @@ function fetchDayTrips(dStr) {
     .catch(() => 0);
 }
 
+function fetchDayLogsRaw(dStr) {
+  if (!db) {
+    if (dStr === localDate()) return Promise.resolve(load().logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta })));
+    return Promise.resolve([]);
+  }
+  return db.ref('days/' + dStr + '/logs').once('value')
+    .then(snap => {
+      const arr = [];
+      snap.forEach(ch => { const v = ch.val(); arr.push({ type: v.type, ts: v.ts, delta: v.delta || 1 }); });
+      return arr;
+    })
+    .catch(() => []);
+}
+
+function fetchDayTripTs(dStr) {
+  if (!db) {
+    if (dStr === localDate()) return Promise.resolve(load().trips.map(tr => tr.ts).sort((a, b) => a - b));
+    return Promise.resolve([]);
+  }
+  return db.ref('turer/' + dStr).once('value')
+    .then(snap => {
+      const arr = [];
+      snap.forEach(ch => { const v = ch.val(); if (v.ts) arr.push(v.ts); });
+      return arr.sort((a, b) => a - b);
+    })
+    .catch(() => []);
+}
+
 function lastDepartureTs() {
   const trips = load().trips;
   return trips.length ? Math.max(...trips.map(t => t.ts)) : 0;
@@ -1507,6 +1550,13 @@ function renderSummary() {
   document.getElementById('sumTripCount').textContent = trips;
   document.getElementById('sumCO2').textContent = co2.toFixed(1) + ' kg';
   document.getElementById('sumCO2Compare').innerHTML = co2CompareHtml(co2);
+
+  const d = load();
+  const deptStats = calcDepartureStats(
+    d.logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta })),
+    d.trips.map(tr => tr.ts).sort((a, b) => a - b)
+  );
+  document.getElementById('sumDeptStatsIdag').innerHTML = deptStatsCardHtml(deptStats, null);
 }
 
 // ── RENDER: SUMMARY HISTORY (Vecka / Månad) ──
@@ -1569,14 +1619,72 @@ function dayListHtml(dates, totals, trips) {
   return `<div class="day-list">${rows}</div>`;
 }
 
+function calcDepartureStats(logs, tripTs) {
+  if (!tripTs.length) return null;
+  const sorted = [...tripTs].sort((a, b) => a - b);
+  const buckets = new Array(sorted.length).fill(0);
+  logs.forEach(l => {
+    if ((l.delta || 1) <= 0) return;
+    const idx = sorted.findIndex(d => d > l.ts);
+    if (idx >= 0) buckets[idx] += 1;
+  });
+  const tripCount = sorted.length;
+  const totalVeh = buckets.reduce((a, b) => a + b, 0);
+  const maxVehicles = Math.max(...buckets);
+  const emptyTrips = buckets.filter(b => b === 0).length;
+  const avgVehicles = tripCount > 0 ? totalVeh / tripCount : null;
+  let tripsPerHour = null;
+  if (tripCount >= 2) {
+    const spanH = (sorted[sorted.length - 1] - sorted[0]) / 3600000;
+    if (spanH >= 0.5) tripsPerHour = tripCount / spanH;
+  }
+  return { avgVehicles, maxVehicles, emptyTrips, tripsPerHour, tripCount, totalVeh };
+}
+
+function deptStatsCardHtml(stats, dayCount) {
+  if (!stats || !stats.tripCount) return '';
+  const title = t('avgStatsTitle');
+  const fmt = v => (v !== null && v !== undefined) ? v.toFixed(1) : '—';
+  const fmtI = v => (v !== null && v !== undefined) ? String(v) : '—';
+  if (dayCount == null) {
+    return `<div class="co2-card">` +
+      `<div class="sec-title" style="margin:0 0 10px">${title}</div>` +
+      `<div class="co2-row">` +
+        `<div><div class="peak-lbl">${t('avgSnitt')}</div><div class="peak-val">${fmt(stats.avgVehicles)}</div></div>` +
+        `<div class="peak-right"><div class="peak-lbl">${t('avgMax')}</div><div class="peak-val">${fmtI(stats.maxVehicles)}</div></div>` +
+      `</div>` +
+      `<div class="co2-row" style="margin-top:10px">` +
+        `<div><div class="peak-lbl">${t('avgTomma')}</div><div class="peak-val">${fmtI(stats.emptyTrips)}</div></div>` +
+        `<div class="peak-right"><div class="peak-lbl">${t('avgPerTimme')}</div><div class="peak-val">${fmt(stats.tripsPerHour)}</div></div>` +
+      `</div>` +
+    `</div>`;
+  } else {
+    const avgPerDay = stats.tripCount / dayCount;
+    return `<div class="co2-card">` +
+      `<div class="sec-title" style="margin:0 0 10px">${title}</div>` +
+      `<div class="co2-row">` +
+        `<div><div class="peak-lbl">${t('avgSnittPerDag')}</div><div class="peak-val">${fmt(avgPerDay)}</div></div>` +
+        `<div><div class="peak-lbl">${t('avgSnitt')}</div><div class="peak-val">${fmt(stats.avgVehicles)}</div></div>` +
+        `<div class="peak-right"><div class="peak-lbl">${t('avgTommaTotal')}</div><div class="peak-val">${fmtI(stats.emptyTrips)}</div></div>` +
+      `</div>` +
+    `</div>`;
+  }
+}
+
 function renderWeek() {
   const container = document.getElementById('sumVeckaContent');
   container.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
   const dates = last7Days();
-  Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
+  Promise.all([
+    Promise.all(dates.map(fetchDayTotal)),
+    Promise.all(dates.map(fetchDayTrips)),
+    Promise.all(dates.map(fetchDayLogsRaw)),
+    Promise.all(dates.map(fetchDayTripTs))
+  ]).then(([totals, trips, allLogs, allTripTs]) => {
     if (summaryTab !== 'Vecka') return;
     const total = totals.reduce((a, b) => a + b, 0);
     const co2 = trips.reduce((a, b) => a + b, 0) * CO2_PER_TRIP;
+    const deptStats = calcDepartureStats(allLogs.flat(), allTripTs.flat());
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
@@ -1584,6 +1692,7 @@ function renderWeek() {
         `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
         co2CompareHtml(co2) +
       `</div>` +
+      deptStatsCardHtml(deptStats, dates.length) +
       dayListHtml(dates, totals, trips) +
       `<div class="period-avg">${t('snittCO2')}: <strong>${(co2 / dates.length).toFixed(1)}</strong> ${t('kgDag')}</div>`;
   });
@@ -1593,13 +1702,19 @@ function renderMonth() {
   const container = document.getElementById('sumManadContent');
   container.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
   const dates = currentMonthDays();
-  Promise.all([Promise.all(dates.map(fetchDayTotal)), Promise.all(dates.map(fetchDayTrips))]).then(([totals, trips]) => {
+  Promise.all([
+    Promise.all(dates.map(fetchDayTotal)),
+    Promise.all(dates.map(fetchDayTrips)),
+    Promise.all(dates.map(fetchDayLogsRaw)),
+    Promise.all(dates.map(fetchDayTripTs))
+  ]).then(([totals, trips, allLogs, allTripTs]) => {
     if (summaryTab !== 'Manad') return;
     const total = totals.reduce((a, b) => a + b, 0);
     const avg = total / dates.length;
     const co2 = trips.reduce((a, b) => a + b, 0) * CO2_PER_TRIP;
     const monthName = new Date().toLocaleDateString(t('locale'), { month: 'long' });
     const monthSub = lang === 'fi' ? `ajoneuvoa tässä kuussa (${monthName})` : `fordon i ${monthName}`;
+    const deptStats = calcDepartureStats(allLogs.flat(), allTripTs.flat());
     container.innerHTML =
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
@@ -1608,6 +1723,7 @@ function renderMonth() {
         `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
         co2CompareHtml(co2) +
       `</div>` +
+      deptStatsCardHtml(deptStats, dates.length) +
       dayListHtml(dates, totals, trips) +
       `<div class="period-avg">${t('snittCO2')}: <strong>${(co2 / dates.length).toFixed(1)}</strong> ${t('kgDag')}</div>`;
   });

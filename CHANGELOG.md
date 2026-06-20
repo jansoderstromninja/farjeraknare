@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.9 – 2026-06-20
+- Ny sektion "Avgångsstatistik" i Summering-vyn på alla tre flikar (Idag, Vecka, Månad)
+- **Idag**: snitt fordon/avgång, max fordon/avgång, antal tomturer, avgångar per timme
+- **Vecka/Månad**: snitt avgångar/dag, snitt fordon/avgång, totalt tomturer
+- Ny hjälpfunktion `calcDepartureStats(logs, tripTs)` kopplar ihop fordonsloggar med avgångstidpunkter via binary-search-liknande findIndex
+- Ny hjälpfunktion `fetchDayLogsRaw(dStr)` hämtar råa `{type, ts, delta}`-poster från Firebase
+- Ny hjälpfunktion `fetchDayTripTs(dStr)` hämtar sorterade avgångstidpunkter från Firebase
+- Statistikkortet visas inte alls om det inte finns några avgångar (tomt = inga rader)
+- Finska översättningar tillagda för alla sju statistiketiketter
+
 ## v2.8 – 2026-06-20
 - GPS-avgångsdetektering: ny konstant `GPS_DEPARTURE_GAP_MS = 5 min` förhindrar att hastighetsvariationer under samma tur triggar flera avgångar
 - Gapet gäller enbart GPS-detektering i Färjeläge – "Kör tom"-knappen och "Ångra avgång" i Testläge påverkas inte
