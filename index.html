@@ -525,6 +525,9 @@ nav {
 .wind-temp { font-size: 11px; color: var(--muted); }
 .wind-dir { font-size: 22px; min-width: 30px; text-align: right; }
 .weather-note { font-size: 11px; color: var(--muted); text-align: center; padding: 6px 0 0; }
+.thunder-banner { background: #450a0a; border: 1px solid #b91c1c; color: #fca5a5; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; font-weight: 700; }
+.thunder-icon { color: #EF4444; font-size: 14px; animation: thunder-blink 1s step-start infinite; }
+@keyframes thunder-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 </style>
 </head>
 <body>
@@ -544,6 +547,7 @@ nav {
     <div class="hdr-date" id="hdrDate"></div>
   </div>
   <div class="hdr-mid">
+    <span id="thunderIcon" class="thunder-icon" style="display:none">⚡</span>
     <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
     <button class="mode-btn" id="modeBtn" onclick="toggleMode()">🧪</button>
   </div>
@@ -639,6 +643,7 @@ nav {
 <!-- WEATHER VIEW -->
 <div class="view" id="vWeather">
   <div class="weather-wrap">
+    <div class="thunder-banner" id="thunderBanner" style="display:none">⚡ Åskvarning – förhöjd risk närmaste timmarna</div>
     <div class="weather-hdr">
       <div class="sec-title" id="weatherTitle">Vindprognos</div>
       <div class="weather-updated" id="weatherUpdated"></div>
@@ -699,7 +704,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -773,6 +778,7 @@ const T = {
     testMode:       'Testläge 🧪',
     windLabel:      'Vind',
     gustLabel:      'Byar',
+    thunderWarning: '⚡ Åskvarning – förhöjd risk närmaste timmarna',
     locale:         'sv-SE',
   },
   fi: {
@@ -830,6 +836,7 @@ const T = {
     testMode:       'Testitila 🧪',
     windLabel:      'Tuuli',
     gustLabel:      'Puuskat',
+    thunderWarning: '⚡ Ukkosvaroitus – kohonnut riski lähitunteina',
     locale:         'fi-FI',
   }
 };
@@ -887,6 +894,7 @@ function applyLang() {
   set('navSummaryLabel',  t('navSummary'));
   set('navWeatherLabel',  t('navWeather'));
   set('weatherTitle',     t('weatherTitle'));
+  set('thunderBanner',    t('thunderWarning'));
   applyMode();
   // Re-sync the current sync status label
   const dot = document.querySelector('#hdrSync .sync-dot');
@@ -1632,6 +1640,22 @@ function tick() {
 let weatherData = null;
 let weatherLastFetch = 0;
 
+function checkThunder(fromIdx) {
+  const cape = weatherData && weatherData.hourly && weatherData.hourly.cape;
+  if (!cape) return false;
+  for (let i = fromIdx; i < fromIdx + 12 && i < cape.length; i++) {
+    if ((cape[i] || 0) >= 500) return true;
+  }
+  return false;
+}
+
+function updateThunderWarning(hasThunder) {
+  const icon   = document.getElementById('thunderIcon');
+  const banner = document.getElementById('thunderBanner');
+  if (icon)   icon.style.display   = hasThunder ? '' : 'none';
+  if (banner) banner.style.display = hasThunder ? 'block' : 'none';
+}
+
 function windDirArrow(deg) {
   const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
   return arrows[(Math.round(deg / 45) + 4) % 8];
@@ -1659,7 +1683,7 @@ async function loadWeather() {
     } catch (_) {}
   }
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,cape&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     weatherData = await resp.json();
@@ -1671,7 +1695,7 @@ async function loadWeather() {
     let idx = times.findIndex(s => s.slice(0, 10) === hDate && s.slice(11, 13) === hHour);
     if (idx < 0) idx = 0;
     let html = '';
-    for (let i = idx; i < idx + 12 && i < times.length; i++) {
+    for (let i = idx; i < idx + 48 && i < times.length; i++) {
       const speed = weatherData.hourly.windspeed_10m[i];
       const gusts = weatherData.hourly.windgusts_10m[i];
       const dir   = weatherData.hourly.winddirection_10m[i];
@@ -1694,9 +1718,11 @@ async function loadWeather() {
     if (updEl) updEl.textContent = `${t('weatherUpdated')} ${now.toLocaleTimeString(t('locale'), { hour: '2-digit', minute: '2-digit' })}`;
     if (!gpsUsed && mode === 'ferry')
       container.insertAdjacentHTML('beforeend', `<div class="weather-note">${t('weatherGpsError')}</div>`);
+    updateThunderWarning(checkThunder(idx));
   } catch (_) {
     container.innerHTML = `<div class="empty">${t('weatherError')}</div>`;
     if (updEl) updEl.textContent = '';
+    updateThunderWarning(false);
   }
 }
 
