@@ -489,6 +489,41 @@ nav {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
 }
+
+/* ── MODE TOGGLE ── */
+.hdr-mid { display: flex; gap: 6px; align-items: center; }
+.mode-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  padding: 3px 7px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sync-mode { font-size: 9px; color: var(--muted); opacity: 0.6; }
+
+/* ── WEATHER VIEW ── */
+.weather-wrap { padding: 14px; }
+.weather-hdr { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.weather-updated { font-size: 11px; color: var(--muted); }
+.wind-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 10px 12px 10px 10px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--border);
+}
+.wind-time { font-size: 14px; font-weight: 700; min-width: 42px; font-variant-numeric: tabular-nums; }
+.wind-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.wind-speed { font-size: 16px; font-weight: 700; }
+.wind-gust { font-size: 11px; color: var(--muted); }
+.wind-dir { font-size: 22px; min-width: 30px; text-align: right; }
+.weather-note { font-size: 11px; color: var(--muted); text-align: center; padding: 6px 0 0; }
 </style>
 </head>
 <body>
@@ -507,10 +542,13 @@ nav {
     <div class="hdr-title" id="hdrTitle">⛴ Fordonsräknare</div>
     <div class="hdr-date" id="hdrDate"></div>
   </div>
-  <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
+  <div class="hdr-mid">
+    <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
+    <button class="mode-btn" id="modeBtn" onclick="toggleMode()">🧪</button>
+  </div>
   <div class="hdr-right">
     <div class="hdr-time" id="hdrTime"></div>
-    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span></div>
+    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span><span class="sync-mode" id="modeLabel">Testläge 🧪</span></div>
   </div>
 </header>
 
@@ -597,6 +635,17 @@ nav {
   </div>
 </div>
 
+<!-- WEATHER VIEW -->
+<div class="view" id="vWeather">
+  <div class="weather-wrap">
+    <div class="weather-hdr">
+      <div class="sec-title" id="weatherTitle">Vindprognos</div>
+      <div class="weather-updated" id="weatherUpdated"></div>
+    </div>
+    <div id="weatherList"><div class="empty">Laddar…</div></div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav>
   <button class="nav-btn active" id="navCount" onclick="goView('Count')">
@@ -610,6 +659,10 @@ nav {
   <button class="nav-btn" id="navSummary" onclick="goView('Summary')">
     <span class="nav-icon">📋</span>
     <span id="navSummaryLabel">Summering</span>
+  </button>
+  <button class="nav-btn" id="navWeather" onclick="goView('Weather')">
+    <span class="nav-icon">🌬️</span>
+    <span id="navWeatherLabel">Väder</span>
   </button>
 </nav>
 
@@ -645,7 +698,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.7";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -655,8 +708,12 @@ const CO2_PER_TRIP    = 8.7;
 const CO2_PER_KM_CAR  = 0.12;  // kg CO2/km, förbränningsmotor
 const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
 const CO2_PER_TRIP_EV = 0.1;   // kg CO2/tur, hypotetisk elfärja (uppskattad)
-const TRIP_GAP_MS     = 2 * 60 * 1000;
-const KORTOM_LOCK_MS  = 2 * 60 * 1000;
+const TRIP_GAP_MS          = 2 * 60 * 1000;
+const KORTOM_LOCK_MS       = 2 * 60 * 1000;
+const MODE_KEY             = 'farjeraknare_mode';
+const WEATHER_FALLBACK_LAT = 60.3333;
+const WEATHER_FALLBACK_LON = 24.3333;
+let mode = localStorage.getItem(MODE_KEY) || 'test';
 
 // ── TRANSLATIONS ──
 const T = {
@@ -706,6 +763,13 @@ const T = {
     ferryPost:      'turer',
     uppskattat:     'uppskattat',
     nästaTur:       'Nästa tur tidigast om',
+    navWeather:     'Väder',
+    weatherTitle:   'Vindprognos',
+    weatherUpdated: 'Uppdaterad',
+    weatherError:   'Väderdata saknas – kontrollera anslutningen.',
+    weatherGpsError:'GPS ej tillgänglig – visar Nummela som fallback.',
+    ferryMode:      'Färjeläge 🛳️',
+    testMode:       'Testläge 🧪',
     locale:         'sv-SE',
   },
   fi: {
@@ -754,6 +818,13 @@ const T = {
     ferryPost:      'ylitystä',
     uppskattat:     'arvio',
     nästaTur:       'Seuraava lähtö aikaisintaan',
+    navWeather:     'Sää',
+    weatherTitle:   'Tuuliennuste',
+    weatherUpdated: 'Päivitetty',
+    weatherError:   'Säätietoja ei voitu hakea – tarkista yhteys.',
+    weatherGpsError:'GPS ei käytettävissä – Nummela varmuuskopiointina.',
+    ferryMode:      'Lauttatila 🛳️',
+    testMode:       'Testitila 🧪',
     locale:         'fi-FI',
   }
 };
@@ -809,6 +880,9 @@ function applyLang() {
   set('navCountLabel',    t('navCount'));
   set('navStatsLabel',    t('navStats'));
   set('navSummaryLabel',  t('navSummary'));
+  set('navWeatherLabel',  t('navWeather'));
+  set('weatherTitle',     t('weatherTitle'));
+  applyMode();
   // Re-sync the current sync status label
   const dot = document.querySelector('#hdrSync .sync-dot');
   if (dot) {
@@ -817,6 +891,20 @@ function applyLang() {
                   dot.classList.contains('error') ? 'error' : 'local';
     setSyncStatus(state);
   }
+}
+
+function toggleMode() {
+  mode = mode === 'ferry' ? 'test' : 'ferry';
+  localStorage.setItem(MODE_KEY, mode);
+  applyMode();
+}
+
+function applyMode() {
+  const isFerry = mode === 'ferry';
+  const mb = document.getElementById('modeBtn');
+  const ml = document.getElementById('modeLabel');
+  if (mb) mb.textContent = isFerry ? '🛳️' : '🧪';
+  if (ml) ml.textContent = isFerry ? t('ferryMode') : t('testMode');
 }
 
 // ── COUNTDOWN ──
@@ -1090,7 +1178,7 @@ function tap(catId, btn) {
 
   const ts = Date.now();
   const lastActivity = lastActivityTs();
-  if (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS) {
+  if (mode === 'ferry' && (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS)) {
     recordDeparture(ts);
     showDepartureBanner();
   }
@@ -1461,7 +1549,7 @@ function renderMonth() {
 }
 
 // ── VIEW SWITCHING ──
-const VIEWS = ['Count', 'Stats', 'Summary'];
+const VIEWS = ['Count', 'Stats', 'Summary', 'Weather'];
 let currentView = 'Count';
 function goView(name) {
   currentView = name;
@@ -1471,6 +1559,7 @@ function goView(name) {
   });
   if (name === 'Stats')   renderStats();
   if (name === 'Summary') goSummaryTab(summaryTab);
+  if (name === 'Weather') renderWeather();
 }
 
 const SUMMARY_TABS = ['Idag', 'Vecka', 'Manad'];
@@ -1518,6 +1607,80 @@ function tick() {
   updateKorTomLock();
 }
 
+// ── WEATHER ──
+let weatherData = null;
+let weatherLastFetch = 0;
+
+function windDirArrow(deg) {
+  const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
+  return arrows[Math.round(deg / 45) % 8];
+}
+
+function windColor(ms) {
+  if (ms < 3)  return '#10B981';
+  if (ms < 6)  return '#F59E0B';
+  if (ms < 9)  return '#F97316';
+  if (ms < 12) return '#EF4444';
+  return '#991B1B';
+}
+
+async function loadWeather() {
+  const container = document.getElementById('weatherList');
+  const updEl = document.getElementById('weatherUpdated');
+  if (!container) return;
+  container.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
+  let lat = WEATHER_FALLBACK_LAT, lon = WEATHER_FALLBACK_LON, gpsUsed = false;
+  if (mode === 'ferry' && navigator.geolocation) {
+    try {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 60000 }));
+      lat = pos.coords.latitude; lon = pos.coords.longitude; gpsUsed = true;
+    } catch (_) {}
+  }
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    weatherData = await resp.json();
+    weatherLastFetch = Date.now();
+    const now = new Date();
+    const locStr = now.toLocaleString('sv-SE', { timeZone: 'Europe/Helsinki' });
+    const hDate = locStr.slice(0, 10), hHour = locStr.slice(11, 13);
+    const times = weatherData.hourly.time;
+    let idx = times.findIndex(s => s.slice(0, 10) === hDate && s.slice(11, 13) === hHour);
+    if (idx < 0) idx = 0;
+    let html = '';
+    for (let i = idx; i < idx + 12 && i < times.length; i++) {
+      const speed = weatherData.hourly.windspeed_10m[i];
+      const gusts = weatherData.hourly.windgusts_10m[i];
+      const dir   = weatherData.hourly.winddirection_10m[i];
+      const color = windColor(speed);
+      const bold  = speed >= 12 ? 'font-weight:800;' : '';
+      html +=
+        `<div class="wind-row" style="border-left:3px solid ${color}">` +
+          `<div class="wind-time">${times[i].slice(11, 16)}</div>` +
+          `<div class="wind-main">` +
+            `<span class="wind-speed" style="color:${color};${bold}">${speed.toFixed(1)} m/s</span>` +
+            `<span class="wind-gust">↑ ${gusts.toFixed(1)} m/s</span>` +
+          `</div>` +
+          `<div class="wind-dir">${windDirArrow(dir)}</div>` +
+        `</div>`;
+    }
+    if (!html) html = `<div class="empty">${t('weatherError')}</div>`;
+    container.innerHTML = html;
+    if (updEl) updEl.textContent = `${t('weatherUpdated')} ${now.toLocaleTimeString(t('locale'), { hour: '2-digit', minute: '2-digit' })}`;
+    if (!gpsUsed && mode === 'ferry')
+      container.insertAdjacentHTML('beforeend', `<div class="weather-note">${t('weatherGpsError')}</div>`);
+  } catch (_) {
+    container.innerHTML = `<div class="empty">${t('weatherError')}</div>`;
+    if (updEl) updEl.textContent = '';
+  }
+}
+
+function renderWeather() {
+  if (!weatherLastFetch || Date.now() - weatherLastFetch > 30 * 60 * 1000) loadWeather();
+}
+
 buildGrid();
 applyLang();
 renderCount();
@@ -1527,6 +1690,7 @@ initFirebase();
 document.getElementById('versionText').textContent = '· v' + APP_VERSION;
 updateCountdown();
 setInterval(updateCountdown, 1000);
+setInterval(() => { weatherLastFetch = 0; if (currentView === 'Weather') loadWeather(); }, 30 * 60 * 1000);
 </script>
 </body>
 </html>
