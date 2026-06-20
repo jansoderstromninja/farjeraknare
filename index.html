@@ -707,7 +707,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.5";
+const APP_VERSION = "2.6";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -930,6 +930,7 @@ function updateCountdown() {
   const bar = document.getElementById('countdownBar');
   const txt = document.getElementById('countdownText');
   if (!bar || !txt) return;
+  if (mode === 'ferry') { bar.style.display = 'none'; return; }
   const last = lastDepartureTs();
   if (!last) { bar.style.display = 'none'; return; }
   const remaining = KORTOM_LOCK_MS - (Date.now() - last);
@@ -1298,6 +1299,7 @@ function lastActivityTs() {
 function updateKorTomLock() {
   const btn = document.getElementById('korTomBtn');
   if (!btn) return;
+  if (mode === 'ferry') { btn.disabled = false; return; }
   const last = lastDepartureTs();
   btn.disabled = !!last && (Date.now() - last < KORTOM_LOCK_MS);
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.6 – 2026-06-20
+- Nedräkningstimer dold i Färjeläge (`updateCountdown` returnerar direkt om `mode === 'ferry'`)
+- "Kör tom"-knappen låses inte längre efter avgång i Färjeläge (`updateKorTomLock` hoppar över låslogiken)
+- I Testläge fungerar timer och knapp-lås precis som tidigare
+- `KORTOM_LOCK_MS`-konstanten behålls men tillämpas bara i Testläge
+
 ## v2.5 – 2026-06-20
 - Dubbel-avgångsregistrering fixad: GPS och fordonstillägg delar nu på samma avgångslogik istället för att köra parallellt
 - I Färjeläge registrerar fordonstillägg (`tap()`) inte längre avgång – GPS är primär källa
