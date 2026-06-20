@@ -523,7 +523,7 @@ nav {
 .wind-speed { font-size: 18px; font-weight: 700; }
 .wind-gust { font-size: 13px; color: var(--muted); }
 .wind-temp { font-size: 13px; color: var(--muted); }
-.wind-dir { font-size: 24px; min-width: 30px; text-align: right; }
+.wind-dir { font-size: 24px; min-width: 30px; display: flex; align-items: center; justify-content: flex-end; }
 .weather-note { font-size: 13px; color: var(--muted); text-align: center; padding: 6px 0 0; }
 .thunder-banner { background: #450a0a; border: 1px solid #b91c1c; color: #fca5a5; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 15px; font-weight: 700; }
 .thunder-banner-yellow { background: #422006; border-color: #ca8a04; color: #fcd34d; }
@@ -709,7 +709,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.9";
+const APP_VERSION = "3.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1883,8 +1883,8 @@ function updateThunderWarning(info) {
 }
 
 function windDirArrow(deg) {
-  const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
-  return arrows[(Math.round(deg / 45) + 4) % 8];
+  const rotation = (deg + 180) % 360;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" style="transform:rotate(${rotation}deg)"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="currentColor"/></svg>`;
 }
 
 function windColor(ms) {

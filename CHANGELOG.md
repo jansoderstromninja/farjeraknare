@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.0 – 2026-06-20
+- Vindriktningspilarna i väderfliken uppgraderade från 8 Unicode-symboler till kontinuerlig SVG-rotation
+- Pilen roteras exakt enligt vindgraden (API-graden + 180° = vindets riktning) utan quantisering till fasta sektorer
+- Stöder i praktiken alla 360 grader – inga fasta 16-sektorsgränser behövs med SVG-rotation
+
 ## v2.9 – 2026-06-20
 - Ny sektion "Avgångsstatistik" i Summering-vyn på alla tre flikar (Idag, Vecka, Månad)
 - **Idag**: snitt fordon/avgång, max fordon/avgång, antal tomturer, avgångar per timme
