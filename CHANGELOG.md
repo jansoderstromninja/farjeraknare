@@ -1,5 +1,16 @@
 # Changelog
 
+## v2.2 – 2026-06-20
+- Alla fontstorlekar ökade proportionerligt för bättre läsbarhet på mobil och surfplatta
+- `--muted`-färgen ljusare (#7a90b0 → #a0b4cc) för bättre kontrast mot mörk bakgrund; `.sync-dot.local` uppdaterad till `var(--muted)`
+- Väderrader (vindstyrka, byar, temperatur, riktning) betydligt större text
+- Åskvarning visar nu *när* risken inträffar (istället för bara ja/nej):
+  - Rödikon + röd banner om åsk­risk inom 6 timmar
+  - Gul ikon + gul banner om risk inom 12 timmar
+  - Tidpunkt visas som "närmaste 2 timmarna", "om ca X timmar" eller "ikväll/imorgon kl HH:00"
+  - Ingen varning om risken är mer än 24 timmar bort
+- Scanning utökad till 24 h (var 12 h)
+
 ## v2.0 – 2026-06-20
 - Utökad väderprognosvy från 12 till 48 timmar
 - Åskvarning baserad på CAPE (Convective Available Potential Energy): om CAPE ≥ 500 J/kg inom närmaste 12 h visas en blinkande ⚡-ikon i headern och en röd varningsbanner i väderfliken
