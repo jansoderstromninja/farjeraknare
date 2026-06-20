@@ -570,6 +570,7 @@ nav {
       <div class="footer-total-num" id="footerTotal">0</div>
     </div>
     <div class="footer-actions">
+      <button class="kortom-btn" id="undoDepartureBtn" onclick="undoLastDeparture()" disabled style="display:none">Ångra avgång</button>
       <button class="kortom-btn" id="korTomBtn" onclick="korTom()">Kör tom</button>
       <button class="undo-btn" id="undoBtn" onclick="undoLast()">Ångra</button>
     </div>
@@ -707,7 +708,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.6";
+const APP_VERSION = "2.7";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -720,6 +721,7 @@ const CO2_PER_TRIP_EV = 0.1;   // kg CO2/avgång, hypotetisk elfärja (uppskatta
 const TRIP_GAP_MS          = 2 * 60 * 1000;
 const KORTOM_LOCK_MS       = 2 * 60 * 1000;
 const GPS_SPEED_THRESHOLD  = 1.0;   // m/s – minsta fart för att GPS ska registrera avgång
+const GPS_WARMUP_MS        = 30000; // ms – GPS lyssnar men registrerar inga avgångar under uppvärmning
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
@@ -773,6 +775,7 @@ const T = {
     ferryPost:      'avgångar',
     uppskattat:     'uppskattat',
     nästaTur:       'Nästa avgång tidigast om',
+    undoAvgang:     'Ångra avgång',
     navWeather:     'Väder',
     weatherTitle:   'Vindprognos',
     weatherUpdated: 'Uppdaterad',
@@ -830,6 +833,7 @@ const T = {
     ferryPost:      'lähtöä',
     uppskattat:     'arvio',
     nästaTur:       'Seuraava lähtö aikaisintaan',
+    undoAvgang:     'Kumoa lähtö',
     navWeather:     'Sää',
     weatherTitle:   'Tuuliennuste',
     weatherUpdated: 'Päivitetty',
@@ -872,6 +876,7 @@ function applyLang() {
   set('langBtn',          lang === 'sv' ? '🇫🇮' : '🇸🇪');
   set('footerTotalLabel', t('footerLabel'));
   set('korTomBtn',        t('korTom'));
+  set('undoDepartureBtn', t('undoAvgang'));
   set('undoBtn',          t('angra'));
   set('statsPerKatTitle', t('perKat'));
   set('statsPerTimmeTitle', t('perTimme'));
@@ -919,10 +924,13 @@ function applyMode() {
   const mb = document.getElementById('modeBtn');
   const ml = document.getElementById('modeLabel');
   const kb = document.getElementById('korTomBtn');
+  const ub = document.getElementById('undoDepartureBtn');
   if (mb) mb.textContent = isFerry ? '🛳️' : '🧪';
   if (ml) ml.textContent = isFerry ? t('ferryMode') : t('testMode');
   if (kb) kb.style.display = isFerry ? 'none' : '';
+  if (ub) ub.style.display = isFerry ? 'none' : '';
   if (isFerry) startGpsWatch(); else stopGpsWatch();
+  updateUndoDeparture();
 }
 
 // ── COUNTDOWN ──
@@ -1025,6 +1033,7 @@ function initFirebase() {
       save(d);
       refreshAll();
       updateKorTomLock();
+      updateUndoDeparture();
     }, () => setSyncStatus('error'));
 
     checkVersion();
@@ -1307,6 +1316,27 @@ function updateKorTomLock() {
 function korTom() {
   recordDeparture(Date.now());
   updateKorTomLock();
+  updateUndoDeparture();
+}
+
+function undoLastDeparture() {
+  const d = load();
+  if (!d.trips.length) return;
+  const last = d.trips[d.trips.length - 1];
+  if (db && last.id && !String(last.id).startsWith('local_')) {
+    db.ref('turer/' + localDate() + '/' + last.id).remove().catch(() => {});
+  }
+  d.trips = d.trips.filter(t => t.id !== last.id);
+  save(d);
+  updateKorTomLock();
+  updateUndoDeparture();
+  renderCount();
+}
+
+function updateUndoDeparture() {
+  const btn = document.getElementById('undoDepartureBtn');
+  if (!btn) return;
+  btn.disabled = load().trips.length === 0;
 }
 
 function undoLast() {
@@ -1643,13 +1673,25 @@ function tick() {
 
 // ── GPS DEPARTURE WATCH ──
 let geoWatchId = null;
+let gpsWarmupUntil = 0;
 
 function startGpsWatch() {
   if (!navigator.geolocation || geoWatchId !== null) return;
+  gpsWarmupUntil = Date.now() + GPS_WARMUP_MS;
+  console.log('[GPS] Färjeläge aktiverat – uppvärmning 30s');
+  const ml = document.getElementById('modeLabel');
+  if (ml) ml.textContent = '🛳️ Stabiliserar…';
+  setTimeout(() => {
+    if (mode === 'ferry') {
+      if (ml) ml.textContent = t('ferryMode');
+      console.log('[GPS] GPS-detektering aktiv');
+    }
+  }, GPS_WARMUP_MS);
   geoWatchId = navigator.geolocation.watchPosition(
     pos => {
       const speed = pos.coords.speed;
       if (speed === null || speed === undefined) return;
+      if (Date.now() < gpsWarmupUntil) return;
       const now = Date.now();
       const last = lastActivityTs();
       if (speed >= GPS_SPEED_THRESHOLD && (!last || now - last >= TRIP_GAP_MS)) {
@@ -1662,14 +1704,14 @@ function startGpsWatch() {
     err => console.warn('[GPS] Fel:', err.message),
     { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
   );
-  console.log('[GPS] watchPosition startad (Färjeläge)');
 }
 
 function stopGpsWatch() {
   if (geoWatchId !== null) {
     navigator.geolocation.clearWatch(geoWatchId);
     geoWatchId = null;
-    console.log('[GPS] watchPosition stoppad (Testläge)');
+    gpsWarmupUntil = 0;
+    console.log('[GPS] Testläge aktiverat');
   }
 }
 

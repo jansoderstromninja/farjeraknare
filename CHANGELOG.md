@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.7 – 2026-06-20
+- Uppvärmningsperiod vid byte till Färjeläge: GPS lyssnar 30 s innan avgångsdetektering aktiveras; headern visar "🛳️ Stabiliserar…" under uppvärmningen och återgår sedan till "Färjeläge 🛳️"
+- Ny konstant `GPS_WARMUP_MS = 30000` bland övriga GPS-konstanter
+- Konsol-logg vid lägesbyte: "Färjeläge aktiverat – uppvärmning 30s" / "GPS-detektering aktiv" / "Testläge aktiverat"
+- Ny knapp "Ångra avgång" i Testläge: tar bort senaste avgången från Firebase och localStorage utan bekräftelsedialog; knappen döljs i Färjeläge och är avaktiverad om inga avgångar finns
+
 ## v2.6 – 2026-06-20
 - Nedräkningstimer dold i Färjeläge (`updateCountdown` returnerar direkt om `mode === 'ferry'`)
 - "Kör tom"-knappen låses inte längre efter avgång i Färjeläge (`updateKorTomLock` hoppar över låslogiken)
