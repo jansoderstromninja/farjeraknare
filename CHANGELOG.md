@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.4 – 2026-06-20
+- Åskvarning visar nu exakt klockslag för den första riskiga timmen: "⚡ Åskrisk kl HH:MM" (rött ≤6h, gult ≤12h)
+- "tur"/"turer" ersatt med "avgång"/"avgångar" i alla användarvänliga strängar (sv); finska: "ylitys/ylitykset" → "lähtö/lähdöt"
+- GPS-avgångsdetektering implementerad i Färjeläge: `navigator.geolocation.watchPosition` startas när Färjeläge aktiveras och stoppas vid byte till Testläge; om farten överstiger 1,5 m/s och senaste aktivitet var ≥ 2 min sedan registreras en avgång automatiskt; debug-meddelanden loggas till konsolen
+
 ## v2.3 – 2026-06-20
 - Fordonsantal per kategori i statistikvyn (`.cat-count`) visas nu i `var(--text)` istället för kategoriernas egna färger; stapeln behåller sin färg
 - Fordonsantal per dag i vecko/månadsvy (`.day-count`) ändrad från blå (#3B82F6) till `var(--text)` för bättre kontrast

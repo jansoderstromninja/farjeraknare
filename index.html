@@ -563,7 +563,7 @@ nav {
 <!-- COUNT VIEW -->
 <div class="view active" id="vCount">
   <div class="btn-grid" id="btnGrid"></div>
-  <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa tur tidigast om</span> <span id="countdownText">5:00</span></div>
+  <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa avgång tidigast om</span> <span id="countdownText">5:00</span></div>
   <div class="count-footer">
     <div>
       <div class="footer-total-label" id="footerTotalLabel">Totalt idag</div>
@@ -614,7 +614,7 @@ nav {
       <div class="co2-card">
         <div class="co2-row">
           <div>
-            <div class="peak-lbl" id="co2LblTurer">Turer idag</div>
+            <div class="peak-lbl" id="co2LblTurer">Avgångar idag</div>
             <div class="peak-val" id="sumTripCount">0</div>
           </div>
           <div class="peak-right">
@@ -707,7 +707,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.3";
+const APP_VERSION = "2.4";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -716,7 +716,7 @@ let lang = localStorage.getItem(LANG_KEY) || 'sv';
 const CO2_PER_TRIP    = 8.7;
 const CO2_PER_KM_CAR  = 0.12;  // kg CO2/km, förbränningsmotor
 const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
-const CO2_PER_TRIP_EV = 0.1;   // kg CO2/tur, hypotetisk elfärja (uppskattad)
+const CO2_PER_TRIP_EV = 0.1;   // kg CO2/avgång, hypotetisk elfärja (uppskattad)
 const TRIP_GAP_MS          = 2 * 60 * 1000;
 const KORTOM_LOCK_MS       = 2 * 60 * 1000;
 const MODE_KEY             = 'farjeraknare_mode';
@@ -744,7 +744,7 @@ const T = {
     snittDag:       'fordon/dag',
     toppimme:       'Toppimme',
     fordonLbl:      'Fordon',
-    turerIdag:      'Turer idag',
+    turerIdag:      'Avgångar idag',
     co2idag:        'CO2 idag',
     aterstall:      'Återställ dagen',
     modalTitle:     'Återställ dagen?',
@@ -769,9 +769,9 @@ const T = {
     fordonEnhet:    'fordon',
     ferryLabel:     '🔋 Elfärja',
     ferryPre:       'samma CO2 räcker till',
-    ferryPost:      'turer',
+    ferryPost:      'avgångar',
     uppskattat:     'uppskattat',
-    nästaTur:       'Nästa tur tidigast om',
+    nästaTur:       'Nästa avgång tidigast om',
     navWeather:     'Väder',
     weatherTitle:   'Vindprognos',
     weatherUpdated: 'Uppdaterad',
@@ -801,7 +801,7 @@ const T = {
     snittDag:       'ajoneuvoa/pv',
     toppimme:       'Huipputunti',
     fordonLbl:      'Ajoneuvot',
-    turerIdag:      'Ylitykset tänään',
+    turerIdag:      'Lähdöt tänään',
     co2idag:        'CO2 tänään',
     aterstall:      'Nollaa päivä',
     modalTitle:     'Nollaa päivä?',
@@ -826,7 +826,7 @@ const T = {
     fordonEnhet:    'ajoneuvoa',
     ferryLabel:     '🔋 Sähkölautta',
     ferryPre:       'sama CO2 riittää',
-    ferryPost:      'ylitystä',
+    ferryPost:      'lähtöä',
     uppskattat:     'arvio',
     nästaTur:       'Seuraava lähtö aikaisintaan',
     navWeather:     'Sää',
@@ -921,6 +921,7 @@ function applyMode() {
   if (mb) mb.textContent = isFerry ? '🛳️' : '🧪';
   if (ml) ml.textContent = isFerry ? t('ferryMode') : t('testMode');
   if (kb) kb.style.display = isFerry ? 'none' : '';
+  if (isFerry) startGpsWatch(); else stopGpsWatch();
 }
 
 // ── COUNTDOWN ──
@@ -1637,6 +1638,38 @@ function tick() {
   updateKorTomLock();
 }
 
+// ── GPS DEPARTURE WATCH ──
+let geoWatchId = null;
+
+function startGpsWatch() {
+  if (!navigator.geolocation || geoWatchId !== null) return;
+  geoWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const speed = pos.coords.speed;
+      if (speed === null || speed === undefined) return;
+      const now = Date.now();
+      const last = lastActivityTs();
+      if (speed > 1.5 && (!last || now - last >= TRIP_GAP_MS)) {
+        console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
+        recordDeparture(now);
+        showDepartureBanner();
+        renderCount();
+      }
+    },
+    err => console.warn('[GPS] Fel:', err.message),
+    { enableHighAccuracy: true, timeout: 30000, maximumAge: 5000 }
+  );
+  console.log('[GPS] watchPosition startad (Färjeläge)');
+}
+
+function stopGpsWatch() {
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+    console.log('[GPS] watchPosition stoppad (Testläge)');
+  }
+}
+
 // ── WEATHER ──
 let weatherData = null;
 let weatherLastFetch = 0;
@@ -1658,17 +1691,9 @@ function thunderInfo(fromIdx) {
   return null;
 }
 
-function thunderMessage(hoursAway, timeStr, isNextDay) {
-  if (lang === 'fi') {
-    if (hoursAway <= 2) return `⚡ Ukkoskriski – lähimmät 2 tunnin sisällä`;
-    if (hoursAway <= 12) return `⚡ Ukkoskriski noin ${hoursAway} tunnin kuluttua`;
-    const day = isNextDay ? 'huomenna' : 'tänään';
-    return `⚡ Ukkoskriski ${day} klo ${timeStr}`;
-  }
-  if (hoursAway <= 2) return `⚡ Åskrisk – närmaste 2 timmarna`;
-  if (hoursAway <= 12) return `⚡ Åskrisk om ca ${hoursAway} timmar`;
-  const day = isNextDay ? 'imorgon' : 'ikväll';
-  return `⚡ Åskrisk ${day} kl ${timeStr}`;
+function thunderMessage(timeStr) {
+  if (lang === 'fi') return `⚡ Ukkoskriski klo ${timeStr}`;
+  return `⚡ Åskrisk kl ${timeStr}`;
 }
 
 function updateThunderWarning(info) {
@@ -1687,7 +1712,7 @@ function updateThunderWarning(info) {
     icon.className = isRed ? 'thunder-icon red' : 'thunder-icon yellow';
   }
   if (banner) {
-    banner.textContent = thunderMessage(hoursAway, timeStr, isNextDay);
+    banner.textContent = thunderMessage(timeStr);
     banner.style.display = 'block';
     banner.className = isRed ? 'thunder-banner' : 'thunder-banner thunder-banner-yellow';
   }
