@@ -707,7 +707,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.4";
+const APP_VERSION = "2.5";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -719,6 +719,7 @@ const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
 const CO2_PER_TRIP_EV = 0.1;   // kg CO2/avgång, hypotetisk elfärja (uppskattad)
 const TRIP_GAP_MS          = 2 * 60 * 1000;
 const KORTOM_LOCK_MS       = 2 * 60 * 1000;
+const GPS_SPEED_THRESHOLD  = 1.0;   // m/s – minsta fart för att GPS ska registrera avgång
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
@@ -1195,7 +1196,7 @@ function tap(catId, btn) {
 
   const ts = Date.now();
   const lastActivity = lastActivityTs();
-  if (mode === 'ferry' && (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS)) {
+  if (mode !== 'ferry' && (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS)) {
     recordDeparture(ts);
     showDepartureBanner();
   }
@@ -1649,7 +1650,7 @@ function startGpsWatch() {
       if (speed === null || speed === undefined) return;
       const now = Date.now();
       const last = lastActivityTs();
-      if (speed > 1.5 && (!last || now - last >= TRIP_GAP_MS)) {
+      if (speed >= GPS_SPEED_THRESHOLD && (!last || now - last >= TRIP_GAP_MS)) {
         console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
         recordDeparture(now);
         showDepartureBanner();

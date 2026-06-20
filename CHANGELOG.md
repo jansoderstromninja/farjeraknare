@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.5 – 2026-06-20
+- Dubbel-avgångsregistrering fixad: GPS och fordonstillägg delar nu på samma avgångslogik istället för att köra parallellt
+- I Färjeläge registrerar fordonstillägg (`tap()`) inte längre avgång – GPS är primär källa
+- I Testläge registrerar fordonstillägg avgång som tidigare (2 min gap-logik)
+- "Kör tom" registrerar alltid avgång manuellt oavsett läge
+- Ny konstant `GPS_SPEED_THRESHOLD = 1.0` m/s (sänkt från 1.5) bland övriga konstanter
+
 ## v2.4 – 2026-06-20
 - Åskvarning visar nu exakt klockslag för den första riskiga timmen: "⚡ Åskrisk kl HH:MM" (rött ≤6h, gult ≤12h)
 - "tur"/"turer" ersatt med "avgång"/"avgångar" i alla användarvänliga strängar (sv); finska: "ylitys/ylitykset" → "lähtö/lähdöt"
