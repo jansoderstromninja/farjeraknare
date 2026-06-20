@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.3 – 2026-06-20
+- Fordonsantal per kategori i statistikvyn (`.cat-count`) visas nu i `var(--text)` istället för kategoriernas egna färger; stapeln behåller sin färg
+- Fordonsantal per dag i vecko/månadsvy (`.day-count`) ändrad från blå (#3B82F6) till `var(--text)` för bättre kontrast
+- CO2-värde per dag (`.day-co2`) explicit satt till #a0b4cc (ljusare muted)
+- Toppimme och fordonsantal i summering (`.peak-val`): `font-weight` höjd till 800, explicit `color: var(--text)`
+- Stor totalsiffra (`.total-big`): explicit `color: var(--text)` för att förhindra oavsiktlig opacity-arv
+
 ## v2.2 – 2026-06-20
 - Alla fontstorlekar ökade proportionerligt för bättre läsbarhet på mobil och surfplatta
 - `--muted`-färgen ljusare (#7a90b0 → #a0b4cc) för bättre kontrast mot mörk bakgrund; `.sync-dot.local` uppdaterad till `var(--muted)`

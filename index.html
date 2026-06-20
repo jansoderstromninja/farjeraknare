@@ -267,7 +267,7 @@ body.lang-fi .v-btn-label-fi {
   text-align: center;
   margin-bottom: 10px;
 }
-.total-big { font-size: 72px; font-weight: 800; letter-spacing: -3px; line-height: 1; }
+.total-big { font-size: 72px; font-weight: 800; letter-spacing: -3px; line-height: 1; color: var(--text); }
 .total-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
 .total-avg { font-size: 14px; color: var(--muted); margin-top: 4px; }
 .total-avg strong { color: var(--text); font-weight: 700; }
@@ -281,7 +281,7 @@ body.lang-fi .v-btn-label-fi {
   align-items: center;
 }
 .peak-lbl { font-size: 13px; color: var(--muted); margin-bottom: 3px; }
-.peak-val { font-size: 16px; font-weight: 700; }
+.peak-val { font-size: 16px; font-weight: 800; color: var(--text); }
 .peak-right { text-align: right; }
 .co2-card {
   background: var(--surface);
@@ -326,8 +326,8 @@ body.lang-fi .v-btn-label-fi {
   padding: 10px 12px;
 }
 .day-date  { flex: 1; font-size: 14px; }
-.day-count { font-size: 16px; font-weight: 800; color: #3B82F6; }
-.day-co2   { font-size: 13px; color: var(--muted); min-width: 56px; text-align: right; }
+.day-count { font-size: 16px; font-weight: 800; color: var(--text); }
+.day-co2   { font-size: 13px; color: #a0b4cc; min-width: 56px; text-align: right; }
 
 /* ── EMPTY STATE ── */
 .empty {
@@ -707,7 +707,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1359,7 +1359,7 @@ function renderStats() {
         `<span class="cat-emoji">${cat.emoji}</span>` +
         `<span class="cat-name">${catName(cat)}</span>` +
         `<div class="cat-bar-bg"><div class="cat-bar" style="width:${bw}%;background:${cat.color}"></div></div>` +
-        `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
+        `<span class="cat-count">${n}</span>` +
       `</div>`;
   });
 
@@ -1463,7 +1463,7 @@ function renderSummary() {
       `<div class="cat-row">` +
         `<span class="cat-emoji">${cat.emoji}</span>` +
         `<span class="cat-name">${catName(cat)}</span>` +
-        `<span class="cat-count" style="color:${cat.color}">${n}</span>` +
+        `<span class="cat-count">${n}</span>` +
       `</div>`;
   });
 
