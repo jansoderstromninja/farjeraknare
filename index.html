@@ -522,6 +522,7 @@ nav {
 .wind-main { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .wind-speed { font-size: 16px; font-weight: 700; }
 .wind-gust { font-size: 11px; color: var(--muted); }
+.wind-temp { font-size: 11px; color: var(--muted); }
 .wind-dir { font-size: 22px; min-width: 30px; text-align: right; }
 .weather-note { font-size: 11px; color: var(--muted); text-align: center; padding: 6px 0 0; }
 </style>
@@ -698,7 +699,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -770,6 +771,8 @@ const T = {
     weatherGpsError:'GPS ej tillgänglig – visar Nummela som fallback.',
     ferryMode:      'Färjeläge 🛳️',
     testMode:       'Testläge 🧪',
+    windLabel:      'Vind',
+    gustLabel:      'Byar',
     locale:         'sv-SE',
   },
   fi: {
@@ -825,6 +828,8 @@ const T = {
     weatherGpsError:'GPS ei käytettävissä – Nummela varmuuskopiointina.',
     ferryMode:      'Lauttatila 🛳️',
     testMode:       'Testitila 🧪',
+    windLabel:      'Tuuli',
+    gustLabel:      'Puuskat',
     locale:         'fi-FI',
   }
 };
@@ -1629,7 +1634,7 @@ let weatherLastFetch = 0;
 
 function windDirArrow(deg) {
   const arrows = ['↑','↗','→','↘','↓','↙','←','↖'];
-  return arrows[Math.round(deg / 45) % 8];
+  return arrows[(Math.round(deg / 45) + 4) % 8];
 }
 
 function windColor(ms) {
@@ -1654,7 +1659,7 @@ async function loadWeather() {
     } catch (_) {}
   }
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     weatherData = await resp.json();
@@ -1670,14 +1675,16 @@ async function loadWeather() {
       const speed = weatherData.hourly.windspeed_10m[i];
       const gusts = weatherData.hourly.windgusts_10m[i];
       const dir   = weatherData.hourly.winddirection_10m[i];
+      const temp  = weatherData.hourly.temperature_2m[i];
       const color = windColor(speed);
       const bold  = speed >= 12 ? 'font-weight:800;' : '';
       html +=
         `<div class="wind-row" style="border-left:3px solid ${color}">` +
           `<div class="wind-time">${times[i].slice(11, 16)}</div>` +
           `<div class="wind-main">` +
-            `<span class="wind-speed" style="color:${color};${bold}">${speed.toFixed(1)} m/s</span>` +
-            `<span class="wind-gust">↑ ${gusts.toFixed(1)} m/s</span>` +
+            `<span class="wind-speed" style="color:${color};${bold}">${t('windLabel')}: ${speed.toFixed(1)} m/s</span>` +
+            `<span class="wind-gust">${t('gustLabel')}: ${gusts.toFixed(1)} m/s</span>` +
+            `<span class="wind-temp">🌡️ ${temp.toFixed(1)}°C</span>` +
           `</div>` +
           `<div class="wind-dir">${windDirArrow(dir)}</div>` +
         `</div>`;
