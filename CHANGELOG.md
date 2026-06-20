@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.8 – 2026-06-20
+- GPS-avgångsdetektering: ny konstant `GPS_DEPARTURE_GAP_MS = 5 min` förhindrar att hastighetsvariationer under samma tur triggar flera avgångar
+- Gapet gäller enbart GPS-detektering i Färjeläge – "Kör tom"-knappen och "Ångra avgång" i Testläge påverkas inte
+
 ## v2.7 – 2026-06-20
 - Uppvärmningsperiod vid byte till Färjeläge: GPS lyssnar 30 s innan avgångsdetektering aktiveras; headern visar "🛳️ Stabiliserar…" under uppvärmningen och återgår sedan till "Färjeläge 🛳️"
 - Ny konstant `GPS_WARMUP_MS = 30000` bland övriga GPS-konstanter
