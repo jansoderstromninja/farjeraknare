@@ -698,7 +698,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "1.7";
+const APP_VERSION = "1.8";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -903,8 +903,10 @@ function applyMode() {
   const isFerry = mode === 'ferry';
   const mb = document.getElementById('modeBtn');
   const ml = document.getElementById('modeLabel');
+  const kb = document.getElementById('korTomBtn');
   if (mb) mb.textContent = isFerry ? '🛳️' : '🧪';
   if (ml) ml.textContent = isFerry ? t('ferryMode') : t('testMode');
+  if (kb) kb.style.display = isFerry ? 'none' : '';
 }
 
 // ── COUNTDOWN ──
@@ -1301,13 +1303,27 @@ function undoLast() {
   renderCount();
 }
 
+function tripCounts() {
+  const lastTs = lastDepartureTs();
+  if (!lastTs) return null;
+  const d = load();
+  const c = {};
+  CATS.forEach(cat => c[cat.id] = 0);
+  d.logs.filter(l => l.ts >= lastTs).forEach(l => {
+    if (c[l.type] !== undefined) c[l.type] += (l.delta || 1);
+  });
+  CATS.forEach(cat => { c[cat.id] = Math.max(0, c[cat.id]); });
+  return c;
+}
+
 // ── RENDER: COUNT VIEW ──
 function renderCount() {
   const c = counts();
   const total = Object.values(c).reduce((a, b) => a + b, 0);
+  const badges = tripCounts() || c;
   CATS.forEach(cat => {
     const el = document.getElementById('b_' + cat.id);
-    if (el) el.textContent = c[cat.id];
+    if (el) el.textContent = badges[cat.id];
   });
   document.getElementById('footerTotal').textContent = total;
   document.getElementById('undoBtn').disabled = (load().logs.length === 0);
