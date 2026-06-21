@@ -185,7 +185,8 @@ body.lang-fi .v-btn-label-fi {
   margin: 0 12px 8px;
   background: var(--surface);
   border-radius: 12px;
-  overflow: hidden;
+  max-height: 320px;
+  overflow-y: auto;
 }
 .dep-row {
   display: flex;
@@ -765,7 +766,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.8";
+const APP_VERSION = "3.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1456,20 +1457,28 @@ function korTom() {
   updateUndoDeparture();
 }
 
-function undoLastDeparture() {
+function deleteDeparture(tripId) {
   const d = load();
-  if (!d.trips.length) return;
-  const last = d.trips[d.trips.length - 1];
-  if (db && last.id && !String(last.id).startsWith('local_')) {
-    db.ref('turer/' + localDate() + '/' + last.id).remove().catch(() => {});
+  const trip = d.trips.find(t => t.id === tripId);
+  if (!trip) return;
+  if (db && tripId && !String(tripId).startsWith('local_')) {
+    db.ref('turer/' + localDate() + '/' + tripId).remove().catch(() => {});
   }
-  d.trips = d.trips.filter(t => t.id !== last.id);
+  d.trips = d.trips.filter(t => t.id !== tripId);
   save(d);
-  lastDepartureFbKey  = null;
-  lastDepartureFbDate = null;
+  if (lastDepartureFbKey === tripId) {
+    lastDepartureFbKey  = null;
+    lastDepartureFbDate = null;
+  }
   updateKorTomLock();
   updateUndoDeparture();
   renderCount();
+}
+
+function undoLastDeparture() {
+  const d = load();
+  if (!d.trips.length) return;
+  deleteDeparture(d.trips[d.trips.length - 1].id);
 }
 
 function updateUndoDeparture() {
@@ -1973,12 +1982,12 @@ function renderDepartureLog() {
     return;
   }
   const d = load();
-  const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 5);
+  const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 10);
   if (!trips.length) { el.style.display = 'none'; return; }
 
   const nameOf = k => (bridgeData.namn[k]) || (k === 'a' ? t('bryggeADefault') : t('bryggeBDefault'));
 
-  const rows = trips.map((trip, idx) => {
+  const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const dirStr = (trip.from && trip.to) ? `${nameOf(trip.from)} → ${nameOf(trip.to)}` : '';
     const veh = d.logs.filter(l => (l.delta || 1) > 0 && Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS).length;
@@ -1986,8 +1995,7 @@ function renderDepartureLog() {
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
     const speedStr = trip.avgSpeed != null ? `${trip.avgSpeed.toFixed(1)} kn` : '';
-    const undoBtn = idx === 0 ? `<button class="dep-undo" onclick="undoLastDeparture()" title="${t('undoAvgang')}">✕</button>` : '';
-    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><span class="dep-speed">${speedStr}</span>${undoBtn}</div>`;
+    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><span class="dep-speed">${speedStr}</span><button class="dep-undo" onclick="deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
   }).join('');
 
   el.innerHTML = rows;
@@ -2056,12 +2064,11 @@ function startGpsWatch() {
         lastGpsDepartureTs = now;
         if (db && lastDepartureFbKey && tripSpeedSamples.length) {
           const moving = tripSpeedSamples.filter(s => s >= GPS_SPEED_THRESHOLD);
-          if (moving.length) {
-            const avg = moving.reduce((a, b) => a + b, 0) / moving.length;
-            db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
-              .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
-              .catch(() => {});
-          }
+          const src = moving.length ? moving : tripSpeedSamples;
+          const avg = src.reduce((a, b) => a + b, 0) / src.length;
+          db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
+            .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
+            .catch(() => {});
         }
         tripSpeedSamples = [];
         console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');

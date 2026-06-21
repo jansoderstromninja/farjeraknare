@@ -1,5 +1,11 @@
 # Changelog
 
+## v3.9 – 2026-06-21
+- Avgångsloggen visar nu de 10 senaste avgångarna (tidigare 5); loggen scrollar vertikalt om den inte ryms på skärmen (`max-height: 320px; overflow-y: auto`)
+- Varje rad i avgångsloggen har en ✕-knapp som tar bort just den avgången från Firebase och lokalt – inte bara senaste; ny funktion `deleteDeparture(tripId)` hanterar borttagning av godtycklig avgång
+- `undoLastDeparture()` använder nu `deleteDeparture()` internt för att undvika kodduplicering
+- Bugg fixad: snitthastighet skrevs inte för tomturer om inga samplar översteg GPS_SPEED_THRESHOLD; åtgärd: faller tillbaka på alla samplar (inte bara "rörliga") om inga rörliga samplar finns – avgångar utan fordon får alltid snitthastighet skriven till Firebase om GPS-data finns
+
 ## v3.8 – 2026-06-21
 - Hastighetsindikatorn flyttad från hdr-sync till hdr-mid (centrerat i headern, mellan språkflaggan och lägesikonen)
 - Stor siffra: font-size 30px, font-weight 800, tabular-nums
