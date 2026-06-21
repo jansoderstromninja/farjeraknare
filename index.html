@@ -755,7 +755,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.3";
+const APP_VERSION = "3.4";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1908,7 +1908,7 @@ function savePositionAndCluster(lat, lng, ts) {
   db.ref('bryggor/positioner').once('value').then(snap => {
     const positions = [];
     snap.forEach(ch => { const v = ch.val(); positions.push({ lat: v.lat, lng: v.lng }); });
-    if (positions.length >= 3) {
+    if (positions.length >= 6) {
       const centrum = kMeans2(positions);
       if (centrum) {
         bridgeData.centrum = centrum;
