@@ -709,7 +709,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.1";
+const APP_VERSION = "3.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1283,20 +1283,14 @@ function removeOne(catId, btn) {
 
 // ── TRIPS (turer) & CO2 ──
 function recordDeparture(ts) {
-  const d = load();
   if (db) {
+    // tripsRef.on('value') is the single source of truth for d.trips.
+    // Firebase fires the listener for its own local cache immediately (even offline),
+    // so no optimistic push needed — and no risk of accumulated duplicates.
     const ref = db.ref('turer/' + localDate()).push();
-    d.trips.push({ id: ref.key, ts });
-    save(d);
-    ref.set({ ts }).catch(() => {
-      // Server rejected the write — undo the optimistic local entry
-      const cur = load();
-      cur.trips = cur.trips.filter(t => t.id !== ref.key);
-      save(cur);
-      updateKorTomLock();
-      setSyncStatus('error');
-    });
+    ref.set({ ts }).catch(() => setSyncStatus('error'));
   } else {
+    const d = load();
     d.trips.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts });
     save(d);
   }

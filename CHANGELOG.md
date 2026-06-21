@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.2 – 2026-06-21
+- Bugg fixad: avgångar dubbelräknades (Firebase visade 5, appen visade 10)
+- Rotorsak: `recordDeparture()` skapade en optimistisk lokal kopia (`d.trips.push()`) innan Firebase-lyssnaren hunnit ersätta localStorage, vilket ledde till att lokal och Firebase-data ackumulerades i stället för att den ena ersatte den andra
+- Lösning: `recordDeparture()` skriver nu bara till Firebase (`ref.set({ts})`); `tripsRef.on('value')`-lyssnaren är ensam källa för `d.trips` i localStorage (den ersätter alltid – `d.trips = trips`, aldrig push)
+- Firebase SDK:n triggar lyssnaren för sin lokala cache omedelbart, även offline, så ingen optimistisk lokal skrivning behövs
+- Offline-läget (`!db`) behåller lokal push som fallback
+
 ## v3.1 – 2026-06-21
 - Bugg fixad: fordonsräkningen nollställdes inte vid midnatt eftersom `logsRef` pekade kvar på gårdagens Firebase-sökväg
 - Ny funktion `attachListeners()` extraherad från `initFirebase()` för att kunna återanvändas vid datumbyte
