@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.6 – 2026-06-21
+- Realtidshastighet i headern: visar aktuell fart i knop bredvid GPS-noggrannhetsindikatorn (`3.2 kn`); uppdateras vid varje GPS-callback; visar `0.0 kn` vid stillastående; döljs tillsammans med noggrannhetsindikatorn när GPS är inaktiv eller Testläge är aktivt
+- Separator `·` mellan noggrannhets- och hastighetsvisning i headern
+- Snitthastighet per tur: hastighetssamplingar samlas efter varje avgång; vid nästa avgång beräknas snitt för rörliga samplar (fart ≥ GPS_SPEED_THRESHOLD); snitthastigheten sparas som `avgSpeed` i Firebase under `turer/DATUM/PUSHKEY` via `.update()`
+- Avgångsloggen visar nu hastigheten per rad: `09:39  Utö → Pettu  2 fordon  2.8 kn`; tomturer och avgångar utan hastighetsdata lämnar hastighetsfältet tomt
+- `recordDeparture` fångar nu Firebase push-nyckeln och sparar den i `lastDepartureFbKey`/`lastDepartureFbDate` för uppdatering vid nästa avgång
+
 ## v3.5 – 2026-06-21
 - GPS-noggrannhetsindikator i headern (bredvid synkpricken): färgad prick + siffra i meter
 - Grön < 10 m, gul 10–30 m, röd > 30 m; uppdateras vid varje GPS-callback

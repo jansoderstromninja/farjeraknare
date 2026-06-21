@@ -60,6 +60,7 @@ header {
 .gps-dot.good { background: #10B981; }
 .gps-dot.ok   { background: #F59E0B; }
 .gps-dot.poor { background: #EF4444; }
+.gps-speed-sep { color: var(--muted); margin: 0 2px; }
 
 /* Language toggle */
 .lang-btn {
@@ -198,6 +199,7 @@ body.lang-fi .v-btn-label-fi {
 .dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 38px; flex-shrink: 0; }
 .dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dep-count { color: var(--muted); text-align: right; min-width: 56px; flex-shrink: 0; }
+.dep-speed { color: var(--muted); text-align: right; min-width: 44px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .dep-empty { color: #EF4444; }
 /* Bridge naming */
 #bridgeNamn {
@@ -601,7 +603,7 @@ nav {
   </div>
   <div class="hdr-right">
     <div class="hdr-time" id="hdrTime"></div>
-    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span><span class="sync-mode" id="modeLabel">Testläge 🧪</span><span class="gps-acc" id="gpsAccuracy"><span class="gps-dot" id="gpsDot"></span><span id="gpsText"></span></span></div>
+    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span><span class="sync-mode" id="modeLabel">Testläge 🧪</span><span class="gps-acc" id="gpsAccuracy"><span class="gps-dot" id="gpsDot"></span><span id="gpsText"></span><span class="gps-speed-sep">·</span><span id="gpsSpeed"></span></span></div>
   </div>
 </header>
 
@@ -760,7 +762,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.5";
+const APP_VERSION = "3.6";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1091,6 +1093,7 @@ function attachListeners() {
       const trip = { id: ch.key, ts: v.ts };
       if (v.lat !== undefined) { trip.lat = v.lat; trip.lng = v.lng; }
       if (v.from !== undefined) { trip.from = v.from; trip.to = v.to; }
+      if (v.avgSpeed !== undefined) { trip.avgSpeed = v.avgSpeed; }
       trips.push(trip);
     });
     trips.sort((a, b) => a.ts - b.ts);
@@ -1350,6 +1353,7 @@ function removeOne(catId, btn) {
 // ── TRIPS (turer) & CO2 ──
 function recordDeparture(ts, lat, lng) {
   if (db) {
+    const date = localDate();
     const data = { ts };
     if (lat !== undefined) {
       data.lat = lat;
@@ -1357,7 +1361,10 @@ function recordDeparture(ts, lat, lng) {
       const dir = getDirection(lat, lng);
       if (dir) { data.from = dir.from; data.to = dir.to; }
     }
-    db.ref('turer/' + localDate()).push(data).catch(() => setSyncStatus('error'));
+    const ref = db.ref('turer/' + date).push(data);
+    ref.catch(() => setSyncStatus('error'));
+    lastDepartureFbKey  = ref.key;
+    lastDepartureFbDate = date;
     if (lat !== undefined) savePositionAndCluster(lat, lng, ts);
   } else {
     const d = load();
@@ -1971,7 +1978,8 @@ function renderDepartureLog() {
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
-    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span></div>`;
+    const speedStr = trip.avgSpeed != null ? `${trip.avgSpeed.toFixed(1)} kn` : '';
+    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><span class="dep-speed">${speedStr}</span></div>`;
   }).join('');
 
   el.innerHTML = rows;
@@ -1979,14 +1987,16 @@ function renderDepartureLog() {
   if (nb) nb.style.display = 'flex';
 }
 
-function updateGpsAccuracy(accuracy) {
+function updateGpsAccuracy(accuracy, speed) {
   const wrapper = document.getElementById('gpsAccuracy');
   const dot     = document.getElementById('gpsDot');
   const txt     = document.getElementById('gpsText');
+  const spd     = document.getElementById('gpsSpeed');
   if (!wrapper) return;
   wrapper.style.display = 'flex';
   txt.textContent = Math.round(accuracy) + 'm';
   dot.className = 'gps-dot ' + (accuracy < 10 ? 'good' : accuracy <= 30 ? 'ok' : 'poor');
+  if (spd) spd.textContent = ((speed || 0) * 1.94384).toFixed(1) + ' kn';
 }
 
 function hideGpsAccuracy() {
@@ -1998,6 +2008,9 @@ function hideGpsAccuracy() {
 let geoWatchId = null;
 let gpsWarmupUntil = 0;
 let lastGpsDepartureTs = 0;
+let tripSpeedSamples  = [];
+let lastDepartureFbKey  = null;
+let lastDepartureFbDate = null;
 
 function startGpsWatch() {
   if (!navigator.geolocation || geoWatchId !== null) return;
@@ -2015,11 +2028,22 @@ function startGpsWatch() {
     pos => {
       const speed = pos.coords.speed;
       if (speed === null || speed === undefined) return;
-      updateGpsAccuracy(pos.coords.accuracy);
+      updateGpsAccuracy(pos.coords.accuracy, speed);
       if (Date.now() < gpsWarmupUntil) return;
+      tripSpeedSamples.push(speed);
       const now = Date.now();
       if (speed >= GPS_SPEED_THRESHOLD && (now - lastGpsDepartureTs >= GPS_DEPARTURE_GAP_MS)) {
         lastGpsDepartureTs = now;
+        if (db && lastDepartureFbKey && tripSpeedSamples.length) {
+          const moving = tripSpeedSamples.filter(s => s >= GPS_SPEED_THRESHOLD);
+          if (moving.length) {
+            const avg = moving.reduce((a, b) => a + b, 0) / moving.length;
+            db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
+              .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
+              .catch(() => {});
+          }
+        }
+        tripSpeedSamples = [];
         console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
         recordDeparture(now, pos.coords.latitude, pos.coords.longitude);
         showDepartureBanner();
@@ -2037,6 +2061,9 @@ function stopGpsWatch() {
     geoWatchId = null;
     gpsWarmupUntil = 0;
     lastGpsDepartureTs = 0;
+    tripSpeedSamples  = [];
+    lastDepartureFbKey  = null;
+    lastDepartureFbDate = null;
     console.log('[GPS] Testläge aktiverat');
   }
   hideGpsAccuracy();
