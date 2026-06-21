@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.1 – 2026-06-21
+- Bugg fixad: fordonsräkningen nollställdes inte vid midnatt eftersom `logsRef` pekade kvar på gårdagens Firebase-sökväg
+- Ny funktion `attachListeners()` extraherad från `initFirebase()` för att kunna återanvändas vid datumbyte
+- Ny funktion `checkDateRollover()`: om `localDate()` skiljer sig från `currentRefDate` lyfts lyssnarena av gamla sökvägen och kopplas om till dagens sökväg
+- `checkDateRollover()` anropas i `tap()`, `removeOne()` och `undoLast()` – precis innan `logsRef` används för skrivning
+- `tripsRef` fungerade redan korrekt (avgångar skrevs direkt via `db.ref('turer/' + localDate())`) – nu är `logsRef` konsekvent
+
 ## v3.0 – 2026-06-20
 - Vindriktningspilarna i väderfliken uppgraderade från 8 Unicode-symboler till kontinuerlig SVG-rotation
 - Pilen roteras exakt enligt vindgraden (API-graden + 180° = vindets riktning) utan quantisering till fasta sektorer

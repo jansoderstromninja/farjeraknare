@@ -709,7 +709,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.0";
+const APP_VERSION = "3.1";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -999,7 +999,7 @@ const firebaseConfig = {
   databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
-let db = null, logsRef = null, tripsRef = null;
+let db = null, logsRef = null, tripsRef = null, currentRefDate = null;
 
 function setSyncStatus(state) {
   const dot = document.querySelector('#hdrSync .sync-dot');
@@ -1009,13 +1009,56 @@ function setSyncStatus(state) {
   txt.textContent = { online: t('syncOnline'), connecting: t('syncConnecting'), error: t('syncError'), local: t('syncLocal') }[state] || t('syncLocal');
 }
 
+function attachListeners() {
+  logsRef.on('value', snap => {
+    const logs = [];
+    snap.forEach(ch => {
+      const v = ch.val();
+      logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta });
+    });
+    logs.sort((a, b) => a.ts - b.ts);
+    const d = load();
+    d.logs = logs;
+    save(d);
+    refreshAll();
+  }, () => setSyncStatus('error'));
+
+  tripsRef.on('value', snap => {
+    const trips = [];
+    snap.forEach(ch => {
+      const v = ch.val();
+      trips.push({ id: ch.key, ts: v.ts });
+    });
+    trips.sort((a, b) => a.ts - b.ts);
+    const d = load();
+    d.trips = trips;
+    save(d);
+    refreshAll();
+    updateKorTomLock();
+    updateUndoDeparture();
+  }, () => setSyncStatus('error'));
+}
+
+function checkDateRollover() {
+  if (!db || !currentRefDate) return;
+  const today = localDate();
+  if (currentRefDate === today) return;
+  logsRef.off();
+  tripsRef.off();
+  currentRefDate = today;
+  logsRef  = db.ref('days/' + today + '/logs');
+  tripsRef = db.ref('turer/' + today);
+  attachListeners();
+}
+
 function initFirebase() {
   if (typeof firebase === 'undefined') { setSyncStatus('local'); return; }
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
-    logsRef = db.ref('days/' + localDate() + '/logs');
-    tripsRef = db.ref('turer/' + localDate());
+    currentRefDate = localDate();
+    logsRef  = db.ref('days/' + currentRefDate + '/logs');
+    tripsRef = db.ref('turer/' + currentRefDate);
     setSyncStatus('connecting');
 
     // Connection state
@@ -1023,38 +1066,10 @@ function initFirebase() {
       setSyncStatus(s.val() === true ? 'online' : 'connecting');
     });
 
-    // Live data: rebuild local cache from server (source of truth) and re-render
-    logsRef.on('value', snap => {
-      const logs = [];
-      snap.forEach(ch => {
-        const v = ch.val();
-        logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta });
-      });
-      logs.sort((a, b) => a.ts - b.ts);
-      const d = load();
-      d.logs = logs;
-      save(d);
-      refreshAll();
-    }, () => setSyncStatus('error'));
-
-    tripsRef.on('value', snap => {
-      const trips = [];
-      snap.forEach(ch => {
-        const v = ch.val();
-        trips.push({ id: ch.key, ts: v.ts });
-      });
-      trips.sort((a, b) => a.ts - b.ts);
-      const d = load();
-      d.trips = trips;
-      save(d);
-      refreshAll();
-      updateKorTomLock();
-      updateUndoDeparture();
-    }, () => setSyncStatus('error'));
-
+    attachListeners();
     checkVersion();
   } catch (e) {
-    db = null; logsRef = null; tripsRef = null;
+    db = null; logsRef = null; tripsRef = null; currentRefDate = null;
     setSyncStatus('local');
   }
 }
@@ -1220,6 +1235,7 @@ function tap(catId, btn) {
   void btn.offsetWidth;
   btn.classList.add('flash');
 
+  checkDateRollover();
   const ts = Date.now();
   const lastActivity = lastActivityTs();
   if (mode !== 'ferry' && (!lastActivity || (ts - lastActivity) >= TRIP_GAP_MS)) {
@@ -1250,6 +1266,7 @@ function removeOne(catId, btn) {
   void btn.offsetWidth;
   btn.classList.add('flash-remove');
 
+  checkDateRollover();
   const ts = Date.now();
   const d = load();
   if (db && logsRef) {
@@ -1384,6 +1401,7 @@ function updateUndoDeparture() {
 }
 
 function undoLast() {
+  checkDateRollover();
   const d = load();
   if (!d.logs.length) return;
   const last = d.logs[d.logs.length - 1];
