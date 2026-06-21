@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.3 – 2026-06-21
+- **Avgångsfönster ±3 min**: `TRIP_VEHICLE_WINDOW_MS = 3 min`; fordon kopplas till närmaste avgång inom ±3 min (inte bara strikt före)
+- **Brygginlärning via k-means (k=2)**: GPS-position sparas till Firebase `bryggor/positioner/` vid varje GPS-detekterad avgång; efter 3+ positioner klustreras de automatiskt i Brygga A och Brygga B; klustercentrum sparas i `bryggor/centrum/`
+- **Riktning per avgång**: avgångsposter i Firebase `turer/DATUM/` får `lat`, `lng`, `from` och `to`; riktning beräknas mot närmaste klustercenter vid avgångstidpunkten
+- **Namngivning av bryggor**: två textfält i Räkna-vyn (synliga i Färjeläge) ger `Brygga A ↔ Brygga B`; sparas i Firebase `bryggor/namn/`; stöder t.ex. "Pettu" och "Utö"
+- **Avgångslogg**: de 5 senaste avgångarna visas ovanför footern i Räkna-vyn (bara i Färjeläge); varje rad: `HH:MM  Från → Till  N fordon`; tomturer markeras i rött; uppdateras live via Firebase-lyssnaren
+- OBS: lägg till `bryggor` i Firebase Realtime Database-reglerna med `.read: true, .write: true`
+
 ## v3.2 – 2026-06-21
 - Bugg fixad: avgångar dubbelräknades (Firebase visade 5, appen visade 10)
 - Rotorsak: `recordDeparture()` skapade en optimistisk lokal kopia (`d.trips.push()`) innan Firebase-lyssnaren hunnit ersätta localStorage, vilket ledde till att lokal och Firebase-data ackumulerades i stället för att den ena ersatte den andra

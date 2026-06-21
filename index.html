@@ -174,6 +174,46 @@ body.lang-fi .v-btn-label-fi {
   100% { opacity: 0; }
 }
 
+/* Departure log */
+#departureLog {
+  margin: 0 12px 8px;
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.dep-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.dep-row:last-child { border-bottom: none; }
+.dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 38px; flex-shrink: 0; }
+.dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dep-count { color: var(--muted); text-align: right; min-width: 56px; flex-shrink: 0; }
+.dep-empty { color: #EF4444; }
+/* Bridge naming */
+#bridgeNamn {
+  margin: 0 12px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.brygga-input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 5px 8px;
+  min-width: 0;
+}
+.brygga-input:focus { outline: none; border-color: #60A5FA; }
 /* Footer bar */
 .count-footer {
   flex-shrink: 0;
@@ -564,6 +604,12 @@ nav {
 <div class="view active" id="vCount">
   <div class="btn-grid" id="btnGrid"></div>
   <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa avgång tidigast om</span> <span id="countdownText">5:00</span></div>
+  <div id="departureLog" style="display:none"></div>
+  <div id="bridgeNamn" style="display:none">
+    <input class="brygga-input" id="bryggeANamn" type="text" placeholder="Brygga A" onchange="saveBridgeName('a',this.value)">
+    <span>↔</span>
+    <input class="brygga-input" id="bryggeBNamn" type="text" placeholder="Brygga B" onchange="saveBridgeName('b',this.value)">
+  </div>
   <div class="count-footer">
     <div>
       <div class="footer-total-label" id="footerTotalLabel">Totalt idag</div>
@@ -709,7 +755,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.2";
+const APP_VERSION = "3.3";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -723,7 +769,8 @@ const TRIP_GAP_MS          = 2 * 60 * 1000;
 const KORTOM_LOCK_MS       = 2 * 60 * 1000;
 const GPS_SPEED_THRESHOLD  = 1.0;   // m/s – minsta fart för att GPS ska registrera avgång
 const GPS_WARMUP_MS        = 30000;         // ms – GPS lyssnar men registrerar inga avgångar under uppvärmning
-const GPS_DEPARTURE_GAP_MS = 5 * 60 * 1000; // ms – minsta tid mellan två GPS-detekterade avgångar
+const GPS_DEPARTURE_GAP_MS    = 5 * 60 * 1000; // ms – minsta tid mellan två GPS-detekterade avgångar
+const TRIP_VEHICLE_WINDOW_MS  = 3 * 60 * 1000; // ms – fordon loggade inom ±3 min räknas till avgången
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
@@ -794,6 +841,10 @@ const T = {
     avgPerTimme:    'Avg/tim',
     avgSnittPerDag: 'Snitt avg/dag',
     avgTommaTotal:  'Tomturer totalt',
+    bryggeADefault: 'Brygga A',
+    bryggeBDefault: 'Brygga B',
+    depTom:         'tom',
+    depFordon:      'fordon',
     locale:         'sv-SE',
   },
   fi: {
@@ -859,6 +910,10 @@ const T = {
     avgPerTimme:    'Lähtöjä/h',
     avgSnittPerDag: 'Keskim. lähtöjä/pv',
     avgTommaTotal:  'Tyhjälähdöt yht.',
+    bryggeADefault: 'Laituri A',
+    bryggeBDefault: 'Laituri B',
+    depTom:         'tyhjä',
+    depFordon:      'ajoneuvoa',
     locale:         'fi-FI',
   }
 };
@@ -947,6 +1002,7 @@ function applyMode() {
   if (ub) ub.style.display = isFerry ? 'none' : '';
   if (isFerry) startGpsWatch(); else stopGpsWatch();
   updateUndoDeparture();
+  renderDepartureLog();
 }
 
 // ── COUNTDOWN ──
@@ -1027,7 +1083,10 @@ function attachListeners() {
     const trips = [];
     snap.forEach(ch => {
       const v = ch.val();
-      trips.push({ id: ch.key, ts: v.ts });
+      const trip = { id: ch.key, ts: v.ts };
+      if (v.lat !== undefined) { trip.lat = v.lat; trip.lng = v.lng; }
+      if (v.from !== undefined) { trip.from = v.from; trip.to = v.to; }
+      trips.push(trip);
     });
     trips.sort((a, b) => a.ts - b.ts);
     const d = load();
@@ -1036,6 +1095,7 @@ function attachListeners() {
     refreshAll();
     updateKorTomLock();
     updateUndoDeparture();
+    renderDepartureLog();
   }, () => setSyncStatus('error'));
 }
 
@@ -1067,6 +1127,7 @@ function initFirebase() {
     });
 
     attachListeners();
+    initBryggorListener();
     checkVersion();
   } catch (e) {
     db = null; logsRef = null; tripsRef = null; currentRefDate = null;
@@ -1282,13 +1343,17 @@ function removeOne(catId, btn) {
 }
 
 // ── TRIPS (turer) & CO2 ──
-function recordDeparture(ts) {
+function recordDeparture(ts, lat, lng) {
   if (db) {
-    // tripsRef.on('value') is the single source of truth for d.trips.
-    // Firebase fires the listener for its own local cache immediately (even offline),
-    // so no optimistic push needed — and no risk of accumulated duplicates.
-    const ref = db.ref('turer/' + localDate()).push();
-    ref.set({ ts }).catch(() => setSyncStatus('error'));
+    const data = { ts };
+    if (lat !== undefined) {
+      data.lat = lat;
+      data.lng = lng;
+      const dir = getDirection(lat, lng);
+      if (dir) { data.from = dir.from; data.to = dir.to; }
+    }
+    db.ref('turer/' + localDate()).push(data).catch(() => setSyncStatus('error'));
+    if (lat !== undefined) savePositionAndCluster(lat, lng, ts);
   } else {
     const d = load();
     d.trips.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts });
@@ -1431,6 +1496,7 @@ function renderCount() {
   });
   document.getElementById('footerTotal').textContent = total;
   document.getElementById('undoBtn').disabled = (load().logs.length === 0);
+  renderDepartureLog();
 }
 
 // ── RENDER: STATS VIEW ──
@@ -1637,8 +1703,13 @@ function calcDepartureStats(logs, tripTs) {
   const buckets = new Array(sorted.length).fill(0);
   logs.forEach(l => {
     if ((l.delta || 1) <= 0) return;
-    const idx = sorted.findIndex(d => d > l.ts);
-    if (idx >= 0) buckets[idx] += 1;
+    // Assign to nearest departure within ±TRIP_VEHICLE_WINDOW_MS
+    let bestIdx = -1, bestDist = Infinity;
+    sorted.forEach((d, i) => {
+      const dist = Math.abs(d - l.ts);
+      if (dist <= TRIP_VEHICLE_WINDOW_MS && dist < bestDist) { bestDist = dist; bestIdx = i; }
+    });
+    if (bestIdx >= 0) buckets[bestIdx] += 1;
   });
   const tripCount = sorted.length;
   const totalVeh = buckets.reduce((a, b) => a + b, 0);
@@ -1800,6 +1871,109 @@ function tick() {
   updateKorTomLock();
 }
 
+// ── BRIDGE LEARNING ──
+let bridgeData = { centrum: null, namn: { a: null, b: null } };
+
+function geoDistSq(lat1, lng1, lat2, lng2) {
+  const dlat = lat2 - lat1, dlng = lng2 - lng1;
+  return dlat * dlat + dlng * dlng;
+}
+
+function kMeans2(positions) {
+  if (positions.length < 2) return null;
+  let a = { lat: positions[0].lat, lng: positions[0].lng };
+  let b = { lat: positions[positions.length - 1].lat, lng: positions[positions.length - 1].lng };
+  for (let iter = 0; iter < 30; iter++) {
+    const ca = [], cb = [];
+    positions.forEach(p => (geoDistSq(p.lat, p.lng, a.lat, a.lng) <= geoDistSq(p.lat, p.lng, b.lat, b.lng) ? ca : cb).push(p));
+    if (!ca.length || !cb.length) break;
+    const mean = arr => ({ lat: arr.reduce((s, p) => s + p.lat, 0) / arr.length, lng: arr.reduce((s, p) => s + p.lng, 0) / arr.length });
+    const na = mean(ca), nb = mean(cb);
+    if (Math.abs(na.lat - a.lat) < 1e-9) break;
+    a = na; b = nb;
+  }
+  return { a, b };
+}
+
+function getDirection(lat, lng) {
+  if (!bridgeData.centrum) return null;
+  const { a, b } = bridgeData.centrum;
+  return geoDistSq(lat, lng, a.lat, a.lng) <= geoDistSq(lat, lng, b.lat, b.lng)
+    ? { from: 'a', to: 'b' } : { from: 'b', to: 'a' };
+}
+
+function savePositionAndCluster(lat, lng, ts) {
+  if (!db) return;
+  db.ref('bryggor/positioner').push({ lat, lng, ts }).catch(() => {});
+  db.ref('bryggor/positioner').once('value').then(snap => {
+    const positions = [];
+    snap.forEach(ch => { const v = ch.val(); positions.push({ lat: v.lat, lng: v.lng }); });
+    if (positions.length >= 3) {
+      const centrum = kMeans2(positions);
+      if (centrum) {
+        bridgeData.centrum = centrum;
+        db.ref('bryggor/centrum').set(centrum).catch(() => {});
+      }
+    }
+  });
+}
+
+function initBryggorListener() {
+  if (!db) return;
+  db.ref('bryggor/centrum').on('value', snap => {
+    const v = snap.val();
+    if (v) { bridgeData.centrum = v; renderDepartureLog(); }
+  });
+  db.ref('bryggor/namn').on('value', snap => {
+    const v = snap.val();
+    if (v) {
+      bridgeData.namn = v;
+      const elA = document.getElementById('bryggeANamn');
+      const elB = document.getElementById('bryggeBNamn');
+      if (elA) elA.value = v.a || t('bryggeADefault');
+      if (elB) elB.value = v.b || t('bryggeBDefault');
+      renderDepartureLog();
+    }
+  });
+}
+
+function saveBridgeName(key, value) {
+  const name = value.trim() || (key === 'a' ? t('bryggeADefault') : t('bryggeBDefault'));
+  bridgeData.namn[key] = name;
+  if (db) db.ref('bryggor/namn/' + key).set(name).catch(() => {});
+  renderDepartureLog();
+}
+
+function renderDepartureLog() {
+  const el = document.getElementById('departureLog');
+  const nb = document.getElementById('bridgeNamn');
+  if (!el) return;
+  if (mode !== 'ferry') {
+    el.style.display = 'none';
+    if (nb) nb.style.display = 'none';
+    return;
+  }
+  const d = load();
+  const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 5);
+  if (!trips.length) { el.style.display = 'none'; return; }
+
+  const nameOf = k => (bridgeData.namn[k]) || (k === 'a' ? t('bryggeADefault') : t('bryggeBDefault'));
+
+  const rows = trips.map(trip => {
+    const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    const dirStr = (trip.from && trip.to) ? `${nameOf(trip.from)} → ${nameOf(trip.to)}` : '';
+    const veh = d.logs.filter(l => (l.delta || 1) > 0 && Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS).length;
+    const vehStr = veh === 0
+      ? `0 <span class="dep-empty">(${t('depTom')})</span>`
+      : `${veh}`;
+    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span></div>`;
+  }).join('');
+
+  el.innerHTML = rows;
+  el.style.display = '';
+  if (nb) nb.style.display = 'flex';
+}
+
 // ── GPS DEPARTURE WATCH ──
 let geoWatchId = null;
 let gpsWarmupUntil = 0;
@@ -1826,7 +2000,7 @@ function startGpsWatch() {
       if (speed >= GPS_SPEED_THRESHOLD && (now - lastGpsDepartureTs >= GPS_DEPARTURE_GAP_MS)) {
         lastGpsDepartureTs = now;
         console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
-        recordDeparture(now);
+        recordDeparture(now, pos.coords.latitude, pos.coords.longitude);
         showDepartureBanner();
         renderCount();
       }
