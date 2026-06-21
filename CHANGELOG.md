@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.7 – 2026-06-21
+- Bugg fixad: byte till väderfliken triggade felaktig avgångsregistrering i Färjeläge; rotorsak var att `loadWeather()` anropade `getCurrentPosition()` vilket på många mobila webbläsare utlöser watchPosition-callbacken; åtgärd: GPS-positionen cachas i `lastKnownGpsPos` vid varje watchPosition-uppdatering och används direkt i `loadWeather` utan något nytt geolokaliserings-anrop
+- Ångra avgång nu tillgänglig i Färjeläge: ett diskret ✕-knappar läggs till på senaste raden i avgångsloggen; anropar samma `undoLastDeparture()`-funktion som Testläget; tar bort avgången från Firebase och lokalt utan bekräftelsemodal
+- `undoLastDeparture()` nollställer nu `lastDepartureFbKey`/`lastDepartureFbDate` för att förhindra att nästa avgång skriver ett föräldralöst `avgSpeed`-fält till den borttagna posten i Firebase
+
 ## v3.6 – 2026-06-21
 - Realtidshastighet i headern: visar aktuell fart i knop bredvid GPS-noggrannhetsindikatorn (`3.2 kn`); uppdateras vid varje GPS-callback; visar `0.0 kn` vid stillastående; döljs tillsammans med noggrannhetsindikatorn när GPS är inaktiv eller Testläge är aktivt
 - Separator `·` mellan noggrannhets- och hastighetsvisning i headern
