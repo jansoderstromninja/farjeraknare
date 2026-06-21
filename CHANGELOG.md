@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.1 – 2026-06-21
+- Avgångsloggen visar nu alla 10 rader utan klippning; `overflow: hidden` borttaget från `#departureLog` – loggen tar den höjd den behöver och sidan scrollar naturligt via `.view { overflow-y: auto }`
+
 ## v4.0 – 2026-06-21
 - Avgångsloggen komprimerad: padding 3px 10px, font-size 11px, gap 5px, min-height 26px per rad – alla 10 rader ryms utan scroll på mobilskärm i portrait; `overflow: hidden` ersätter scroll
 - Bugg fixad: snitthastighet loggades inte tillförlitligt – `pos.coords.speed` är null på många Android-enheter, vilket ledde till tidig `return` och inga sparade samplar
