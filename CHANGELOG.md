@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.0 – 2026-06-21
+- Avgångsloggen komprimerad: padding 3px 10px, font-size 11px, gap 5px, min-height 26px per rad – alla 10 rader ryms utan scroll på mobilskärm i portrait; `overflow: hidden` ersätter scroll
+- Bugg fixad: snitthastighet loggades inte tillförlitligt – `pos.coords.speed` är null på många Android-enheter, vilket ledde till tidig `return` och inga sparade samplar
+- Ny struktur för hastighetssampling: samplar samlas vid varje watchPosition-callback *innan* null-check och warmup-guard; endast positiva värden (> 0) sparas; warmup-spärren blockerar bara avgångsdetektering, inte sampling
+- Ny funktion `finalizeCurrentTripSpeed()`: beräknar snitt av insamlade samplar och skriver `avgSpeed` till Firebase; anropas både vid ny GPS-avgångsdetektering och i `stopGpsWatch()` (sista turen för dagen skrivs nu alltid)
+
 ## v3.9 – 2026-06-21
 - Avgångsloggen visar nu de 10 senaste avgångarna (tidigare 5); loggen scrollar vertikalt om den inte ryms på skärmen (`max-height: 320px; overflow-y: auto`)
 - Varje rad i avgångsloggen har en ✕-knapp som tar bort just den avgången från Firebase och lokalt – inte bara senaste; ny funktion `deleteDeparture(tripId)` hanterar borttagning av godtycklig avgång

@@ -185,23 +185,23 @@ body.lang-fi .v-btn-label-fi {
   margin: 0 12px 8px;
   background: var(--surface);
   border-radius: 12px;
-  max-height: 320px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .dep-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 3px 10px;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  font-size: 11px;
+  min-height: 26px;
 }
 .dep-row:last-child { border-bottom: none; }
-.dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 38px; flex-shrink: 0; }
+.dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; flex-shrink: 0; }
 .dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dep-count { color: var(--muted); text-align: right; min-width: 56px; flex-shrink: 0; }
-.dep-speed { color: var(--muted); text-align: right; min-width: 44px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
-.dep-undo  { background: none; border: none; color: var(--muted); padding: 0 2px; font-size: 13px; cursor: pointer; opacity: 0.5; line-height: 1; flex-shrink: 0; }
+.dep-count { color: var(--muted); text-align: right; min-width: 46px; flex-shrink: 0; }
+.dep-speed { color: var(--muted); text-align: right; min-width: 34px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.dep-undo  { background: none; border: none; color: var(--muted); padding: 2px 4px; font-size: 12px; cursor: pointer; opacity: 0.5; line-height: 1; flex-shrink: 0; min-width: 22px; min-height: 22px; }
 .dep-undo:hover { opacity: 1; color: #EF4444; }
 .dep-empty { color: #EF4444; }
 /* Bridge naming */
@@ -766,7 +766,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.9";
+const APP_VERSION = "4.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2055,21 +2055,15 @@ function startGpsWatch() {
     pos => {
       lastKnownGpsPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const speed = pos.coords.speed;
-      if (speed === null || speed === undefined) return;
       updateGpsAccuracy(pos.coords.accuracy, speed);
-      if (Date.now() < gpsWarmupUntil) return;
-      tripSpeedSamples.push(speed);
+      // Collect every positive sample continuously — before warmup guard and null guard
+      if (speed != null && speed > 0) tripSpeedSamples.push(speed);
+      // Departure detection only after warmup and with valid speed
+      if (speed == null || Date.now() < gpsWarmupUntil) return;
       const now = Date.now();
       if (speed >= GPS_SPEED_THRESHOLD && (now - lastGpsDepartureTs >= GPS_DEPARTURE_GAP_MS)) {
         lastGpsDepartureTs = now;
-        if (db && lastDepartureFbKey && tripSpeedSamples.length) {
-          const moving = tripSpeedSamples.filter(s => s >= GPS_SPEED_THRESHOLD);
-          const src = moving.length ? moving : tripSpeedSamples;
-          const avg = src.reduce((a, b) => a + b, 0) / src.length;
-          db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
-            .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
-            .catch(() => {});
-        }
+        finalizeCurrentTripSpeed();
         tripSpeedSamples = [];
         console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
         recordDeparture(now, pos.coords.latitude, pos.coords.longitude);
@@ -2082,12 +2076,21 @@ function startGpsWatch() {
   );
 }
 
+function finalizeCurrentTripSpeed() {
+  if (!db || !lastDepartureFbKey || !tripSpeedSamples.length) return;
+  const avg = tripSpeedSamples.reduce((a, b) => a + b, 0) / tripSpeedSamples.length;
+  db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
+    .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
+    .catch(() => {});
+}
+
 function stopGpsWatch() {
   if (geoWatchId !== null) {
     navigator.geolocation.clearWatch(geoWatchId);
     geoWatchId = null;
     gpsWarmupUntil = 0;
     lastGpsDepartureTs = 0;
+    finalizeCurrentTripSpeed();
     tripSpeedSamples  = [];
     lastDepartureFbKey  = null;
     lastDepartureFbDate = null;
