@@ -1,5 +1,10 @@
 # Changelog
 
+## v3.5 – 2026-06-21
+- GPS-noggrannhetsindikator i headern (bredvid synkpricken): färgad prick + siffra i meter
+- Grön < 10 m, gul 10–30 m, röd > 30 m; uppdateras vid varje GPS-callback
+- Visas bara i Färjeläge; döljs automatiskt när GPS stoppas eller läge byts till Testläge
+
 ## v3.3 – 2026-06-21
 - **Avgångsfönster ±3 min**: `TRIP_VEHICLE_WINDOW_MS = 3 min`; fordon kopplas till närmaste avgång inom ±3 min (inte bara strikt före)
 - **Brygginlärning via k-means (k=2)**: GPS-position sparas till Firebase `bryggor/positioner/` vid varje GPS-detekterad avgång; efter 3+ positioner klustreras de automatiskt i Brygga A och Brygga B; klustercentrum sparas i `bryggor/centrum/`
