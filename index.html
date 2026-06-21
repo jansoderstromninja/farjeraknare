@@ -765,7 +765,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.1";
+const APP_VERSION = "4.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1098,7 +1098,7 @@ function attachListeners() {
       const trip = { id: ch.key, ts: v.ts };
       if (v.lat !== undefined) { trip.lat = v.lat; trip.lng = v.lng; }
       if (v.from !== undefined) { trip.from = v.from; trip.to = v.to; }
-      if (v.avgSpeed !== undefined) { trip.avgSpeed = v.avgSpeed; }
+      if (v.avgSpeedKnots !== undefined) { trip.avgSpeedKnots = v.avgSpeedKnots; }
       trips.push(trip);
     });
     trips.sort((a, b) => a.ts - b.ts);
@@ -1993,7 +1993,7 @@ function renderDepartureLog() {
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
-    const speedStr = trip.avgSpeed != null ? `${trip.avgSpeed.toFixed(1)} kn` : '';
+    const speedStr = trip.avgSpeedKnots != null ? `${trip.avgSpeedKnots.toFixed(1)} kn` : '— kn';
     return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><span class="dep-speed">${speedStr}</span><button class="dep-undo" onclick="deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
   }).join('');
 
@@ -2056,7 +2056,10 @@ function startGpsWatch() {
       const speed = pos.coords.speed;
       updateGpsAccuracy(pos.coords.accuracy, speed);
       // Collect every positive sample continuously — before warmup guard and null guard
-      if (speed != null && speed > 0) tripSpeedSamples.push(speed);
+      if (speed != null && speed > 0) {
+        tripSpeedSamples.push(speed);
+        console.log('[GPS] Speed sample:', speed.toFixed(2), 'm/s –', tripSpeedSamples.length, 'samplar totalt');
+      }
       // Departure detection only after warmup and with valid speed
       if (speed == null || Date.now() < gpsWarmupUntil) return;
       const now = Date.now();
@@ -2078,9 +2081,11 @@ function startGpsWatch() {
 function finalizeCurrentTripSpeed() {
   if (!db || !lastDepartureFbKey || !tripSpeedSamples.length) return;
   const avg = tripSpeedSamples.reduce((a, b) => a + b, 0) / tripSpeedSamples.length;
+  const avgKn = parseFloat((avg * 1.94384).toFixed(1));
+  console.log('[GPS] Sparar avgSpeedKnots:', avgKn, 'kn till tur', lastDepartureFbKey, '(', tripSpeedSamples.length, 'samplar)');
   db.ref('turer/' + lastDepartureFbDate + '/' + lastDepartureFbKey)
-    .update({ avgSpeed: parseFloat((avg * 1.94384).toFixed(2)) })
-    .catch(() => {});
+    .update({ avgSpeedKnots: avgKn })
+    .catch(e => console.error('[GPS] avgSpeedKnots fel:', e));
 }
 
 function stopGpsWatch() {

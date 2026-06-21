@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.2 – 2026-06-21
+- Hastighetsfältet i Firebase döpt om från `avgSpeed` till `avgSpeedKnots`, avrundad till 1 decimal
+- `console.log` tillagd vid varje speed-sampl och vid varje Firebase-skrivning för enkel felsökning i DevTools
+- Firebase-lyssnaren läser nu `avgSpeedKnots` från turer-noden
+- Avgångsloggen visar `"2.8 kn"` om värde finns, annars `"— kn"` (tidigare tomt)
+
 ## v4.1 – 2026-06-21
 - Avgångsloggen visar nu alla 10 rader utan klippning; `overflow: hidden` borttaget från `#departureLog` – loggen tar den höjd den behöver och sidan scrollar naturligt via `.view { overflow-y: auto }`
 
