@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.8 – 2026-06-21
+- Hastighetsindikatorn flyttad från hdr-sync till hdr-mid (centrerat i headern, mellan språkflaggan och lägesikonen)
+- Stor siffra: font-size 30px, font-weight 800, tabular-nums
+- Färgkodning efter hastighet i knop: grå < 0.05 kn (stillastående), vit < 1.0 kn, grön 1.0–3.0 kn, gul > 3.0 kn
+- Visas bara i Färjeläge; döljs i Testläge via `applyMode()`; nollställs till grå "0.0 kn" när GPS stoppas
+- Borttaget: det gamla `·`-separatorelementet och `#gpsSpeed`-spann i hdr-sync
+
 ## v3.7 – 2026-06-21
 - Bugg fixad: byte till väderfliken triggade felaktig avgångsregistrering i Färjeläge; rotorsak var att `loadWeather()` anropade `getCurrentPosition()` vilket på många mobila webbläsare utlöser watchPosition-callbacken; åtgärd: GPS-positionen cachas i `lastKnownGpsPos` vid varje watchPosition-uppdatering och används direkt i `loadWeather` utan något nytt geolokaliserings-anrop
 - Ångra avgång nu tillgänglig i Färjeläge: ett diskret ✕-knappar läggs till på senaste raden i avgångsloggen; anropar samma `undoLastDeparture()`-funktion som Testläget; tar bort avgången från Firebase och lokalt utan bekräftelsemodal

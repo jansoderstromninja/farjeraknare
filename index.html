@@ -60,7 +60,7 @@ header {
 .gps-dot.good { background: #10B981; }
 .gps-dot.ok   { background: #F59E0B; }
 .gps-dot.poor { background: #EF4444; }
-.gps-speed-sep { color: var(--muted); margin: 0 2px; }
+.hdr-speed { font-size: 30px; font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; letter-spacing: -1px; line-height: 1; }
 
 /* Language toggle */
 .lang-btn {
@@ -601,11 +601,12 @@ nav {
   <div class="hdr-mid">
     <span id="thunderIcon" class="thunder-icon" style="display:none">⚡</span>
     <button class="lang-btn" id="langBtn" onclick="toggleLang()">🇫🇮</button>
+    <span class="hdr-speed" id="hdrSpeed" style="display:none">0.0 kn</span>
     <button class="mode-btn" id="modeBtn" onclick="toggleMode()">🧪</button>
   </div>
   <div class="hdr-right">
     <div class="hdr-time" id="hdrTime"></div>
-    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span><span class="sync-mode" id="modeLabel">Testläge 🧪</span><span class="gps-acc" id="gpsAccuracy"><span class="gps-dot" id="gpsDot"></span><span id="gpsText"></span><span class="gps-speed-sep">·</span><span id="gpsSpeed"></span></span></div>
+    <div class="hdr-sync" id="hdrSync"><span class="sync-dot local"></span><span id="syncText">Lokal</span><span class="sync-version" id="versionText"></span><span class="sync-mode" id="modeLabel">Testläge 🧪</span><span class="gps-acc" id="gpsAccuracy"><span class="gps-dot" id="gpsDot"></span><span id="gpsText"></span></span></div>
   </div>
 </header>
 
@@ -764,7 +765,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "3.7";
+const APP_VERSION = "3.8";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1005,10 +1006,12 @@ function applyMode() {
   const ml = document.getElementById('modeLabel');
   const kb = document.getElementById('korTomBtn');
   const ub = document.getElementById('undoDepartureBtn');
+  const hs = document.getElementById('hdrSpeed');
   if (mb) mb.textContent = isFerry ? '🛳️' : '🧪';
   if (ml) ml.textContent = isFerry ? t('ferryMode') : t('testMode');
   if (kb) kb.style.display = isFerry ? 'none' : '';
   if (ub) ub.style.display = isFerry ? 'none' : '';
+  if (hs) hs.style.display = isFerry ? '' : 'none';
   if (isFerry) startGpsWatch(); else stopGpsWatch();
   updateUndoDeparture();
   renderDepartureLog();
@@ -1996,12 +1999,22 @@ function updateGpsAccuracy(accuracy, speed) {
   const wrapper = document.getElementById('gpsAccuracy');
   const dot     = document.getElementById('gpsDot');
   const txt     = document.getElementById('gpsText');
-  const spd     = document.getElementById('gpsSpeed');
   if (!wrapper) return;
   wrapper.style.display = 'flex';
   txt.textContent = Math.round(accuracy) + 'm';
   dot.className = 'gps-dot ' + (accuracy < 10 ? 'good' : accuracy <= 30 ? 'ok' : 'poor');
-  if (spd) spd.textContent = ((speed || 0) * 1.94384).toFixed(1) + ' kn';
+  updateHdrSpeed(speed);
+}
+
+function updateHdrSpeed(speedMs) {
+  const el = document.getElementById('hdrSpeed');
+  if (!el) return;
+  const kn = (speedMs || 0) * 1.94384;
+  el.textContent = kn.toFixed(1) + ' kn';
+  el.style.color = kn < 0.05 ? 'var(--muted)'
+    : kn < 1.0  ? 'var(--text)'
+    : kn <= 3.0 ? '#10B981'
+    : '#F59E0B';
 }
 
 function hideGpsAccuracy() {
@@ -2074,6 +2087,7 @@ function stopGpsWatch() {
     console.log('[GPS] Testläge aktiverat');
   }
   hideGpsAccuracy();
+  updateHdrSpeed(0);
 }
 
 // ── WEATHER ──
