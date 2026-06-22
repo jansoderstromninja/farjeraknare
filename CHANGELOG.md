@@ -12,6 +12,7 @@
 ## v4.0 – 2026-06-21
 - Avgångsloggen komprimerad: padding 3px 10px, font-size 11px, gap 5px, min-height 26px per rad – alla 10 rader ryms utan scroll på mobilskärm i portrait; `overflow: hidden` ersätter scroll
 - Bugg fixad: snitthastighet loggades inte tillförlitligt – `pos.coords.speed` är null på många Android-enheter, vilket ledde till tidig `return` och inga sparade samplar
+  - Rotorsak: `pos.coords.speed` är frivillig i Geolocation API:et och returneras som `null` av många Android-enheters GPS-chip. Den tidigare `if (speed === null || speed === undefined) return` låg längst upp i callbacken, före pushen till `tripSpeedSamples`, så arrayen fylldes aldrig på dessa enheter.
 - Ny struktur för hastighetssampling: samplar samlas vid varje watchPosition-callback *innan* null-check och warmup-guard; endast positiva värden (> 0) sparas; warmup-spärren blockerar bara avgångsdetektering, inte sampling
 - Ny funktion `finalizeCurrentTripSpeed()`: beräknar snitt av insamlade samplar och skriver `avgSpeed` till Firebase; anropas både vid ny GPS-avgångsdetektering och i `stopGpsWatch()` (sista turen för dagen skrivs nu alltid)
 
@@ -20,6 +21,7 @@
 - Varje rad i avgångsloggen har en ✕-knapp som tar bort just den avgången från Firebase och lokalt – inte bara senaste; ny funktion `deleteDeparture(tripId)` hanterar borttagning av godtycklig avgång
 - `undoLastDeparture()` använder nu `deleteDeparture()` internt för att undvika kodduplicering
 - Bugg fixad: snitthastighet skrevs inte för tomturer om inga samplar översteg GPS_SPEED_THRESHOLD; åtgärd: faller tillbaka på alla samplar (inte bara "rörliga") om inga rörliga samplar finns – avgångar utan fordon får alltid snitthastighet skriven till Firebase om GPS-data finns
+  - Rotorsak: finaliseringskoden filtrerade `tripSpeedSamples` med `s => s >= GPS_SPEED_THRESHOLD` och skrev till Firebase endast om `moving.length > 0`. En tomtur med samplar under 1 m/s — t.ex. lugnt hav, kort dockningstid eller GPS-noise — fick aldrig något hastighetsfält skrivet.
 
 ## v3.8 – 2026-06-21
 - Hastighetsindikatorn flyttad från hdr-sync till hdr-mid (centrerat i headern, mellan språkflaggan och lägesikonen)
@@ -29,9 +31,11 @@
 - Borttaget: det gamla `·`-separatorelementet och `#gpsSpeed`-spann i hdr-sync
 
 ## v3.7 – 2026-06-21
-- Bugg fixad: byte till väderfliken triggade felaktig avgångsregistrering i Färjeläge; rotorsak var att `loadWeather()` anropade `getCurrentPosition()` vilket på många mobila webbläsare utlöser watchPosition-callbacken; åtgärd: GPS-positionen cachas i `lastKnownGpsPos` vid varje watchPosition-uppdatering och används direkt i `loadWeather` utan något nytt geolokaliserings-anrop
+- Bugg fixad: byte till väderfliken registrerade en falsk avgång i Färjeläge; åtgärd: GPS-positionen cachas i `lastKnownGpsPos` vid varje watchPosition-uppdatering och används direkt i `loadWeather` utan nytt geolokaliserings-anrop
+  - Rotorsak: `loadWeather()` anropade `navigator.geolocation.getCurrentPosition()` i Färjeläge för att hämta koordinater till väder-API:et. På många mobila webbläsare levererar detta anrop svaret via samma interna GPS-kö som `watchPosition`, vilket utlöste departure-callbacken. Om färjan rörde sig och minst 5 minuter hade passerat sedan senaste avgång registrerades en falsk avgång.
 - Ångra avgång nu tillgänglig i Färjeläge: ett diskret ✕-knappar läggs till på senaste raden i avgångsloggen; anropar samma `undoLastDeparture()`-funktion som Testläget; tar bort avgången från Firebase och lokalt utan bekräftelsemodal
-- `undoLastDeparture()` nollställer nu `lastDepartureFbKey`/`lastDepartureFbDate` för att förhindra att nästa avgång skriver ett föräldralöst `avgSpeed`-fält till den borttagna posten i Firebase
+- Bugg fixad: `undoLastDeparture()` nollställer nu `lastDepartureFbKey`/`lastDepartureFbDate` efter borttagning
+  - Rotorsak: `finalizeCurrentTripSpeed()` använde `lastDepartureFbKey` utan att kontrollera om den posten fortfarande existerade. Firebase `.update()` på en raderad sökväg skapar ett nytt minimalt fragment — `{avgSpeed: X}` utan `ts` — som hamnade kvar permanent i databasen.
 
 ## v3.6 – 2026-06-21
 - Realtidshastighet i headern: visar aktuell fart i knop bredvid GPS-noggrannhetsindikatorn (`3.2 kn`); uppdateras vid varje GPS-callback; visar `0.0 kn` vid stillastående; döljs tillsammans med noggrannhetsindikatorn när GPS är inaktiv eller Testläge är aktivt
@@ -62,6 +66,7 @@
 
 ## v3.1 – 2026-06-21
 - Bugg fixad: fordonsräkningen nollställdes inte vid midnatt eftersom `logsRef` pekade kvar på gårdagens Firebase-sökväg
+  - Rotorsak: `logsRef` initierades en enda gång i `initFirebase()` med `localDate()` vid uppstarten och återanvändes sedan oförändrad i alla skrivanrop. `tripsRef` drabbades inte eftersom avgångsskrivningar alltid använde `db.ref('turer/' + localDate())` — ett nytt datumhämtning vid varje operation.
 - Ny funktion `attachListeners()` extraherad från `initFirebase()` för att kunna återanvändas vid datumbyte
 - Ny funktion `checkDateRollover()`: om `localDate()` skiljer sig från `currentRefDate` lyfts lyssnarena av gamla sökvägen och kopplas om till dagens sökväg
 - `checkDateRollover()` anropas i `tap()`, `removeOne()` och `undoLast()` – precis innan `logsRef` används för skrivning
@@ -100,6 +105,7 @@
 
 ## v2.5 – 2026-06-20
 - Dubbel-avgångsregistrering fixad: GPS och fordonstillägg delar nu på samma avgångslogik istället för att köra parallellt
+  - Rotorsak: `tap()` och `watchPosition`-callbacken anropade `recordDeparture()` oberoende av varandra i Färjeläge utan gemensam koordinering. Varje fysisk avgång utlöste därmed båda kodvägarna och skrevs dubbelt till Firebase.
 - I Färjeläge registrerar fordonstillägg (`tap()`) inte längre avgång – GPS är primär källa
 - I Testläge registrerar fordonstillägg avgång som tidigare (2 min gap-logik)
 - "Kör tom" registrerar alltid avgång manuellt oavsett läge
@@ -154,6 +160,7 @@
 
 ## v1.6 – 2026-06-19
 - Bugg fixad: på Android/Chrome detekterades inte ny tur automatiskt om appen hade pausats (localStorage var tom när Firebase-lyssnaren ännu inte hunnit ladda data)
+  - Rotorsak: turdetekteringen läste `lastActivityTs()` ur `d.trips` i localStorage. Android pausar Chrome aggressivt och rensar ofta processens minne; vid återaktivering var localStorage ännu inte ifyllt av Firebase-lyssnaren, `lastActivityTs()` returnerade null och tolkades som "ingen tidigare aktivitet" — nästa fordonstillägg skapade en ny tur i stället för att fortsätta den pågående.
 - Turdetekteringsgräns sänkt från 7 min till 2 min inaktivitet
 - Nedräkningstimer sänkt från 5 min till 2 min
 
