@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.6 – 2026-06-23
+- Avgångsloggen visar nu bara avsändarbryggan per rad ("Pettu") istället för hela riktningspilen ("Pettu → Utö")
+- Bryggnamnsinmatningsfälten under avgångsloggen borttagna — bryggnamnens källdata (`bryggor/namn/`) läses fortfarande från Firebase
+- Rader utan `from`-fält (k-means ej kört) visar bara klockslaget, ingen tom text
+- Borttaget: `#bridgeNamn`-div, `.brygga-input`-stilar, `saveBridgeName()`-funktion
+
 ## v4.5 – 2026-06-23
 - Media query `@media (max-width: 389px)` för smala mobilskärmar (iPhone SE 375px och liknande)
 - Hastighetsindikatorn krymps från 30px till 22px, klockan från 22px till 18px, titelfonten från 16px till 14px

@@ -203,26 +203,6 @@ body.lang-fi .v-btn-label-fi {
 .dep-undo  { background: none; border: none; color: var(--muted); padding: 2px 4px; font-size: 12px; cursor: pointer; opacity: 0.5; line-height: 1; flex-shrink: 0; min-width: 22px; min-height: 22px; }
 .dep-undo:hover { opacity: 1; color: #EF4444; }
 .dep-empty { color: #EF4444; }
-/* Bridge naming */
-#bridgeNamn {
-  margin: 0 12px 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.brygga-input {
-  flex: 1;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 13px;
-  padding: 5px 8px;
-  min-width: 0;
-}
-.brygga-input:focus { outline: none; border-color: #60A5FA; }
 /* Footer bar */
 .count-footer {
   flex-shrink: 0;
@@ -675,11 +655,6 @@ nav {
   <div class="btn-grid" id="btnGrid"></div>
   <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa avgång tidigast om</span> <span id="countdownText">5:00</span></div>
   <div id="departureLog" style="display:none"></div>
-  <div id="bridgeNamn" style="display:none">
-    <input class="brygga-input" id="bryggeANamn" type="text" placeholder="Brygga A" onchange="saveBridgeName('a',this.value)">
-    <span>↔</span>
-    <input class="brygga-input" id="bryggeBNamn" type="text" placeholder="Brygga B" onchange="saveBridgeName('b',this.value)">
-  </div>
   <div class="count-footer">
     <div>
       <div class="footer-total-label" id="footerTotalLabel">Totalt idag</div>
@@ -873,7 +848,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.5";
+const APP_VERSION = "4.6";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2061,33 +2036,15 @@ function initBryggorListener() {
   });
   db.ref('bryggor/namn').on('value', snap => {
     const v = snap.val();
-    if (v) {
-      bridgeData.namn = v;
-      const elA = document.getElementById('bryggeANamn');
-      const elB = document.getElementById('bryggeBNamn');
-      if (elA) elA.value = v.a || t('bryggeADefault');
-      if (elB) elB.value = v.b || t('bryggeBDefault');
-      renderDepartureLog();
-    }
+    if (v) { bridgeData.namn = v; renderDepartureLog(); }
   });
 }
 
-function saveBridgeName(key, value) {
-  const name = value.trim() || (key === 'a' ? t('bryggeADefault') : t('bryggeBDefault'));
-  bridgeData.namn[key] = name;
-  if (db) db.ref('bryggor/namn/' + key).set(name).catch(() => {});
-  renderDepartureLog();
-}
 
 function renderDepartureLog() {
   const el = document.getElementById('departureLog');
-  const nb = document.getElementById('bridgeNamn');
   if (!el) return;
-  if (mode !== 'ferry') {
-    el.style.display = 'none';
-    if (nb) nb.style.display = 'none';
-    return;
-  }
+  if (mode !== 'ferry') { el.style.display = 'none'; return; }
   const d = load();
   const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 10);
   if (!trips.length) { el.style.display = 'none'; return; }
@@ -2096,7 +2053,7 @@ function renderDepartureLog() {
 
   const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    const dirStr = (trip.from && trip.to) ? `${nameOf(trip.from)} → ${nameOf(trip.to)}` : '';
+    const dirStr = trip.from ? nameOf(trip.from) : '';
     const veh = d.logs.filter(l => (l.delta || 1) > 0 && Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS).length;
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
@@ -2107,7 +2064,6 @@ function renderDepartureLog() {
 
   el.innerHTML = rows;
   el.style.display = '';
-  if (nb) nb.style.display = 'flex';
 }
 
 function updateGpsAccuracy(accuracy, speed) {
