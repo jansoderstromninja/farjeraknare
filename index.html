@@ -848,7 +848,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.6";
+const APP_VERSION = "4.7";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2012,20 +2012,30 @@ function getDirection(lat, lng) {
     ? { from: 'a', to: 'b' } : { from: 'b', to: 'a' };
 }
 
+// Firebase-regler måste tillåta läs/skriv till bryggor/ för autentiserade
+// (eller alla) användare, t.ex.: "bryggor": { ".read": true, ".write": true }
 function savePositionAndCluster(lat, lng, ts) {
   if (!db) return;
-  db.ref('bryggor/positioner').push({ lat, lng, ts }).catch(() => {});
-  db.ref('bryggor/positioner').once('value').then(snap => {
-    const positions = [];
-    snap.forEach(ch => { const v = ch.val(); positions.push({ lat: v.lat, lng: v.lng }); });
-    if (positions.length >= 6) {
-      const centrum = kMeans2(positions);
-      if (centrum) {
-        bridgeData.centrum = centrum;
-        db.ref('bryggor/centrum').set(centrum).catch(() => {});
+  console.log('[Bryggor] savePositionAndCluster anropad, lat:', lat, 'lng:', lng);
+  // push() måste vara klar innan once('value') läser — annars missar snapshoten
+  // den nyss sparade positionen (race condition med parallella Firebase-anrop)
+  db.ref('bryggor/positioner').push({ lat, lng, ts })
+    .then(() => db.ref('bryggor/positioner').once('value'))
+    .then(snap => {
+      const positions = [];
+      snap.forEach(ch => { const v = ch.val(); positions.push({ lat: v.lat, lng: v.lng }); });
+      console.log('[Bryggor]', positions.length, 'positioner inlästa, behöver 6 för kluster');
+      if (positions.length >= 6) {
+        const centrum = kMeans2(positions);
+        if (centrum) {
+          bridgeData.centrum = centrum;
+          db.ref('bryggor/centrum').set(centrum)
+            .then(() => console.log('[Bryggor] Centrum sparat:', JSON.stringify(centrum)))
+            .catch(e => console.error('[Bryggor] Fel vid skrivning av centrum:', e));
+        }
       }
-    }
-  });
+    })
+    .catch(e => console.error('[Bryggor] Fel vid skrivning/läsning av positioner:', e));
 }
 
 function initBryggorListener() {

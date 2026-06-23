@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.7 – 2026-06-23
+- Bugg fixad: `bryggor/`-noden skapades aldrig i Firebase trots att GPS-avgångar registrerades med lat/lng
+  - Rotorsak: `.push()` och `.once('value')` startades parallellt — `once` läste gamla snapshoten innan `push` hunnit bekräftas av servern, så antalet positioner räknades aldrig upp korrekt och k-means triggades aldrig
+- Fix: `.once('value')` kedjas nu med `.then()` efter att `.push()` resolvar, så snapshoten alltid innehåller den nyss sparade positionen
+- `console.log` tillagd i `savePositionAndCluster()` vid anrop och efter läsning av positionsantal
+- `console.error` tillagd på varje Firebase-skrivning i funktionen
+- Kommentar tillagd om att Firebase-regler måste tillåta skriv/läs till `bryggor/`
+
 ## v4.6 – 2026-06-23
 - Avgångsloggen visar nu bara avsändarbryggan per rad ("Pettu") istället för hela riktningspilen ("Pettu → Utö")
 - Bryggnamnsinmatningsfälten under avgångsloggen borttagna — bryggnamnens källdata (`bryggor/namn/`) läses fortfarande från Firebase
