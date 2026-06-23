@@ -498,6 +498,53 @@ nav {
   padding: 2px 4px;
 }
 
+/* ── DEBUG PANEL ── */
+#debugPanel {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 2000;
+  flex-direction: column;
+  font-family: 'Courier New', monospace;
+}
+#debugPanel.show { display: flex; }
+#debugHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #111;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+#debugHeader span { color: #aaa; font-size: 13px; font-weight: 700; }
+#debugControls { display: flex; gap: 8px; }
+#debugControls button {
+  background: #222;
+  border: 1px solid #444;
+  color: #ccc;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+#debugLog {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+.dbg-line {
+  font-size: 11px;
+  line-height: 1.6;
+  border-bottom: 1px solid #1a1a1a;
+  padding: 1px 0;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.dbg-line .dbg-ts { color: #555; margin-right: 6px; }
+.dbg-line .dbg-msg { color: #b8f0b8; }
+
 /* ── DEPARTURE BANNER ── */
 .departure-banner {
   position: fixed;
@@ -745,6 +792,18 @@ nav {
   </div>
 </div>
 
+<!-- DEBUG PANEL -->
+<div id="debugPanel">
+  <div id="debugHeader">
+    <span>🐛 Debug</span>
+    <div id="debugControls">
+      <button onclick="clearDebugLog()">Rensa</button>
+      <button onclick="hideDebugPanel()">Stäng</button>
+    </div>
+  </div>
+  <div id="debugLog"></div>
+</div>
+
 <!-- DEPARTURE BANNER -->
 <div class="departure-banner" id="departureBanner">⛴ Avgång registrerad</div>
 
@@ -753,6 +812,42 @@ nav {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
+// ── DEBUG PANEL ──
+const _debugLines = [];
+const _origLog = console.log.bind(console);
+console.log = function(...args) {
+  _origLog(...args);
+  const now = new Date();
+  const ts = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const msg = args.map(a => (typeof a === 'object' ? JSON.stringify(a) : String(a))).join(' ');
+  _debugLines.push({ ts, msg });
+  if (_debugLines.length > 200) _debugLines.shift();
+  const log = document.getElementById('debugLog');
+  if (log && document.getElementById('debugPanel').classList.contains('show')) {
+    const el = document.createElement('div');
+    el.className = 'dbg-line';
+    el.innerHTML = `<span class="dbg-ts">${ts}</span><span class="dbg-msg">${msg.replace(/</g,'&lt;')}</span>`;
+    log.appendChild(el);
+    log.scrollTop = log.scrollHeight;
+  }
+};
+
+function showDebugPanel() {
+  const panel = document.getElementById('debugPanel');
+  const log = document.getElementById('debugLog');
+  log.innerHTML = '';
+  _debugLines.forEach(({ ts, msg }) => {
+    const el = document.createElement('div');
+    el.className = 'dbg-line';
+    el.innerHTML = `<span class="dbg-ts">${ts}</span><span class="dbg-msg">${msg.replace(/</g,'&lt;')}</span>`;
+    log.appendChild(el);
+  });
+  log.scrollTop = log.scrollHeight;
+  panel.classList.add('show');
+}
+function hideDebugPanel() { document.getElementById('debugPanel').classList.remove('show'); }
+function clearDebugLog() { _debugLines.length = 0; document.getElementById('debugLog').innerHTML = ''; }
+
 const CATS = [
   { id: 'personbil',  label: 'Personbil',  labelFi: 'Henkilöauto',   emoji: '🚗',  color: '#1D4ED8' },
   { id: 'paketbil',   label: 'Paketbil',   labelFi: 'Pakettiauto',   emoji: '🚐',  color: '#6D28D9' },
@@ -765,7 +860,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.3";
+const APP_VERSION = "4.4";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2229,6 +2324,15 @@ tick();
 setInterval(tick, 10000);
 initFirebase();
 document.getElementById('versionText').textContent = '· v' + APP_VERSION;
+(function() {
+  let tapCount = 0, tapTimer = null;
+  document.getElementById('versionText').addEventListener('click', () => {
+    tapCount++;
+    clearTimeout(tapTimer);
+    if (tapCount >= 5) { tapCount = 0; showDebugPanel(); return; }
+    tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+  });
+})();
 updateCountdown();
 setInterval(updateCountdown, 1000);
 setInterval(() => { weatherLastFetch = 0; if (currentView === 'Weather') loadWeather(); }, 30 * 60 * 1000);

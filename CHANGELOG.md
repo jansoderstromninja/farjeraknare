@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.4 – 2026-06-23
+- Dold debug-panel tillagd: visas när användaren trycker fem gånger snabbt på versionsnumret i headern
+- Panelen visar de senaste 200 loggmeddelandena med tidsstämpel HH:MM:SS, rullar automatiskt till botten
+- `console.log` wrappas globalt vid appstart – alla befintliga loggutskrifter syns i panelen utan kodändringar
+- Panelen har "Rensa"- och "Stäng"-knappar; är helt dold i normalläge och påverkar inte prestanda
+
 ## v4.2 – 2026-06-21
 - Hastighetsfältet i Firebase döpt om från `avgSpeed` till `avgSpeedKnots`, avrundad till 1 decimal
 - `console.log` tillagd vid varje speed-sampl och vid varje Firebase-skrivning för enkel felsökning i DevTools
