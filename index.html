@@ -627,6 +627,19 @@ nav {
 .thunder-icon.red    { color: #EF4444; }
 .thunder-icon.yellow { color: #F59E0B; }
 @keyframes thunder-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ── NARROW SCREEN (≤ 389px, e.g. iPhone SE 375px) ── */
+@media (max-width: 389px) {
+  header { padding: 8px 10px; }
+  .hdr-title { font-size: 14px; }
+  .hdr-date  { font-size: 11px; }
+  .hdr-speed { font-size: 22px; letter-spacing: -0.5px; }
+  .hdr-time  { font-size: 18px; }
+  .hdr-mid   { gap: 4px; }
+  .sync-mode { display: none; }
+  .lang-btn  { font-size: 16px; padding: 2px 5px; }
+  .mode-btn  { font-size: 13px; padding: 2px 5px; }
+}
 </style>
 </head>
 <body>
@@ -860,7 +873,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.4";
+const APP_VERSION = "4.5";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';

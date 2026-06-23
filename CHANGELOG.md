@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.5 – 2026-06-23
+- Media query `@media (max-width: 389px)` för smala mobilskärmar (iPhone SE 375px och liknande)
+- Hastighetsindikatorn krymps från 30px till 22px, klockan från 22px till 18px, titelfonten från 16px till 14px
+- Header-padding minskas till 8px 10px, knapp-padding och gap i `hdr-mid` reduceras
+- Lägestext ("Testläge 🧪") döljs i sync-raden på smala skärmar — läget syns redan via ikonen
+- Påverkar inte Galaxy Tab A8 eller bredare skärmar
+
 ## v4.4 – 2026-06-23
 - Dold debug-panel tillagd: visas när användaren trycker fem gånger snabbt på versionsnumret i headern
 - Panelen visar de senaste 200 loggmeddelandena med tidsstämpel HH:MM:SS, rullar automatiskt till botten
