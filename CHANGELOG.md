@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.2 – 2026-06-24
+- "Per kategori"-sektionen borttagen från Summering-vyn (Idag-fliken) — informationen finns redan i Statistik-vyn med visuella staplar
+- Borttaget: `#sumPerKatTitle`, `#sumCatList`, cat-list-renderingen i `renderSummary()`, och `applyLang`-raden för `sumPerKatTitle`
+
 ## v5.1 – 2026-06-24
 - Avgångsloggen visar nu `TEST!` (röd, fet text) på rader där GPS-koordinaterna inte matchade någon känd brygga inom 50 m — tydlig signal om att bryggornas koordinater behöver justeras
 - Tidigare visades koordinaterna (60.1234,24.5678) som diagnostik; ersatt med den mer lättlästa TEST!-markeringen

@@ -735,8 +735,6 @@ nav {
         <div id="sumCO2Compare"></div>
       </div>
       <div id="sumDeptStatsIdag"></div>
-      <div class="sec-title" id="sumPerKatTitle">Per kategori</div>
-      <div class="cat-list" id="sumCatList"></div>
       <button class="reset-btn" id="resetBtnIdag" onclick="confirmReset()">Återställ dagen</button>
     </div>
   </div>
@@ -866,7 +864,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "5.1";
+const APP_VERSION = "5.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -1067,7 +1065,6 @@ function applyLang() {
   set('peakLblFordon',    t('fordonLbl'));
   set('co2LblTurer',      t('turerIdag'));
   set('co2LblCO2',        t('co2idag'));
-  set('sumPerKatTitle',   t('perKat'));
   set('resetBtnIdag',     t('aterstall'));
   set('modalTitle',       t('modalTitle'));
   set('modalBody',        t('modalBody'));
@@ -1737,18 +1734,6 @@ function renderSummary() {
     document.getElementById('peakCount').textContent = '—';
     document.getElementById('sumAvg').textContent = `${t('snitt')}: — ${t('snittTim')}`;
   }
-
-  const cl = document.getElementById('sumCatList');
-  cl.innerHTML = '';
-  CATS.forEach(cat => {
-    const n = c[cat.id];
-    cl.innerHTML +=
-      `<div class="cat-row">` +
-        `<span class="cat-emoji">${cat.emoji}</span>` +
-        `<span class="cat-name">${catName(cat)}</span>` +
-        `<span class="cat-count">${n}</span>` +
-      `</div>`;
-  });
 
   const trips = tripsToday();
   const co2 = trips * CO2_PER_TRIP;
