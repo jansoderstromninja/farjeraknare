@@ -1,5 +1,12 @@
 # Changelog
 
+## v5.4 – 2026-06-24
+- Hastighetsindikatorn i headern ersatt med en SVG-speedometer (halvcirkel, 0–6 knop)
+- Nålen roterar i realtid baserat på aktuell GPS-hastighet
+- Färgkodad båge: vit 0–1 kn, grön 1–3 kn, gul 3–6 kn (tonade zoner mot mörk bakgrund)
+- Nål och siffra färgkodas identiskt med tidigare textindikator (grå/vit/grön/gul)
+- Nollställs till grå nål + "0.0 kn" när GPS stoppas; döljs i Testläge
+
 ## v5.3 – 2026-06-24
 - Statistik och Summering sammanslagna till en flik ("Statistik") med underflikar Idag / Vecka / Månad
 - Idag-fliken visar i ordning: totalt fordon + snitt, toppimme, avgångar + CO2, CO2-jämförelser, avgångsstatistik, per kategori med staplar, per timme-graf
