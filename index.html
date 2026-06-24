@@ -686,18 +686,8 @@ nav {
   </div>
 </div>
 
-<!-- STATS VIEW -->
+<!-- STATS VIEW (merged with summary) -->
 <div class="view" id="vStats">
-  <div class="stats-wrap">
-    <div class="sec-title" id="statsPerKatTitle">Per kategori</div>
-    <div class="cat-list" id="statsCatList"></div>
-    <div class="sec-title" id="statsPerTimmeTitle">Per timme</div>
-    <div id="statsHourList"></div>
-  </div>
-</div>
-
-<!-- SUMMARY VIEW -->
-<div class="view" id="vSummary">
   <div class="sum-tabs">
     <button class="sum-tab active" id="sumTabIdag"  onclick="goSummaryTab('Idag')">Idag</button>
     <button class="sum-tab" id="sumTabVecka" onclick="goSummaryTab('Vecka')">Vecka</button>
@@ -735,6 +725,10 @@ nav {
         <div id="sumCO2Compare"></div>
       </div>
       <div id="sumDeptStatsIdag"></div>
+      <div class="sec-title" id="statsPerKatTitle">Per kategori</div>
+      <div class="cat-list" id="statsCatList"></div>
+      <div class="sec-title" id="statsPerTimmeTitle">Per timme</div>
+      <div id="statsHourList"></div>
       <button class="reset-btn" id="resetBtnIdag" onclick="confirmReset()">Återställ dagen</button>
     </div>
   </div>
@@ -773,10 +767,6 @@ nav {
   <button class="nav-btn" id="navStats" onclick="goView('Stats')">
     <span class="nav-icon">📊</span>
     <span id="navStatsLabel">Statistik</span>
-  </button>
-  <button class="nav-btn" id="navSummary" onclick="goView('Summary')">
-    <span class="nav-icon">📋</span>
-    <span id="navSummaryLabel">Summering</span>
   </button>
   <button class="nav-btn" id="navWeather" onclick="goView('Weather')">
     <span class="nav-icon">🌬️</span>
@@ -864,7 +854,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "5.2";
+const APP_VERSION = "5.3";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -892,7 +882,6 @@ const T = {
     appTitle:       'Fordonsräknare',
     navCount:       'Räkna',
     navStats:       'Statistik',
-    navSummary:     'Summering',
     footerLabel:    'Totalt idag',
     korTom:         'Kör tom',
     angra:          'Ångra',
@@ -959,7 +948,6 @@ const T = {
     appTitle:       'Ajoneuvolaskuri',
     navCount:       'Laske',
     navStats:       'Tilastot',
-    navSummary:     'Yhteenveto',
     footerLabel:    'Yhteensä tänään',
     korTom:         'Aja tyhjänä',
     angra:          'Kumoa',
@@ -1074,7 +1062,6 @@ function applyLang() {
   set('countdownLabel',   t('nästaTur'));
   set('navCountLabel',    t('navCount'));
   set('navStatsLabel',    t('navStats'));
-  set('navSummaryLabel',  t('navSummary'));
   set('navWeatherLabel',  t('navWeather'));
   set('weatherTitle',     t('weatherTitle'));
   updateThunderWarning(lastThunderInfo);
@@ -1627,8 +1614,38 @@ function renderCount() {
 function renderStats() {
   const c = counts();
   const total = Object.values(c).reduce((a, b) => a + b, 0);
-  const maxCat = Math.max(...Object.values(c), 1);
+  const h = hourlyData();
+  const hrs = Object.keys(h).map(Number);
 
+  // ── Summary cards ──
+  document.getElementById('sumTotal').textContent = total;
+  if (hrs.length) {
+    const peak = hrs.reduce((best, hr) => hourTotal(h[hr]) > hourTotal(h[best]) ? hr : best, hrs[0]);
+    const pn = hourTotal(h[peak]);
+    document.getElementById('peakHour').textContent =
+      `${pad(peak)}:00 – ${pad(peak + 1 < 24 ? peak + 1 : 0)}:00`;
+    document.getElementById('peakCount').textContent = `${pn} ${t('fordonEnhet')}`;
+    document.getElementById('sumAvg').innerHTML =
+      `${t('snitt')}: <strong>${Math.round(total / hrs.length)}</strong> ${t('snittTim')}`;
+  } else {
+    document.getElementById('peakHour').textContent = '—';
+    document.getElementById('peakCount').textContent = '—';
+    document.getElementById('sumAvg').textContent = `${t('snitt')}: — ${t('snittTim')}`;
+  }
+  const trips = tripsToday();
+  const co2 = trips * CO2_PER_TRIP;
+  document.getElementById('sumTripCount').textContent = trips;
+  document.getElementById('sumCO2').textContent = co2.toFixed(1) + ' kg';
+  document.getElementById('sumCO2Compare').innerHTML = co2CompareHtml(co2);
+  const d = load();
+  const deptStats = calcDepartureStats(
+    d.logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta })),
+    d.trips.map(tr => tr.ts).sort((a, b) => a - b)
+  );
+  document.getElementById('sumDeptStatsIdag').innerHTML = deptStatsCardHtml(deptStats, null);
+
+  // ── Per category (with bars) ──
+  const maxCat = Math.max(...Object.values(c), 1);
   const cl = document.getElementById('statsCatList');
   cl.innerHTML = '';
   CATS.forEach(cat => {
@@ -1643,9 +1660,9 @@ function renderStats() {
       `</div>`;
   });
 
-  const h = hourlyData();
+  // ── Per hour chart ──
   const hl = document.getElementById('statsHourList');
-  const hrs = Object.keys(h).map(Number).sort((a, b) => a - b);
+  hrs.sort((a, b) => a - b);
 
   if (!hrs.length) {
     hl.innerHTML = `<div class="empty">${t('ingaFordon')}</div>`;
@@ -1711,42 +1728,6 @@ function renderStats() {
       `</g>` +
     `</svg>` +
     `<div class="hour-chart-avg">${t('snitt')}: <strong>${Math.round(avg)}</strong> ${t('snittTim')}</div>`;
-}
-
-// ── RENDER: SUMMARY VIEW ──
-function renderSummary() {
-  const c = counts();
-  const total = Object.values(c).reduce((a, b) => a + b, 0);
-  document.getElementById('sumTotal').textContent = total;
-
-  const h = hourlyData();
-  const hrs = Object.keys(h).map(Number);
-  if (hrs.length) {
-    const peak = hrs.reduce((best, hr) => hourTotal(h[hr]) > hourTotal(h[best]) ? hr : best, hrs[0]);
-    const pn = hourTotal(h[peak]);
-    document.getElementById('peakHour').textContent =
-      `${pad(peak)}:00 – ${pad(peak+1 < 24 ? peak+1 : 0)}:00`;
-    document.getElementById('peakCount').textContent = `${pn} ${t('fordonEnhet')}`;
-    document.getElementById('sumAvg').innerHTML =
-      `${t('snitt')}: <strong>${Math.round(total / hrs.length)}</strong> ${t('snittTim')}`;
-  } else {
-    document.getElementById('peakHour').textContent = '—';
-    document.getElementById('peakCount').textContent = '—';
-    document.getElementById('sumAvg').textContent = `${t('snitt')}: — ${t('snittTim')}`;
-  }
-
-  const trips = tripsToday();
-  const co2 = trips * CO2_PER_TRIP;
-  document.getElementById('sumTripCount').textContent = trips;
-  document.getElementById('sumCO2').textContent = co2.toFixed(1) + ' kg';
-  document.getElementById('sumCO2Compare').innerHTML = co2CompareHtml(co2);
-
-  const d = load();
-  const deptStats = calcDepartureStats(
-    d.logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta })),
-    d.trips.map(tr => tr.ts).sort((a, b) => a - b)
-  );
-  document.getElementById('sumDeptStatsIdag').innerHTML = deptStatsCardHtml(deptStats, null);
 }
 
 // ── RENDER: SUMMARY HISTORY (Vecka / Månad) ──
@@ -1925,7 +1906,7 @@ function renderMonth() {
 }
 
 // ── VIEW SWITCHING ──
-const VIEWS = ['Count', 'Stats', 'Summary', 'Weather'];
+const VIEWS = ['Count', 'Stats', 'Weather'];
 let currentView = 'Count';
 function goView(name) {
   currentView = name;
@@ -1933,8 +1914,7 @@ function goView(name) {
     document.getElementById('v' + v).classList.toggle('active', v === name);
     document.getElementById('nav' + v).classList.toggle('active', v === name);
   });
-  if (name === 'Stats')   renderStats();
-  if (name === 'Summary') goSummaryTab(summaryTab);
+  if (name === 'Stats')   goSummaryTab(summaryTab);
   if (name === 'Weather') renderWeather();
 }
 
@@ -1946,7 +1926,7 @@ function goSummaryTab(name) {
     document.getElementById('sumTab' + t).classList.toggle('active', t === name);
     document.getElementById('sumPanel' + t).classList.toggle('active', t === name);
   });
-  if (name === 'Idag')  renderSummary();
+  if (name === 'Idag')  renderStats();
   if (name === 'Vecka') renderWeek();
   if (name === 'Manad') renderMonth();
 }
@@ -1954,8 +1934,7 @@ function goSummaryTab(name) {
 // Re-render whatever is on screen (used by the live Firebase listener)
 function refreshAll() {
   renderCount();
-  if (currentView === 'Stats')   renderStats();
-  if (currentView === 'Summary' && summaryTab === 'Idag') renderSummary();
+  if (currentView === 'Stats' && summaryTab === 'Idag') renderStats();
 }
 
 // ── RESET ──

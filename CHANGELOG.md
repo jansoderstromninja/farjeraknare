@@ -1,5 +1,12 @@
 # Changelog
 
+## v5.3 – 2026-06-24
+- Statistik och Summering sammanslagna till en flik ("Statistik") med underflikar Idag / Vecka / Månad
+- Idag-fliken visar i ordning: totalt fordon + snitt, toppimme, avgångar + CO2, CO2-jämförelser, avgångsstatistik, per kategori med staplar, per timme-graf
+- Summering-fliken borttagen från navigationen
+- Borttaget: `vSummary`, `navSummary`, `renderSummary()`, i18n-nycklarna `navSummary`
+- `renderStats()` renderar nu hela Idag-innehållet; `goSummaryTab('Idag')` anropar `renderStats()`
+
 ## v5.2 – 2026-06-24
 - "Per kategori"-sektionen borttagen från Summering-vyn (Idag-fliken) — informationen finns redan i Statistik-vyn med visuella staplar
 - Borttaget: `#sumPerKatTitle`, `#sumCatList`, cat-list-renderingen i `renderSummary()`, och `applyLang`-raden för `sumPerKatTitle`
