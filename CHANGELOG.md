@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.0 – 2026-06-24
+- Avgångspåminnelse tillagd i Färjeläge: om ingen ny avgång skett på 22 min visas "Kolla Pettu 👀" eller "Kolla Utö 👀" beroende på senaste avgångsbrygga
+- Påminnelsen kräver att `from`-fältet är känt (brygga matchad inom 50 m), GPS-hastighet ≤ 0.5 m/s och att alarmet inte redan fired under denna avgångscykel
+- Bannern visas diskret i Räkna-vyn och försvinner automatiskt efter 30 s; stängs direkt vid nästa registrerade avgång
+- Ny funktion `playPing()`: mjukare ljud än klick-feedback (520 Hz sinus, 0.6 s decay)
+- Ny konstant `DEPARTURE_REMINDER_MS = 22 * 60 * 1000`
+- `currentGpsSpeedMs` spåras nu i GPS-callbacken och nollställs i `stopGpsWatch()`
+
 ## v4.9 – 2026-06-24
 - k-means brygginlärning ersatt med hårdkodad koordinatmatchning mot Pettu (60.0385, 22.9226) och Utö (60.0411, 22.9151)
 - Ny funktion `getNearestBrygga(lat, lng)`: beräknar Haversine-avstånd till varje känd brygga, returnerar namn om inom 50 m, annars null

@@ -546,6 +546,23 @@ nav {
 }
 .departure-banner.show { opacity: 1; }
 
+/* ── REMINDER BANNER ── */
+#reminderBanner {
+  flex-shrink: 0;
+  background: #1a2e1a;
+  border-top: 1px solid #2d5a2d;
+  border-bottom: 1px solid #2d5a2d;
+  padding: 7px 16px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #86efac;
+  text-align: center;
+}
+#reminderBanner.show { display: flex; }
+
 /* ── COUNTDOWN BAR ── */
 #countdownBar {
   flex-shrink: 0;
@@ -653,6 +670,7 @@ nav {
 <div class="view active" id="vCount">
   <div class="btn-grid" id="btnGrid"></div>
   <div id="countdownBar" style="display:none"><span id="countdownLabel">Nästa avgång tidigast om</span> <span id="countdownText">5:00</span></div>
+  <div id="reminderBanner"></div>
   <div id="departureLog" style="display:none"></div>
   <div class="count-footer">
     <div>
@@ -847,7 +865,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.9";
+const APP_VERSION = "5.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -863,6 +881,7 @@ const GPS_SPEED_THRESHOLD  = 1.0;   // m/s – minsta fart för att GPS ska regi
 const GPS_WARMUP_MS        = 30000;         // ms – GPS lyssnar men registrerar inga avgångar under uppvärmning
 const GPS_DEPARTURE_GAP_MS    = 5 * 60 * 1000; // ms – minsta tid mellan två GPS-detekterade avgångar
 const TRIP_VEHICLE_WINDOW_MS  = 3 * 60 * 1000; // ms – fordon loggade inom ±3 min räknas till avgången
+const DEPARTURE_REMINDER_MS   = 22 * 60 * 1000; // ms – påminnelse om ingen ny avgång efter 22 min
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
@@ -1435,6 +1454,9 @@ function removeOne(catId, btn) {
 
 // ── TRIPS (turer) & CO2 ──
 function recordDeparture(ts, lat, lng) {
+  reminderFired = false;
+  const rb = document.getElementById('reminderBanner');
+  if (rb) rb.classList.remove('show');
   if (db) {
     const date = localDate();
     const data = { ts };
@@ -1973,6 +1995,7 @@ function tick() {
   document.getElementById('hdrDate').textContent =
     n.toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' });
   updateKorTomLock();
+  checkDepartureReminder();
 }
 
 // ── PIER MATCHING ──
@@ -2082,6 +2105,50 @@ let tripSpeedSamples    = [];
 let lastDepartureFbKey  = null;
 let lastDepartureFbDate = null;
 let lastKnownGpsPos     = null;
+let currentGpsSpeedMs   = 0;
+let reminderFired       = false;
+
+function playPing() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 520;
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.6);
+  } catch (e) {}
+}
+
+let reminderHideTimer = null;
+function showReminderBanner(msg) {
+  const el = document.getElementById('reminderBanner');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(reminderHideTimer);
+  reminderHideTimer = setTimeout(() => el.classList.remove('show'), 30000);
+}
+
+function checkDepartureReminder() {
+  if (mode !== 'ferry') return;
+  if (currentGpsSpeedMs > 0.5) return;
+  if (reminderFired) return;
+  const d = load();
+  if (!d.trips.length) return;
+  const last = [...d.trips].sort((a, b) => b.ts - a.ts)[0];
+  if (!last.from) return;
+  if (Date.now() - last.ts < DEPARTURE_REMINDER_MS) return;
+  reminderFired = true;
+  playPing();
+  showReminderBanner('Kolla ' + last.from + ' 👀');
+  console.log('[Påminnelse] 22 min sedan avgång från', last.from);
+}
 
 function startGpsWatch() {
   if (!navigator.geolocation || geoWatchId !== null) return;
@@ -2099,6 +2166,7 @@ function startGpsWatch() {
     pos => {
       lastKnownGpsPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       const speed = pos.coords.speed;
+      currentGpsSpeedMs = speed ?? 0;
       updateGpsAccuracy(pos.coords.accuracy, speed);
       // Collect every positive sample continuously — before warmup guard and null guard
       if (speed != null && speed > 0) {
@@ -2139,6 +2207,7 @@ function stopGpsWatch() {
     geoWatchId = null;
     gpsWarmupUntil = 0;
     lastGpsDepartureTs = 0;
+    currentGpsSpeedMs  = 0;
     finalizeCurrentTripSpeed();
     tripSpeedSamples  = [];
     lastDepartureFbKey  = null;
