@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.9 – 2026-06-24
+- k-means brygginlärning ersatt med hårdkodad koordinatmatchning mot Pettu (60.0385, 22.9226) och Utö (60.0411, 22.9151)
+- Ny funktion `getNearestBrygga(lat, lng)`: beräknar Haversine-avstånd till varje känd brygga, returnerar namn om inom 50 m, annars null
+- `from`-fältet i Firebase `turer/` innehåller nu bryggans namn direkt ("Pettu"/"Utö") istället för 'a'/'b'
+- `initBryggorListener()` lyssnar nu på `config/bryggor/` i Firebase — koordinater kan åsidosättas utan koddeploy
+- Borttaget: `savePositionAndCluster()`, `kMeans2()`, `geoDistSq()`, `getDirection()`, `bridgeData`, `bryggor/positioner`-skrivningar
+- Borttaget: oanvända i18n-nycklar `bryggeADefault`/`bryggeBDefault`
+
 ## v4.8 – 2026-06-24
 - Avgångsloggen: om `from` saknas (k-means ej kört) visas nu GPS-koordinaterna (lat/lng, 4 decimaler) istället för tom sträng — bekräftar att GPS-data finns i Firebase
 - Bugg fixad: lång tryckning minskade räknaren men inte fordonsantalet på avgångsraden i loggen

@@ -847,7 +847,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.8";
+const APP_VERSION = "4.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -933,8 +933,6 @@ const T = {
     avgPerTimme:    'Avg/tim',
     avgSnittPerDag: 'Snitt avg/dag',
     avgTommaTotal:  'Tomturer totalt',
-    bryggeADefault: 'Brygga A',
-    bryggeBDefault: 'Brygga B',
     depTom:         'tom',
     depFordon:      'fordon',
     locale:         'sv-SE',
@@ -1002,8 +1000,6 @@ const T = {
     avgPerTimme:    'Lähtöjä/h',
     avgSnittPerDag: 'Keskim. lähtöjä/pv',
     avgTommaTotal:  'Tyhjälähdöt yht.',
-    bryggeADefault: 'Laituri A',
-    bryggeBDefault: 'Laituri B',
     depTom:         'tyhjä',
     depFordon:      'ajoneuvoa',
     locale:         'fi-FI',
@@ -1445,14 +1441,13 @@ function recordDeparture(ts, lat, lng) {
     if (lat !== undefined) {
       data.lat = lat;
       data.lng = lng;
-      const dir = getDirection(lat, lng);
-      if (dir) { data.from = dir.from; data.to = dir.to; }
+      const brygga = getNearestBrygga(lat, lng);
+      if (brygga) data.from = brygga;
     }
     const ref = db.ref('turer/' + date).push(data);
     ref.catch(() => setSyncStatus('error'));
     lastDepartureFbKey  = ref.key;
     lastDepartureFbDate = date;
-    if (lat !== undefined) savePositionAndCluster(lat, lng, ts);
   } else {
     const d = load();
     d.trips.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts });
@@ -1980,72 +1975,48 @@ function tick() {
   updateKorTomLock();
 }
 
-// ── BRIDGE LEARNING ──
-let bridgeData = { centrum: null, namn: { a: null, b: null } };
+// ── PIER MATCHING ──
+// Koordinater kan åsidosättas via Firebase config/bryggor/{id}: { name, lat, lng }
+// Firebase-regler måste tillåta läsning av config/: { ".read": true }
+const BRYGGOR_DEFAULT = [
+  { id: 'pettu', name: 'Pettu', lat: 60.0385, lng: 22.9226 },
+  { id: 'uto',   name: 'Utö',   lat: 60.0411, lng: 22.9151 },
+];
+let bryggorConfig = BRYGGOR_DEFAULT;
+const BRYGGA_RADIUS_M = 50;
 
-function geoDistSq(lat1, lng1, lat2, lng2) {
-  const dlat = lat2 - lat1, dlng = lng2 - lng1;
-  return dlat * dlat + dlng * dlng;
+function geoDistMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function kMeans2(positions) {
-  if (positions.length < 2) return null;
-  let a = { lat: positions[0].lat, lng: positions[0].lng };
-  let b = { lat: positions[positions.length - 1].lat, lng: positions[positions.length - 1].lng };
-  for (let iter = 0; iter < 30; iter++) {
-    const ca = [], cb = [];
-    positions.forEach(p => (geoDistSq(p.lat, p.lng, a.lat, a.lng) <= geoDistSq(p.lat, p.lng, b.lat, b.lng) ? ca : cb).push(p));
-    if (!ca.length || !cb.length) break;
-    const mean = arr => ({ lat: arr.reduce((s, p) => s + p.lat, 0) / arr.length, lng: arr.reduce((s, p) => s + p.lng, 0) / arr.length });
-    const na = mean(ca), nb = mean(cb);
-    if (Math.abs(na.lat - a.lat) < 1e-9) break;
-    a = na; b = nb;
+function getNearestBrygga(lat, lng) {
+  let nearest = null, minDist = Infinity;
+  bryggorConfig.forEach(b => {
+    const d = geoDistMeters(lat, lng, b.lat, b.lng);
+    if (d < minDist) { minDist = d; nearest = b; }
+  });
+  if (nearest && minDist <= BRYGGA_RADIUS_M) {
+    console.log('[Bryggor] Närmaste brygga:', nearest.name, '–', minDist.toFixed(0), 'm');
+    return nearest.name;
   }
-  return { a, b };
-}
-
-function getDirection(lat, lng) {
-  if (!bridgeData.centrum) return null;
-  const { a, b } = bridgeData.centrum;
-  return geoDistSq(lat, lng, a.lat, a.lng) <= geoDistSq(lat, lng, b.lat, b.lng)
-    ? { from: 'a', to: 'b' } : { from: 'b', to: 'a' };
-}
-
-// Firebase-regler måste tillåta läs/skriv till bryggor/ för autentiserade
-// (eller alla) användare, t.ex.: "bryggor": { ".read": true, ".write": true }
-function savePositionAndCluster(lat, lng, ts) {
-  if (!db) return;
-  console.log('[Bryggor] savePositionAndCluster anropad, lat:', lat, 'lng:', lng);
-  // push() måste vara klar innan once('value') läser — annars missar snapshoten
-  // den nyss sparade positionen (race condition med parallella Firebase-anrop)
-  db.ref('bryggor/positioner').push({ lat, lng, ts })
-    .then(() => db.ref('bryggor/positioner').once('value'))
-    .then(snap => {
-      const positions = [];
-      snap.forEach(ch => { const v = ch.val(); positions.push({ lat: v.lat, lng: v.lng }); });
-      console.log('[Bryggor]', positions.length, 'positioner inlästa, behöver 6 för kluster');
-      if (positions.length >= 6) {
-        const centrum = kMeans2(positions);
-        if (centrum) {
-          bridgeData.centrum = centrum;
-          db.ref('bryggor/centrum').set(centrum)
-            .then(() => console.log('[Bryggor] Centrum sparat:', JSON.stringify(centrum)))
-            .catch(e => console.error('[Bryggor] Fel vid skrivning av centrum:', e));
-        }
-      }
-    })
-    .catch(e => console.error('[Bryggor] Fel vid skrivning/läsning av positioner:', e));
+  console.log('[Bryggor] Ingen brygga inom', BRYGGA_RADIUS_M, 'm (närmast:', nearest?.name, minDist.toFixed(0), 'm)');
+  return null;
 }
 
 function initBryggorListener() {
   if (!db) return;
-  db.ref('bryggor/centrum').on('value', snap => {
+  db.ref('config/bryggor').on('value', snap => {
     const v = snap.val();
-    if (v) { bridgeData.centrum = v; renderDepartureLog(); }
-  });
-  db.ref('bryggor/namn').on('value', snap => {
-    const v = snap.val();
-    if (v) { bridgeData.namn = v; renderDepartureLog(); }
+    if (v && typeof v === 'object') {
+      bryggorConfig = Object.values(v);
+      console.log('[Bryggor] Konfiguration laddad från Firebase:', JSON.stringify(bryggorConfig));
+    }
+    renderDepartureLog();
   });
 }
 
@@ -2058,12 +2029,10 @@ function renderDepartureLog() {
   const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 10);
   if (!trips.length) { el.style.display = 'none'; return; }
 
-  const nameOf = k => (bridgeData.namn[k]) || (k === 'a' ? t('bryggeADefault') : t('bryggeBDefault'));
-
   const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const dirStr = trip.from
-      ? nameOf(trip.from)
+      ? trip.from
       : (trip.lat != null ? `${trip.lat.toFixed(4)},${trip.lng.toFixed(4)}` : '');
     const veh = Math.max(0, d.logs
       .filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS)
