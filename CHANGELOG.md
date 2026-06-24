@@ -1,5 +1,12 @@
 # Changelog
 
+## v4.8 – 2026-06-24
+- Avgångsloggen: om `from` saknas (k-means ej kört) visas nu GPS-koordinaterna (lat/lng, 4 decimaler) istället för tom sträng — bekräftar att GPS-data finns i Firebase
+- Bugg fixad: lång tryckning minskade räknaren men inte fordonsantalet på avgångsraden i loggen
+  - Rotorsak: `veh`-räknaren filtrerade bara loggar med `delta > 0` och ignorerade `delta: -1`-händelser — nettot räknades aldrig ut
+  - Fix: räknar nu med `.reduce()` på samtliga loggar inom tidsfönstret och summerar delta-värdena, klämt till 0
+- Hastighetsfältet (X kn) borttaget från avgångsloggens rader — `.dep-speed`-CSS och `speedStr`-variabeln raderade
+
 ## v4.7 – 2026-06-23
 - Bugg fixad: `bryggor/`-noden skapades aldrig i Firebase trots att GPS-avgångar registrerades med lat/lng
   - Rotorsak: `.push()` och `.once('value')` startades parallellt — `once` läste gamla snapshoten innan `push` hunnit bekräftas av servern, så antalet positioner räknades aldrig upp korrekt och k-means triggades aldrig

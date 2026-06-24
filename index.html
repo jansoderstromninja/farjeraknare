@@ -199,7 +199,6 @@ body.lang-fi .v-btn-label-fi {
 .dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; flex-shrink: 0; }
 .dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dep-count { color: var(--muted); text-align: right; min-width: 46px; flex-shrink: 0; }
-.dep-speed { color: var(--muted); text-align: right; min-width: 34px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .dep-undo  { background: none; border: none; color: var(--muted); padding: 2px 4px; font-size: 12px; cursor: pointer; opacity: 0.5; line-height: 1; flex-shrink: 0; min-width: 22px; min-height: 22px; }
 .dep-undo:hover { opacity: 1; color: #EF4444; }
 .dep-empty { color: #EF4444; }
@@ -848,7 +847,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "4.7";
+const APP_VERSION = "4.8";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2063,13 +2062,16 @@ function renderDepartureLog() {
 
   const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    const dirStr = trip.from ? nameOf(trip.from) : '';
-    const veh = d.logs.filter(l => (l.delta || 1) > 0 && Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS).length;
+    const dirStr = trip.from
+      ? nameOf(trip.from)
+      : (trip.lat != null ? `${trip.lat.toFixed(4)},${trip.lng.toFixed(4)}` : '');
+    const veh = Math.max(0, d.logs
+      .filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS)
+      .reduce((sum, l) => sum + (l.delta ?? 1), 0));
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
-    const speedStr = trip.avgSpeedKnots != null ? `${trip.avgSpeedKnots.toFixed(1)} kn` : '— kn';
-    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><span class="dep-speed">${speedStr}</span><button class="dep-undo" onclick="deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
+    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><button class="dep-undo" onclick="deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
   }).join('');
 
   el.innerHTML = rows;
