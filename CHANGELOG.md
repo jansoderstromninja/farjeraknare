@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.1 – 2026-06-24
+- Avgångsloggen visar nu `TEST!` (röd, fet text) på rader där GPS-koordinaterna inte matchade någon känd brygga inom 50 m — tydlig signal om att bryggornas koordinater behöver justeras
+- Tidigare visades koordinaterna (60.1234,24.5678) som diagnostik; ersatt med den mer lättlästa TEST!-markeringen
+
 ## v5.0 – 2026-06-24
 - Avgångspåminnelse tillagd i Färjeläge: om ingen ny avgång skett på 22 min visas "Kolla Pettu 👀" eller "Kolla Utö 👀" beroende på senaste avgångsbrygga
 - Påminnelsen kräver att `from`-fältet är känt (brygga matchad inom 50 m), GPS-hastighet ≤ 0.5 m/s och att alarmet inte redan fired under denna avgångscykel

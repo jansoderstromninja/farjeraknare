@@ -198,6 +198,7 @@ body.lang-fi .v-btn-label-fi {
 .dep-row:last-child { border-bottom: none; }
 .dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; flex-shrink: 0; }
 .dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dep-test  { color: #EF4444; font-weight: 700; font-size: 10px; letter-spacing: 0.05em; }
 .dep-count { color: var(--muted); text-align: right; min-width: 46px; flex-shrink: 0; }
 .dep-undo  { background: none; border: none; color: var(--muted); padding: 2px 4px; font-size: 12px; cursor: pointer; opacity: 0.5; line-height: 1; flex-shrink: 0; min-width: 22px; min-height: 22px; }
 .dep-undo:hover { opacity: 1; color: #EF4444; }
@@ -865,7 +866,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "5.0";
+const APP_VERSION = "5.1";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2056,7 +2057,7 @@ function renderDepartureLog() {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const dirStr = trip.from
       ? trip.from
-      : (trip.lat != null ? `${trip.lat.toFixed(4)},${trip.lng.toFixed(4)}` : '');
+      : (trip.lat != null ? `<span class="dep-test">TEST!</span>` : '');
     const veh = Math.max(0, d.logs
       .filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS)
       .reduce((sum, l) => sum + (l.delta ?? 1), 0));
