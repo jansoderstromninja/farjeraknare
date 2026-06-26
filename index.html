@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.0";
+const APP_VERSION = "7.1";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -904,7 +904,7 @@ function buildFmiWaterUrl() {
   const start = new Date(now - 2 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
   return 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature' +
     '&storedquery_id=fmi::observations::mareograph::instant::simple' +
-    '&fmisid=132310' +
+    '&fmisid=134253' +
     '&starttime=' + start + '&endtime=' + end;
 }
 let mode = localStorage.getItem(MODE_KEY) || 'test';
@@ -2409,7 +2409,7 @@ async function loadWeather() {
         const sign = cm > 0 ? '+' : '';
         fmiStatus.innerHTML = `<div class="fmi-cards"><div class="fmi-card">` +
           `<div class="fmi-card-value" style="color:${col}">🌊 ${sign}${Math.round(cm)} cm</div>` +
-          `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta (Helsinki)' : 'Havsvattenstånd (Helsinki)'}</div>` +
+          `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta Hanko' : 'Vattenstånd Hangö'}</div>` +
           `</div></div>`;
       }
     }

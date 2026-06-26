@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.1 – 2026-06-26
+- FMI Hangö mareograf hittad: fmisid=134253 (59.823°N, 22.977°E = Hanko Russarö)
+- Station bytt från Helsinki Kaivopuisto (132310) till Hangö Russarö (134253)
+- Etiketten återställd till "Vattenstånd Hangö" / "Vedenpinta Hanko"
+
 ## v7.0 – 2026-06-26
 - FMI vindkort borttaget — bara havsvattenstånd visas i väderfliken
 - FMI vattenståndsstation bytt till Helsinki Kaivopuisto (fmisid=132310) — närmaste aktiva FMI-mareograf (Hangö finns inte i FMI:s öppna data)
