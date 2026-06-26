@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "6.7";
+const APP_VERSION = "6.8";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2346,6 +2346,10 @@ function parseFmiSimple(xmlText, label) {
       if (lastVal !== null) return { wlev: { value: lastVal, time: lastTime } };
     }
 
+    if (label) {
+      const tagNames = new Set(Array.from(doc.getElementsByTagNameNS('*', '*')).map(e => e.localName));
+      console.log('[FMI ' + label + '] elements in XML:', Array.from(tagNames).sort().join(', '));
+    }
     if (label) console.log('[FMI ' + label + '] no known format found in XML');
     return null;
   } catch (e) {
