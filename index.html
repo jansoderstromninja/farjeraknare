@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "6.1";
+const APP_VERSION = "6.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -899,7 +899,15 @@ const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
 const FMI_WIND_URL  = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::simple&place=Ut%C3%B6&parameters=ws_10min,wg_10min,wd_10min';
-const FMI_WATER_URL = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant&latlon=59.8233,23.0297&parameters=wlev';
+function buildFmiWaterUrl() {
+  const now = new Date();
+  const end   = now.toISOString().slice(0, 19) + 'Z';
+  const start = new Date(now - 2 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
+  return 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature' +
+    '&storedquery_id=fmi::observations::mareograph::instant' +
+    '&latlon=59.8233,23.0297&parameters=wlev' +
+    '&starttime=' + start + '&endtime=' + end;
+}
 let mode = localStorage.getItem(MODE_KEY) || 'test';
 
 // ── TRANSLATIONS ──
@@ -2359,7 +2367,7 @@ async function loadWeather() {
     const [omResp, fmiWindResp, fmiWaterResp] = await Promise.all([
       fetch(omUrl),
       fetch(FMI_WIND_URL).catch(() => null),
-      fetch(FMI_WATER_URL).catch(() => null),
+      fetch(buildFmiWaterUrl()).catch(() => null),
     ]);
     if (!omResp.ok) throw new Error('HTTP ' + omResp.status);
     weatherData = await omResp.json();
