@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "5.8";
+const APP_VERSION = "5.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2320,7 +2320,7 @@ function parseFmiSimple(xmlText, label) {
     if (label) console.log('[FMI ' + label + '] WML2 parsed:', JSON.stringify(latest));
     return Object.keys(latest).length ? latest : null;
   } catch (e) {
-    if (label) console.error('[FMI ' + label + '] parse error:', e);
+    if (label) console.log('[FMI ' + label + '] parse error:', e);
     return null;
   }
 }
@@ -2372,7 +2372,7 @@ async function loadWeather() {
       console.log('[FMI wind] HTTP', fmiWindResp.status, '| XML[:800]:', windXml.slice(0, 800));
       fmiWind = parseFmiSimple(windXml, 'wind');
     } else {
-      console.error('[FMI wind] HTTP', fmiWindResp?.status ?? 'null');
+      console.log('[FMI wind] FAILED HTTP', fmiWindResp?.status ?? 'null');
     }
     if (fmiWaterResp?.ok) {
       const waterXml = await fmiWaterResp.text();
@@ -2380,7 +2380,7 @@ async function loadWeather() {
       fmiWater = parseFmiSimple(waterXml, 'water');
       console.log('[FMI water] wlev result:', JSON.stringify(fmiWater?.wlev ?? null));
     } else {
-      console.error('[FMI water] HTTP', fmiWaterResp?.status ?? 'null');
+      console.log('[FMI water] FAILED HTTP', fmiWaterResp?.status ?? 'null (network error)');
     }
 
     // FMI status cards
