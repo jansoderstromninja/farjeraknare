@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "5.6";
+const APP_VERSION = "5.7";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -899,7 +899,7 @@ const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
 const FMI_WIND_URL  = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::simple&fmisid=100539&parameters=ws_10min,wg_10min,wd_10min';
-const FMI_WATER_URL = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant&fmisid=134254&parameters=wlev';
+const FMI_WATER_URL = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant&place=Hanko&parameters=wlev';
 let mode = localStorage.getItem(MODE_KEY) || 'test';
 
 // ── TRANSLATIONS ──
@@ -2277,22 +2277,52 @@ function windColor(ms) {
   return '#991B1B';
 }
 
-function parseFmiSimple(xmlText) {
+function parseFmiSimple(xmlText, label) {
   try {
     const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    const elements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
     const latest = {};
-    Array.from(elements).forEach(el => {
-      const name   = el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent?.trim();
-      const valStr = el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent?.trim();
-      const time   = el.getElementsByTagNameNS('*', 'Time')[0]?.textContent?.trim();
-      if (!name || valStr === 'NaN') return;
-      const val = parseFloat(valStr);
-      if (!isNaN(val) && (!latest[name] || time > latest[name].time))
-        latest[name] = { value: val, time };
+
+    // Format 1: BsWFS simple (used by weather::simple queries)
+    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
+    if (bsElements.length > 0) {
+      Array.from(bsElements).forEach(el => {
+        const name   = el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent?.trim();
+        const valStr = el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent?.trim();
+        const time   = el.getElementsByTagNameNS('*', 'Time')[0]?.textContent?.trim();
+        if (!name || valStr === 'NaN') return;
+        const val = parseFloat(valStr);
+        if (!isNaN(val) && (!latest[name] || time > latest[name].time))
+          latest[name] = { value: val, time };
+      });
+      if (label) console.log('[FMI ' + label + '] BsWFS parsed:', JSON.stringify(latest));
+      return Object.keys(latest).length ? latest : null;
+    }
+
+    // Format 2: WML2/OM (used by mareograph::instant and other complex queries)
+    const tsList = doc.getElementsByTagNameNS('*', 'MeasurementTimeseries');
+    Array.from(tsList).forEach(ts => {
+      // Parameter name is the last dash-separated segment of gml:id, e.g. "obs-obs-1-1-wlev" → "wlev"
+      const gmlId = ts.getAttributeNS('http://www.opengis.net/gml/3.2', 'id')
+                 || ts.getAttribute('gml:id') || ts.getAttribute('id') || '';
+      const param = gmlId.split('-').pop();
+      if (!param) return;
+      const tvps = ts.getElementsByTagNameNS('*', 'MeasurementTVP');
+      let lastVal = null, lastTime = null;
+      Array.from(tvps).forEach(tvp => {
+        const valStr = tvp.getElementsByTagNameNS('*', 'value')[0]?.textContent?.trim();
+        const time   = tvp.getElementsByTagNameNS('*', 'time')[0]?.textContent?.trim();
+        if (!valStr || valStr === 'NaN') return;
+        const val = parseFloat(valStr);
+        if (!isNaN(val)) { lastVal = val; lastTime = time; }
+      });
+      if (lastVal !== null) latest[param] = { value: lastVal, time: lastTime };
     });
+    if (label) console.log('[FMI ' + label + '] WML2 parsed:', JSON.stringify(latest));
     return Object.keys(latest).length ? latest : null;
-  } catch (_) { return null; }
+  } catch (e) {
+    if (label) console.error('[FMI ' + label + '] parse error:', e);
+    return null;
+  }
 }
 
 function wmoIcon(code) {
@@ -2337,8 +2367,19 @@ async function loadWeather() {
 
     // Parse FMI responses (failures are silently ignored)
     let fmiWind = null, fmiWater = null;
-    if (fmiWindResp?.ok)  fmiWind  = parseFmiSimple(await fmiWindResp.text());
-    if (fmiWaterResp?.ok) fmiWater = parseFmiSimple(await fmiWaterResp.text());
+    if (fmiWindResp?.ok) {
+      fmiWind = parseFmiSimple(await fmiWindResp.text(), 'wind');
+    } else {
+      console.error('[FMI wind] HTTP', fmiWindResp?.status ?? 'null');
+    }
+    if (fmiWaterResp?.ok) {
+      const waterXml = await fmiWaterResp.text();
+      console.log('[FMI water] HTTP', fmiWaterResp.status, '| XML[:800]:', waterXml.slice(0, 800));
+      fmiWater = parseFmiSimple(waterXml, 'water');
+      console.log('[FMI water] wlev result:', JSON.stringify(fmiWater?.wlev ?? null));
+    } else {
+      console.error('[FMI water] HTTP', fmiWaterResp?.status ?? 'null');
+    }
 
     // FMI status cards
     if (fmiStatus) {

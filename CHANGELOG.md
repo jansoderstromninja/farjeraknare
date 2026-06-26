@@ -1,5 +1,11 @@
 # Changelog
 
+## v5.7 – 2026-06-26
+- FMI-parsern hanterar nu både BsWFS (vinddata) och WML2/OM-format (mareografdata) — `::instant`-frågor returnerar WML2, inte BsWFS
+- FMI vattenståndsurl ändrad från `fmisid=134254` till `place=Hanko` (stabilare sökning)
+- Lagt till `console.log` på råxml och parsningsresultat för FMI vatten och vind (synligt i debug-panelen)
+- `console.error` om FMI-anrop returnerar icke-OK HTTP-status
+
 ## v5.6 – 2026-06-26
 - FMI vindstation ändrad från `place=Utö` till `fmisid=100539` (Utö i Skärgårdshavet, 59.7791°N 21.3744°E) — korrekt station
 - FMI vattenstånd ändrad från `place=Utö` till `fmisid=134254` (Hangö mareograf) — Utö har ingen mareograf
