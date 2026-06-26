@@ -1,5 +1,13 @@
 # Changelog
 
+## v5.5 – 2026-06-26
+- Väderfliken hämtar nu data parallellt från FMI och Open-Meteo via `Promise.all`
+- FMI: aktuellt vattenstånd (Utö mareograf) visas överst som färgkodad kort: grön ±20 cm, gul 20–50 cm, röd >50 eller <−20 cm
+- FMI: senaste vindmätning från Utö visas som observationskort bredvid vattenståndet
+- Open-Meteo behålls för CAPE (åskvarningslogik orörd), timtemperatur och timvind i prognosen
+- Timrader i prognosen har nu väderikon baserad på WMO-kodtabellen: ☀️🌤️☁️🌫️🌧️❄️🌦️🌨️⛈️
+- Om FMI-anrop misslyckas faller appen tyst tillbaka på enbart Open-Meteo — inga krascher
+
 ## v5.4 – 2026-06-24
 - Hastighetsindikatorn i headern ersatt med en SVG-speedometer (halvcirkel, 0–6 knop)
 - Nålen roterar i realtid baserat på aktuell GPS-hastighet
