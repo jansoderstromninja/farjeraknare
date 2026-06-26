@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.2 – 2026-06-26
+- Rubrik "Vindprognos" → "Havsvattenstånd" (sv) / "Meriveden korkeus" (fi)
+- Fi `weatherGpsError`: "varmuuskopiointina" (fel ord, beteknar datasäkerhetskopia) → "varapaikkana"
+- Fi `ferryPre`: "sama CO2 riittää" → "sama CO2 vastaa" (grammatiskt korrekt med partitiv "lähtöä")
+
 ## v7.1 – 2026-06-26
 - FMI Hangö mareograf hittad: fmisid=134253 (59.823°N, 22.977°E = Hanko Russarö)
 - Station bytt från Helsinki Kaivopuisto (132310) till Hangö Russarö (134253)

@@ -774,7 +774,7 @@ nav {
   <div class="weather-wrap">
     <div class="thunder-banner" id="thunderBanner" style="display:none">⚡ Åskvarning – förhöjd risk närmaste timmarna</div>
     <div class="weather-hdr">
-      <div class="sec-title" id="weatherTitle">Vindprognos</div>
+      <div class="sec-title" id="weatherTitle">Havsvattenstånd</div>
       <div class="weather-updated" id="weatherUpdated"></div>
     </div>
     <div id="fmiStatus"></div>
@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.1";
+const APP_VERSION = "7.2";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -910,6 +910,8 @@ function buildFmiWaterUrl() {
 let mode = localStorage.getItem(MODE_KEY) || 'test';
 
 // ── TRANSLATIONS ──
+// i18n-ändringar v7.2: weatherTitle sv/fi (Vindprognos→Havsvattenstånd / Tuuliennuste→Meriveden korkeus);
+// fi weatherGpsError (varmuuskopiointina→varapaikkana); fi ferryPre (riittää→vastaa, grammatiskt korrekt med partitiv)
 const T = {
   sv: {
     appTitle:       'Fordonsräknare',
@@ -958,7 +960,7 @@ const T = {
     nästaTur:       'Nästa avgång tidigast om',
     undoAvgang:     'Ångra avgång',
     navWeather:     'Väder',
-    weatherTitle:   'Vindprognos',
+    weatherTitle:   'Havsvattenstånd',
     weatherUpdated: 'Uppdaterad',
     weatherError:   'Väderdata saknas – kontrollera anslutningen.',
     weatherGpsError:'GPS ej tillgänglig – visar Nummela som fallback.',
@@ -1018,16 +1020,16 @@ const T = {
     kgDag:          'kg/pv',
     fordonEnhet:    'ajoneuvoa',
     ferryLabel:     '🔋 Sähkölautta',
-    ferryPre:       'sama CO2 riittää',
+    ferryPre:       'sama CO2 vastaa',
     ferryPost:      'lähtöä',
     uppskattat:     'arvio',
     nästaTur:       'Seuraava lähtö aikaisintaan',
     undoAvgang:     'Kumoa lähtö',
     navWeather:     'Sää',
-    weatherTitle:   'Tuuliennuste',
+    weatherTitle:   'Meriveden korkeus',
     weatherUpdated: 'Päivitetty',
     weatherError:   'Säätietoja ei voitu hakea – tarkista yhteys.',
-    weatherGpsError:'GPS ei käytettävissä – Nummela varmuuskopiointina.',
+    weatherGpsError:'GPS ei käytettävissä – näytetään Nummela varapaikkana.',
     ferryMode:      'Lauttatila 🛳️',
     testMode:       'Testitila 🧪',
     windLabel:      'Tuuli',
