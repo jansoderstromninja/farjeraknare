@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "6.9";
+const APP_VERSION = "7.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -898,14 +898,13 @@ const DEPARTURE_REMINDER_MS   = 22 * 60 * 1000; // ms – påminnelse om ingen n
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
-const FMI_WIND_URL  = 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::weather::simple&place=Ut%C3%B6&parameters=ws_10min,wg_10min,wd_10min';
 function buildFmiWaterUrl() {
   const now = new Date();
   const end   = now.toISOString().slice(0, 19) + 'Z';
   const start = new Date(now - 2 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
   return 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature' +
     '&storedquery_id=fmi::observations::mareograph::instant::simple' +
-    '&fmisid=134254' +
+    '&fmisid=132310' +
     '&starttime=' + start + '&endtime=' + end;
 }
 let mode = localStorage.getItem(MODE_KEY) || 'test';
@@ -2389,59 +2388,30 @@ async function loadWeather() {
   }
   const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,cape,weathercode&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
   try {
-    const [omResp, fmiWindResp, fmiWaterResp] = await Promise.all([
+    const [omResp, fmiWaterResp] = await Promise.all([
       fetch(omUrl),
-      fetch(FMI_WIND_URL).catch(() => null),
       fetch(buildFmiWaterUrl()).catch(() => null),
     ]);
     if (!omResp.ok) throw new Error('HTTP ' + omResp.status);
     weatherData = await omResp.json();
     weatherLastFetch = Date.now();
 
-    // Parse FMI responses (failures are silently ignored)
-    let fmiWind = null, fmiWater = null;
-    if (fmiWindResp?.ok) {
-      const windXml = await fmiWindResp.text();
-      console.log('[FMI wind] HTTP', fmiWindResp.status, '| XML[:800]:', windXml.slice(0, 800));
-      fmiWind = parseFmiSimple(windXml, 'wind');
-    } else {
-      console.log('[FMI wind] FAILED HTTP', fmiWindResp?.status ?? 'null');
-    }
+    let fmiWater = null;
     if (fmiWaterResp?.ok) {
-      const waterXml = await fmiWaterResp.text();
-      console.log('[FMI water] HTTP', fmiWaterResp.status, '| XML[:3000]:', waterXml.slice(0, 3000));
-      fmiWater = parseFmiSimple(waterXml, 'water');
-      console.log('[FMI water] wlev result:', JSON.stringify(fmiWater?.wlev ?? null));
-    } else {
-      const errBody = fmiWaterResp ? await fmiWaterResp.text().catch(() => '') : '';
-      console.log('[FMI water] FAILED HTTP', fmiWaterResp?.status ?? 'null', '| body[:600]:', errBody.slice(0, 600));
+      fmiWater = parseFmiSimple(await fmiWaterResp.text(), null);
     }
 
-    // FMI status cards
+    // FMI water level card
     if (fmiStatus) {
-      let cards = '';
-      if (fmiWater?.wlev != null) {
-        const cm  = fmiWater.wlev.value;
+      if (fmiWater?.WATLEV != null) {
+        const cm  = fmiWater.WATLEV.value / 10;
         const col = waterLevelColor(cm);
         const sign = cm > 0 ? '+' : '';
-        cards += `<div class="fmi-card">` +
+        fmiStatus.innerHTML = `<div class="fmi-cards"><div class="fmi-card">` +
           `<div class="fmi-card-value" style="color:${col}">🌊 ${sign}${Math.round(cm)} cm</div>` +
-          `<div class="fmi-card-label">${lang === 'fi' ? 'Hanko – vedenpinta' : 'Vattenstånd Hangö'}</div>` +
-          `</div>`;
+          `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta (Helsinki)' : 'Havsvattenstånd (Helsinki)'}</div>` +
+          `</div></div>`;
       }
-      if (fmiWind?.ws_10min != null) {
-        const ws  = fmiWind.ws_10min.value;
-        const wg  = fmiWind.wg_10min?.value;
-        const wd  = fmiWind.wd_10min?.value;
-        const col = windColor(ws);
-        const arrow = wd != null ? windDirArrow(wd) + ' ' : '';
-        const gustStr = wg != null ? ` ${lang === 'fi' ? 'puuskat' : 'byar'} ${wg.toFixed(1)}` : '';
-        cards += `<div class="fmi-card">` +
-          `<div class="fmi-card-value" style="color:${col}">${arrow}${ws.toFixed(1)} m/s</div>` +
-          `<div class="fmi-card-label">Utö – ${lang === 'fi' ? 'hav. tuuli' : 'obs. vind'}${gustStr}</div>` +
-          `</div>`;
-      }
-      if (cards) fmiStatus.innerHTML = `<div class="fmi-cards">${cards}</div>`;
     }
 
     // Hourly forecast rows (Open-Meteo)

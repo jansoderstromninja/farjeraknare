@@ -1,5 +1,12 @@
 # Changelog
 
+## v7.0 – 2026-06-26
+- FMI vindkort borttaget — bara havsvattenstånd visas i väderfliken
+- FMI vattenståndsstation bytt till Helsinki Kaivopuisto (fmisid=132310) — närmaste aktiva FMI-mareograf (Hangö finns inte i FMI:s öppna data)
+- Bugg fixad: WATLEV-nyckeln (stor bokstav) används nu korrekt — vattenståndet visades inte trots lyckad hämtning
+- Enhetskonvertering fixad: WATLEV från FMI är i mm, delas nu med 10 för att visa cm
+- Debug-logging borttagen ur FMI-parsningen
+
 ## v5.8 – 2026-06-26
 - FMI vindstation ändrad från `fmisid=100539` till `place=Utö` — fmisid returnerade ExceptionReport
 - Lagt till raw XML-logg (800 tecken) även för vindanropet, synligt i debug-panelen
