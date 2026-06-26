@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "6.2";
+const APP_VERSION = "6.3";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -2388,7 +2388,8 @@ async function loadWeather() {
       fmiWater = parseFmiSimple(waterXml, 'water');
       console.log('[FMI water] wlev result:', JSON.stringify(fmiWater?.wlev ?? null));
     } else {
-      console.log('[FMI water] FAILED HTTP', fmiWaterResp?.status ?? 'null (network error)');
+      const errBody = fmiWaterResp ? await fmiWaterResp.text().catch(() => '') : '';
+      console.log('[FMI water] FAILED HTTP', fmiWaterResp?.status ?? 'null', '| body[:600]:', errBody.slice(0, 600));
     }
 
     // FMI status cards
