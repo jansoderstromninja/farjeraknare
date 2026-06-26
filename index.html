@@ -879,7 +879,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.4";
+const APP_VERSION = "7.5";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
@@ -979,6 +979,8 @@ const T = {
     avgTommaTotal:  'Tomturer totalt',
     depTom:         'tom',
     depFordon:      'fordon',
+    depFromPettu:   'Start från Pettu',
+    depFromUto:     'Start från Utö',
     locale:         'sv-SE',
   },
   fi: {
@@ -1045,6 +1047,8 @@ const T = {
     avgTommaTotal:  'Tyhjälähdöt yht.',
     depTom:         'tyhjä',
     depFordon:      'ajoneuvoa',
+    depFromPettu:   'Lähtö Petusta',
+    depFromUto:     'Lähtö Ulkoluodosta',
     locale:         'fi-FI',
   }
 };
@@ -2056,9 +2060,8 @@ function renderDepartureLog() {
 
   const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
-    const dirStr = trip.from
-      ? trip.from
-      : (trip.lat != null ? `<span class="dep-test">TEST!</span>` : '');
+    const DEP_FROM_KEY = { Pettu: 'depFromPettu', Utö: 'depFromUto' };
+    const dirStr = (trip.from && DEP_FROM_KEY[trip.from]) ? t(DEP_FROM_KEY[trip.from]) : '';
     const veh = Math.max(0, d.logs
       .filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS)
       .reduce((sum, l) => sum + (l.delta ?? 1), 0));

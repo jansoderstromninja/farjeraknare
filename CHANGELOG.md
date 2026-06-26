@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.5 – 2026-06-26
+- Avgångsloggen visar nu "Start från Pettu" / "Start från Utö" (sv) och "Lähtö Petusta" / "Lähtö Ulkoluodosta" (fi) bredvid tidsstämpeln
+- Om from saknas eller bryggan är okänd visas ingen text (TEST!-etiketten borttagen)
+- Ny i18n: depFromPettu, depFromUto i båda språken
+
 ## v7.4 – 2026-06-26
 - Vattenståndshistorik flyttad från localStorage till Firebase (config/watlev {value, ts})
 - Trend beräknas mot senaste Firebase-värde; ignoreras om värdet är äldre än 2 timmar
