@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.4 – 2026-06-26
+- Vattenståndshistorik flyttad från localStorage till Firebase (config/watlev {value, ts})
+- Trend beräknas mot senaste Firebase-värde; ignoreras om värdet är äldre än 2 timmar
+- localStorage-nyckeln farjeraknare_watlev rensas vid start (migration)
+
 ## v7.3 – 2026-06-26
 - Vattenståndskortet visar nu trend sedan föregående avläsning: ↑/↓/→ med diff i cm
 - Tröskel: >+1 cm grön pil upp, <−1 cm röd pil ned, ±1 cm grå horisontalpil

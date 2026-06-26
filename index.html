@@ -879,12 +879,10 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.3";
+const APP_VERSION = "7.4";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
-const WATER_LEVEL_KEY = 'farjeraknare_watlev';
-let lastWaterLevel = parseFloat(localStorage.getItem(WATER_LEVEL_KEY));
-if (isNaN(lastWaterLevel)) lastWaterLevel = null;
+localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
 
 // CO2 per avgång: 2 dieselmotorer, ~5 min, fast uppskattat värde (oavsett antal fordon)
@@ -2408,26 +2406,31 @@ async function loadWeather() {
     }
 
     // FMI water level card
-    if (fmiStatus) {
-      if (fmiWater?.WATLEV != null) {
-        const cm  = Math.round(fmiWater.WATLEV.value / 10);
-        const col = waterLevelColor(cm);
-        const sign = cm > 0 ? '+' : '';
-        let trendHtml = '';
-        if (lastWaterLevel !== null) {
-          const diff = cm - lastWaterLevel;
-          if (diff > 1)       trendHtml = `<div class="fmi-card-trend" style="color:#10B981">↑ +${diff} cm</div>`;
-          else if (diff < -1) trendHtml = `<div class="fmi-card-trend" style="color:#EF4444">↓ ${diff} cm</div>`;
-          else                trendHtml = `<div class="fmi-card-trend" style="color:var(--muted)">→</div>`;
-        }
-        localStorage.setItem(WATER_LEVEL_KEY, cm);
-        lastWaterLevel = cm;
-        fmiStatus.innerHTML = `<div class="fmi-cards"><div class="fmi-card">` +
-          `<div class="fmi-card-value" style="color:${col}">🌊 ${sign}${cm} cm</div>` +
-          trendHtml +
-          `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta Hanko' : 'Vattenstånd Hangö'}</div>` +
-          `</div></div>`;
+    if (fmiStatus && fmiWater?.WATLEV != null) {
+      const cm  = Math.round(fmiWater.WATLEV.value / 10);
+      const col = waterLevelColor(cm);
+      const sign = cm > 0 ? '+' : '';
+      let trendHtml = '';
+      if (db) {
+        try {
+          const snap = await db.ref('config/watlev').once('value');
+          const prev = snap.val();
+          if (prev && typeof prev.value === 'number' && typeof prev.ts === 'number') {
+            if (Date.now() - prev.ts < 2 * 3600 * 1000) {
+              const diff = cm - prev.value;
+              if (diff > 1)       trendHtml = `<div class="fmi-card-trend" style="color:#10B981">↑ +${diff} cm</div>`;
+              else if (diff < -1) trendHtml = `<div class="fmi-card-trend" style="color:#EF4444">↓ ${diff} cm</div>`;
+              else                trendHtml = `<div class="fmi-card-trend" style="color:var(--muted)">→</div>`;
+            }
+          }
+        } catch (e) { /* Firebase otillgänglig — ingen trend */ }
+        db.ref('config/watlev').set({ value: cm, ts: Date.now() }).catch(() => {});
       }
+      fmiStatus.innerHTML = `<div class="fmi-cards"><div class="fmi-card">` +
+        `<div class="fmi-card-value" style="color:${col}">🌊 ${sign}${cm} cm</div>` +
+        trendHtml +
+        `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta Hanko' : 'Vattenstånd Hangö'}</div>` +
+        `</div></div>`;
     }
 
     // Hourly forecast rows (Open-Meteo)
