@@ -878,7 +878,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "6.3";
+const APP_VERSION = "6.4";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 let lang = localStorage.getItem(LANG_KEY) || 'sv';
@@ -904,8 +904,8 @@ function buildFmiWaterUrl() {
   const end   = now.toISOString().slice(0, 19) + 'Z';
   const start = new Date(now - 2 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
   return 'https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature' +
-    '&storedquery_id=fmi::observations::mareograph::instant' +
-    '&latlon=59.8233,23.0297&parameters=wlev' +
+    '&storedquery_id=fmi::observations::mareograph::multipointcoverage' +
+    '&bbox=22.5,59.5,23.5,60.2&parameters=wlev' +
     '&starttime=' + start + '&endtime=' + end;
 }
 let mode = localStorage.getItem(MODE_KEY) || 'test';
@@ -2306,27 +2306,48 @@ function parseFmiSimple(xmlText, label) {
       return Object.keys(latest).length ? latest : null;
     }
 
-    // Format 2: WML2/OM (used by mareograph::instant and other complex queries)
+    // Format 2: WML2/OM (MeasurementTimeseries)
     const tsList = doc.getElementsByTagNameNS('*', 'MeasurementTimeseries');
-    Array.from(tsList).forEach(ts => {
-      // Parameter name is the last dash-separated segment of gml:id, e.g. "obs-obs-1-1-wlev" → "wlev"
-      const gmlId = ts.getAttributeNS('http://www.opengis.net/gml/3.2', 'id')
-                 || ts.getAttribute('gml:id') || ts.getAttribute('id') || '';
-      const param = gmlId.split('-').pop();
-      if (!param) return;
-      const tvps = ts.getElementsByTagNameNS('*', 'MeasurementTVP');
-      let lastVal = null, lastTime = null;
-      Array.from(tvps).forEach(tvp => {
-        const valStr = tvp.getElementsByTagNameNS('*', 'value')[0]?.textContent?.trim();
-        const time   = tvp.getElementsByTagNameNS('*', 'time')[0]?.textContent?.trim();
-        if (!valStr || valStr === 'NaN') return;
-        const val = parseFloat(valStr);
-        if (!isNaN(val)) { lastVal = val; lastTime = time; }
+    if (tsList.length > 0) {
+      Array.from(tsList).forEach(ts => {
+        const gmlId = ts.getAttributeNS('http://www.opengis.net/gml/3.2', 'id')
+                   || ts.getAttribute('gml:id') || ts.getAttribute('id') || '';
+        const param = gmlId.split('-').pop();
+        if (!param) return;
+        const tvps = ts.getElementsByTagNameNS('*', 'MeasurementTVP');
+        let lastVal = null, lastTime = null;
+        Array.from(tvps).forEach(tvp => {
+          const valStr = tvp.getElementsByTagNameNS('*', 'value')[0]?.textContent?.trim();
+          const time   = tvp.getElementsByTagNameNS('*', 'time')[0]?.textContent?.trim();
+          if (!valStr || valStr === 'NaN') return;
+          const val = parseFloat(valStr);
+          if (!isNaN(val)) { lastVal = val; lastTime = time; }
+        });
+        if (lastVal !== null) latest[param] = { value: lastVal, time: lastTime };
       });
-      if (lastVal !== null) latest[param] = { value: lastVal, time: lastTime };
-    });
-    if (label) console.log('[FMI ' + label + '] WML2 parsed:', JSON.stringify(latest));
-    return Object.keys(latest).length ? latest : null;
+      if (label) console.log('[FMI ' + label + '] WML2 parsed:', JSON.stringify(latest));
+      return Object.keys(latest).length ? latest : null;
+    }
+
+    // Format 3: MultiPointCoverage (used by mareograph::multipointcoverage)
+    // gml:tupleList contains lines of "timestamp value1 value2..." for each time step
+    // We only requested one parameter (wlev), so each line is "timestamp value"
+    const tupleEl = doc.getElementsByTagNameNS('*', 'tupleList')[0];
+    if (tupleEl) {
+      const lines = tupleEl.textContent.trim().split('\n').map(s => s.trim()).filter(Boolean);
+      let lastVal = null, lastTime = null;
+      lines.forEach(line => {
+        const parts = line.split(/\s+/);
+        if (parts.length < 2) return;
+        const val = parseFloat(parts[parts.length - 1]);
+        if (!isNaN(val)) { lastVal = val; lastTime = parts[0]; }
+      });
+      if (label) console.log('[FMI ' + label + '] MPC parsed: wlev =', lastVal, 'at', lastTime);
+      if (lastVal !== null) return { wlev: { value: lastVal, time: lastTime } };
+    }
+
+    if (label) console.log('[FMI ' + label + '] no known format found in XML');
+    return null;
   } catch (e) {
     if (label) console.log('[FMI ' + label + '] parse error:', e);
     return null;
