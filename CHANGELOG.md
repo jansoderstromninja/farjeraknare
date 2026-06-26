@@ -1,5 +1,9 @@
 # Changelog
 
+## v5.8 – 2026-06-26
+- FMI vindstation ändrad från `fmisid=100539` till `place=Utö` — fmisid returnerade ExceptionReport
+- Lagt till raw XML-logg (800 tecken) även för vindanropet, synligt i debug-panelen
+
 ## v5.7 – 2026-06-26
 - FMI-parsern hanterar nu både BsWFS (vinddata) och WML2/OM-format (mareografdata) — `::instant`-frågor returnerar WML2, inte BsWFS
 - FMI vattenståndsurl ändrad från `fmisid=134254` till `place=Hanko` (stabilare sökning)
