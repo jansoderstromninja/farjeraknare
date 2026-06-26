@@ -1,5 +1,10 @@
 # Changelog
 
+## v5.6 – 2026-06-26
+- FMI vindstation ändrad från `place=Utö` till `fmisid=100539` (Utö i Skärgårdshavet, 59.7791°N 21.3744°E) — korrekt station
+- FMI vattenstånd ändrad från `place=Utö` till `fmisid=134254` (Hangö mareograf) — Utö har ingen mareograf
+- Vattenståndskortets etikett uppdaterad till "Vattenstånd Hangö" / "Hanko – vedenpinta"
+
 ## v5.5 – 2026-06-26
 - Väderfliken hämtar nu data parallellt från FMI och Open-Meteo via `Promise.all`
 - FMI: aktuellt vattenstånd (Utö mareograf) visas överst som färgkodad kort: grön ±20 cm, gul 20–50 cm, röd >50 eller <−20 cm
