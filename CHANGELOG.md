@@ -1,5 +1,11 @@
 # Changelog
 
+## v7.3 – 2026-06-26
+- Vattenståndskortet visar nu trend sedan föregående avläsning: ↑/↓/→ med diff i cm
+- Tröskel: >+1 cm grön pil upp, <−1 cm röd pil ned, ±1 cm grå horisontalpil
+- Föregående värde sparas i localStorage (farjeraknare_watlev) — trend visas korrekt även efter omladdning
+- Ingen trend visas vid första laddningen (inget föregående värde)
+
 ## v7.2 – 2026-06-26
 - Rubrik "Vindprognos" → "Havsvattenstånd" (sv) / "Meriveden korkeus" (fi)
 - Fi `weatherGpsError`: "varmuuskopiointina" (fel ord, beteknar datasäkerhetskopia) → "varapaikkana"
