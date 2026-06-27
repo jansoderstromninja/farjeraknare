@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.3.3</title>
+<title>Färjeräknare BENTO v1.3.4</title>
 <style>
 /* ── FÄRGER & BAS ── */
 :root {
@@ -22,7 +22,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden; /* Förhindrar scroll på Mac/Desktop */
   display: flex;
   flex-direction: column;
 }
@@ -30,61 +31,74 @@ body {
 /* ── DASHBOARD LAYOUT ── */
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* Vi delar skärmen i två exakta halvor (2fr 2fr) */
+  grid-template-columns: 2fr 2fr; 
   grid-template-rows: repeat(3, 1fr);
-  gap: 12px;
-  padding: 12px;
+  gap: 15px;
+  padding: 15px;
   flex: 1;
-  height: 100vh;
 }
 
 .tile {
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 24px;
-  padding: 15px;
+  border-radius: 28px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  position: relative;
+  overflow: hidden; /* Förhindrar att innehåll spiller ut */
+  min-width: 0;      /* Fix för Grid-överlappning */
 }
 
-/* ── POSITIONERING ── */
+/* ── VÄNSTER PANEL (KNAPPAR) ── */
 #btnGrid {
-  grid-column: 1 / 3;
+  grid-column: 1 / 2;
   grid-row: 1 / 4;
-  display: grid !important; /* Tvinga Grid för knapparna */
+  display: grid !important;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 10px;
-  min-height: 300px; /* Förhindra att lådan kollapsar */
 }
 
-.tile-speed { grid-column: 3 / 5; grid-row: 1 / 3; justify-content: center; align-items: center; }
-.tile-water { grid-column: 3 / 4; grid-row: 3 / 4; }
-.tile-log   { grid-column: 4 / 5; grid-row: 3 / 4; }
+/* ── HÖGER PANEL (INSTRUMENT) ── */
+.tile-speed { 
+  grid-column: 2 / 3; 
+  grid-row: 1 / 3; 
+  justify-content: center; 
+  align-items: center; 
+}
 
-/* ── MOBIL-ANPASSNING (Stapling) ── */
+/* Nedersta raden till höger delas i två */
+.bottom-right-container {
+  grid-column: 2 / 3;
+  grid-row: 3 / 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.tile-water, .tile-log {
+  height: 100%;
+}
+
+/* ── MOBIL-ANPASSNING ── */
 @media (max-width: 900px) {
+  body { overflow-y: auto; }
   .dashboard {
     display: flex; 
     flex-direction: column;
     height: auto;
-    overflow-y: auto;
   }
-  #btnGrid { 
-    display: grid !important;
-    width: 100%; 
-    grid-template-columns: repeat(3, 1fr);
-    margin-bottom: 15px; 
-    min-height: 400px;
-  }
-  .tile { width: 100%; margin-bottom: 12px; min-height: 160px; }
+  #btnGrid { display: grid !important; width: 100%; margin-bottom: 10px; }
+  .bottom-right-container { display: flex; flex-direction: column; }
+  .tile { width: 100%; margin-bottom: 10px; min-height: 160px; }
 }
 
-/* ── KNAPPAR ── */
+/* ── OPERATIONELLA KNAPPAR ── */
 .v-btn {
   position: relative;
   width: 100%;
+  max-height: 100%;
   aspect-ratio: 1 / 1;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 20px;
@@ -98,38 +112,38 @@ body {
 }
 
 .v-btn:active { transform: translateY(2px); filter: brightness(1.2); border-color: #fff; }
-.v-btn-emoji { font-size: 38px; }
-.v-btn-label { font-size: 13px; font-weight: 900; margin-top: 4px; text-transform: uppercase; }
+.v-btn-emoji { font-size: clamp(24px, 5vh, 44px); } /* Skalar baserat på höjd */
+.v-btn-label { font-size: clamp(10px, 2vh, 14px); font-weight: 900; margin-top: 4px; text-transform: uppercase; }
 
-/* ── GULA BADGES ── */
+/* ── SIGNAL-GULA BADGES ── */
 .v-btn-badge {
   position: absolute;
-  top: -6px; right: -6px;
+  top: -5px; right: -5px;
   background: var(--signal-yellow);
   color: #000;
   padding: 4px 10px;
-  border-radius: 10px;
-  font-size: 20px;
+  border-radius: 12px;
+  font-size: clamp(14px, 2.5vh, 20px);
   font-weight: 900;
   border: 2px solid #000;
   z-index: 10;
 }
 
 .tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
-.dep-row { display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); }
+.dep-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
 #speedVal { font-size: 24px; font-weight: 900; }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
-  <!-- KNAPPAR -->
+  <!-- VÄNSTER: KNAPPAR -->
   <div id="btnGrid"></div>
 
-  <!-- SPEEDOMETER -->
+  <!-- HÖGER TOPP: SPEEDO -->
   <div class="tile tile-speed">
     <div class="tile-title">Fart (Knop)</div>
-    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 250px;">
+    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 280px;">
         <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="5" stroke-linecap="round"/>
         <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>
         <circle cx="36" cy="32" r="4" fill="#3B82F6"/>
@@ -137,16 +151,16 @@ body {
     </svg>
   </div>
 
-  <!-- VATTENSTÅND -->
-  <div class="tile tile-water">
-    <div class="tile-title">Vattenstånd</div>
-    <div id="waterDisplay" style="font-size: 38px; font-weight: 900; color: #10B981;">-- cm</div>
-  </div>
-
-  <!-- LOGG -->
-  <div class="tile tile-log">
-    <div class="tile-title">Senaste logg</div>
-    <div id="departureLog" style="overflow-y: auto;"></div>
+  <!-- HÖGER BOTTEN: VATTEN & LOGG -->
+  <div class="bottom-right-container">
+    <div class="tile tile-water">
+      <div class="tile-title">Vatten</div>
+      <div id="waterDisplay" style="font-size: 32px; font-weight: 900; color: #10B981;">-- cm</div>
+    </div>
+    <div class="tile tile-log">
+      <div class="tile-title">Logg</div>
+      <div id="departureLog" style="overflow-y: auto; font-size: 11px;"></div>
+    </div>
   </div>
 </div>
 
@@ -154,7 +168,13 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
-// 1. DATA
+const firebaseConfig = {
+  apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
+  authDomain: "fordonsraknare.firebaseapp.com",
+  projectId: "fordonsraknare",
+  databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
+};
+
 const CATS = [
   { id: 'personbil',  label: 'Bil', emoji: '🚗', color: '#1D4ED8' },
   { id: 'paketbil',   label: 'Paket', emoji: '🚐', color: '#6D28D9' },
@@ -167,42 +187,24 @@ const CATS = [
   { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#3730A3' },
 ];
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
-  authDomain: "fordonsraknare.firebaseapp.com",
-  projectId: "fordonsraknare",
-  databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
-};
-
-// Globala referenser så de når alla funktioner
 var db, logsRef, tripsRef;
 
-// 2. BYGG UI NÄR SIDAN ÄR LADDAD
 document.addEventListener('DOMContentLoaded', function() {
   const grid = document.getElementById('btnGrid');
-  if (grid) {
-    CATS.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = 'v-btn';
-      btn.style.backgroundColor = cat.color;
-      btn.innerHTML = `
-          <span class="v-btn-badge" id="b_${cat.id}">0</span>
-          <span class="v-btn-emoji">${cat.emoji}</span>
-          <span class="v-btn-label">${cat.label}</span>
-      `;
-      btn.onclick = () => {
-          if (navigator.vibrate) navigator.vibrate(25);
-          if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
-      };
-      grid.appendChild(btn);
-    });
-  }
-  
-  // Starta Firebase efter att UI är på plats
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'v-btn';
+    btn.style.backgroundColor = cat.color;
+    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
+    btn.onclick = () => {
+        if (navigator.vibrate) navigator.vibrate(25);
+        if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
+    };
+    grid.appendChild(btn);
+  });
   initApp();
 });
 
-// 3. LOGIK
 function initApp() {
   try {
     firebase.initializeApp(firebaseConfig);
@@ -237,7 +239,6 @@ function initApp() {
       if (data && disp) disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
     });
 
-    // GPS startar här
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const kn = (pos.coords.speed || 0) * 1.94384;
@@ -248,10 +249,7 @@ function initApp() {
         if (val) val.textContent = kn.toFixed(1) + ' kn';
       }, null, { enableHighAccuracy: true });
     }
-
-  } catch (e) {
-    console.error("Init-fel:", e);
-  }
+  } catch (e) { console.error("Init-fel:", e); }
 }
 </script>
 </body>
