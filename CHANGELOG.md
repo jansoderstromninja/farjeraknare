@@ -1,5 +1,12 @@
 # Changelog
 
+## v7.6 – 2026-06-27
+- Driftsgeofence: avgångar registreras bara inom 1000 m från Pettu eller Utö
+- Ny funktion isWithinOperatingArea() återanvänder befintlig Haversine + bryggorConfig
+- Ny konstant OPERATING_RADIUS_M = 1000
+- Hastighetssampling sker fortfarande utanför området — bara avgångsregistreringen blockeras
+- Debug-panel loggar "Utanför driftsområde — avgång ej registrerad" när hastighetströskel nås utanför området
+
 ## v7.5 – 2026-06-26
 - Avgångsloggen visar nu "Start från Pettu" / "Start från Utö" (sv) och "Lähtö Petusta" / "Lähtö Ulkoluodosta" (fi) bredvid tidsstämpeln
 - Om from saknas eller bryggan är okänd visas ingen text (TEST!-etiketten borttagen)

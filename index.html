@@ -879,7 +879,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.5";
+const APP_VERSION = "7.6";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
@@ -2013,6 +2013,7 @@ const BRYGGOR_DEFAULT = [
 ];
 let bryggorConfig = BRYGGOR_DEFAULT;
 const BRYGGA_RADIUS_M = 50;
+const OPERATING_RADIUS_M = 1000;
 
 function geoDistMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -2035,6 +2036,10 @@ function getNearestBrygga(lat, lng) {
   }
   console.log('[Bryggor] Ingen brygga inom', BRYGGA_RADIUS_M, 'm (närmast:', nearest?.name, minDist.toFixed(0), 'm)');
   return null;
+}
+
+function isWithinOperatingArea(lat, lng) {
+  return bryggorConfig.some(b => geoDistMeters(lat, lng, b.lat, b.lng) <= OPERATING_RADIUS_M);
 }
 
 function initBryggorListener() {
@@ -2189,13 +2194,17 @@ function startGpsWatch() {
       if (speed == null || Date.now() < gpsWarmupUntil) return;
       const now = Date.now();
       if (speed >= GPS_SPEED_THRESHOLD && (now - lastGpsDepartureTs >= GPS_DEPARTURE_GAP_MS)) {
-        lastGpsDepartureTs = now;
-        finalizeCurrentTripSpeed();
-        tripSpeedSamples = [];
-        console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
-        recordDeparture(now, pos.coords.latitude, pos.coords.longitude);
-        showDepartureBanner();
-        renderCount();
+        if (!isWithinOperatingArea(pos.coords.latitude, pos.coords.longitude)) {
+          console.log('[GPS] Utanför driftsområde — avgång ej registrerad');
+        } else {
+          lastGpsDepartureTs = now;
+          finalizeCurrentTripSpeed();
+          tripSpeedSamples = [];
+          console.log('[GPS] Avgång detekterad, fart =', speed.toFixed(2), 'm/s');
+          recordDeparture(now, pos.coords.latitude, pos.coords.longitude);
+          showDepartureBanner();
+          renderCount();
+        }
       }
     },
     err => console.warn('[GPS] Fel:', err.message),
