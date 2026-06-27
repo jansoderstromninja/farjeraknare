@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.2</title>
+<title>Färjeräknare BENTO v1.2.1</title>
 <style>
-/* ── GRUNDSTIL & HÖGKONTRAST ── */
 :root {
   --bg: #05080f;
   --surface: #121a2b;
@@ -28,7 +27,6 @@ body {
   flex-direction: column;
 }
 
-/* ── BENTO DASHBOARD LAYOUT ── */
 .dashboard {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -38,6 +36,7 @@ body {
   flex: 1;
 }
 
+/* GRUNDSTIL FÖR ALLA RUROR */
 .tile {
   background: var(--glass);
   border: 1px solid var(--glass-border);
@@ -55,30 +54,31 @@ body {
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
-.tile-main-controls {
+/* SPECIFIK STIL FÖR KNAPP-RUTAN */
+#btnGrid {
   grid-column: 1 / 3;
   grid-row: 1 / 4;
-  display: grid;
+  display: grid !important; /* Tvinga Grid för knapparna */
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 12px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
 }
 
-.tile-speed {
-  grid-column: 3 / 5;
-  grid-row: 1 / 3;
-  justify-content: center;
-  align-items: center;
-}
-
+.tile-speed { grid-column: 3 / 5; grid-row: 1 / 3; justify-content: center; align-items: center; }
 .tile-water { grid-column: 3 / 4; grid-row: 3 / 4; }
-.tile-log { grid-column: 4 / 5; grid-row: 3 / 4; }
+.tile-log   { grid-column: 4 / 5; grid-row: 3 / 4; }
 
-/* ── OPERATIONAL BUTTONS (Högkontrast) ── */
+/* OPERATIONELLA KNAPPAR */
 .v-btn {
+  width: 100%;
+  height: 100%;
   position: relative;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 22px;
@@ -89,11 +89,12 @@ body {
   cursor: pointer;
   transition: transform 0.1s;
   box-shadow: 0 6px 0px rgba(0,0,0,0.4);
+  padding: 10px;
 }
 
 .v-btn:active { 
   transform: translateY(3px); 
-  filter: brightness(1.3);
+  filter: brightness(1.2);
   border-color: #fff;
 }
 
@@ -103,27 +104,25 @@ body {
 }
 
 .v-btn-label { 
-  font-size: 16px; 
+  font-size: 14px; 
   font-weight: 900; 
-  margin-top: 6px; 
+  margin-top: 4px; 
   color: #fff;
   text-transform: uppercase;
   text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
-/* ── SIGNAL-GULA BADGES (Fixen för mörk text) ── */
+/* GULA BADGES */
 .v-btn-badge {
   position: absolute;
-  top: -10px;
-  right: -10px;
+  top: -8px;
+  right: -8px;
   background: var(--signal-yellow);
-  color: #000; /* Svart text på gult syns bäst */
-  padding: 6px 12px;
-  border-radius: 14px;
-  font-size: 22px;
+  color: #000;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 20px;
   font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
   border: 2px solid #000;
   z-index: 10;
 }
@@ -132,19 +131,18 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--glass-border);
-  font-weight: 600;
 }
-.dep-time { color: var(--muted); }
 
-#speedVal { font-size: 22px; font-weight: 900; fill: #fff; }
+#speedVal { font-size: 22px; font-weight: 900; }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
-  <div class="tile tile-main-controls" id="btnGrid"></div>
+  <!-- KNAPPARNA HAMNAR HÄR -->
+  <div id="btnGrid"></div>
 
   <div class="tile tile-speed">
     <div class="tile-title">Fart (Knop)</div>
@@ -159,21 +157,18 @@ body {
   <div class="tile tile-water">
     <div class="tile-title">Vattenstånd</div>
     <div id="waterDisplay" style="font-size: 36px; font-weight: 900; color: #10B981;">-- cm</div>
-    <div id="waterTrend" style="font-size: 14px; color: var(--muted); margin-top: 5px;">Hämtar...</div>
   </div>
 
   <div class="tile tile-log">
-    <div class="tile-title">Senaste turer</div>
-    <div id="departureLog" style="overflow-y: auto;"></div>
+    <div class="tile-title">Senaste logg</div>
+    <div id="departureLog"></div>
   </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
-// ── FIREBASE CONFIG (Kopierad från v7.7) ──
 const firebaseConfig = {
   apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
   authDomain: "fordonsraknare.firebaseapp.com",
@@ -193,14 +188,12 @@ const CATS = [
   { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#3730A3' },
 ];
 
-// ── INIT MOTOR ──
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const today = new Date().toISOString().slice(0, 10);
 const logsRef = db.ref('days/' + today + '/logs');
 const tripsRef = db.ref('turer/' + today);
 
-// Firebase Lyssnare
 logsRef.on('value', snap => {
     const logs = snap.val() || {};
     const c = {};
@@ -219,28 +212,21 @@ tripsRef.on('value', snap => {
     const sorted = Object.values(trips).sort((a,b) => b.ts - a.ts).slice(0,5);
     log.innerHTML = sorted.map(t => {
         const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-        return `<div class="dep-row"><span class="dep-time">${time}</span><span>${t.from || 'Avgång'}</span></div>`;
+        return `<div class="dep-row"><span>${time}</span><span>${t.from || 'Avgång'}</span></div>`;
     }).join('');
 });
 
 db.ref('config/watlev').on('value', snap => {
     const data = snap.val();
-    if (data) {
-        document.getElementById('waterDisplay').textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
-    }
+    if (data) document.getElementById('waterDisplay').textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
 });
 
-// ── BYGG KNAPPAR ──
 const grid = document.getElementById('btnGrid');
 CATS.forEach(cat => {
     const btn = document.createElement('button');
     btn.className = 'v-btn';
     btn.style.backgroundColor = cat.color;
-    btn.innerHTML = `
-        <span class="v-btn-badge" id="b_${cat.id}">0</span>
-        <span class="v-btn-emoji">${cat.emoji}</span>
-        <span class="v-btn-label">${cat.label}</span>
-    `;
+    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
     btn.onclick = () => {
         if (navigator.vibrate) navigator.vibrate(25);
         logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
@@ -248,14 +234,12 @@ CATS.forEach(cat => {
     grid.appendChild(btn);
 });
 
-// ── GPS SPEEDO ──
 navigator.geolocation.watchPosition(pos => {
     const kn = (pos.coords.speed || 0) * 1.94384;
     const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
     document.getElementById('speedNeedle').setAttribute('transform', `rotate(${angle},36,32)`);
     document.getElementById('speedVal').textContent = kn.toFixed(1) + ' kn';
 }, null, { enableHighAccuracy: true });
-
 </script>
 </body>
 </html>
