@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.4.3</title>
+<title>Färjeräknare BENTO v1.4.4</title>
 <style>
 :root {
   --bg: #05080f;
@@ -97,39 +97,27 @@ body {
 .speedo-svg { width: 100%; height: auto; max-height: 90px; }
 
 .sys-status {
-  height: 25px;
-  padding: 0 15px;
-  font-size: 10px;
-  font-weight: 800;
-  color: #4a5568;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #000;
+  height: 25px; padding: 0 15px; font-size: 10px; font-weight: 800; color: #4a5568; display: flex; justify-content: space-between; align-items: center; background: #000;
 }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
 .dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
 
-/* ── UPDATED WEATHER OVERLAY (v1.4.3) ── */
+/* ── PROGNOS OVERLAY STILAR (v1.4.4) ── */
 #weatherOverlay {
-  position: fixed; inset: 0; background: rgba(5, 8, 15, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px; overflow-y: auto;
+  position: fixed; inset: 0; background: rgba(5, 8, 15, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px;
 }
 #weatherOverlay.show { display: flex; }
+.prognos-scroll { flex: 1; overflow-y: auto; }
 .prognos-row { 
-    display: flex; 
-    align-items: center; 
-    gap: 12px; 
-    background: rgba(255,255,255,0.05); 
-    margin-bottom: 5px; 
-    padding: 12px; 
-    border-radius: 12px; 
-    border-left: 4px solid var(--accent); 
+  display: flex; align-items: center; gap: 15px; 
+  background: rgba(255,255,255,0.05); margin-bottom: 6px; 
+  padding: 15px; border-radius: 15px; border-left: 5px solid #2d3748; 
 }
-.prognos-time { font-weight: 900; min-width: 50px; font-size: 14px; }
-.prognos-icon { font-size: 20px; min-width: 30px; text-align: center; }
-.prognos-wind { flex: 1; font-weight: 800; }
-.prognos-temp { font-weight: 700; color: var(--muted); }
-.prognos-arrow { display: flex; align-items: center; justify-content: center; }
+.p-time { font-weight: 900; min-width: 60px; font-size: 16px; }
+.p-icon { font-size: 24px; min-width: 40px; text-align: center; }
+.p-wind { flex: 1; font-weight: 800; font-size: 16px; }
+.p-temp { font-weight: 800; font-size: 16px; min-width: 70px; text-align: right; }
+.p-arrow { width: 30px; display: flex; justify-content: center; }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
@@ -158,10 +146,10 @@ body {
     <div class="tile-title">Vatten & Vind (48h)</div>
     <div class="water-val" id="waterDisplay">-- cm</div>
     <div class="wind-box">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <div id="mainWeatherIcon" style="font-size: 24px;">☀️</div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div id="mainWeatherIcon" style="font-size: 28px;">☀️</div>
             <div style="display: flex; flex-direction: column;">
-                <div id="windMain" style="font-size: 18px; font-weight: 900;">-- m/s</div>
+                <div id="windMain" style="font-size: 20px; font-weight: 900;">-- m/s</div>
                 <div id="windGusts" style="font-size: 11px; font-weight: 700; color: #718096;">Byar: --</div>
             </div>
         </div>
@@ -178,17 +166,17 @@ body {
 <div class="sys-status">
     <div style="display: flex; align-items: center;">
         <div id="syncDot" class="status-dot"></div>
-        <span id="syncText">V1.4.3-B</span>
+        <span id="syncText">V1.4.4-B</span>
     </div>
     <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
 <div id="weatherOverlay">
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
-        <h2>48h Prognos (Pettu)</h2>
-        <button onclick="toggleWeather(false)" style="color:white; background:var(--surface); border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button>
+        <h2 style="font-size: 24px;">48h Prognos (Pettu)</h2>
+        <button onclick="toggleWeather(false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 12px 25px; border-radius: 15px; font-weight: 900; cursor: pointer;">STÄNG ✕</button>
     </div>
-    <div id="prognosContent"></div>
+    <div class="prognos-scroll" id="prognosContent"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -216,29 +204,26 @@ const CATS = [
 
 var db, logsRef, tripsRef, fullWeatherData;
 
-// ── WEATHER HELPERS (v1.4.3) ──
+// ── LOGIK FÖR IKONER (v1.4.4) ──
 function getWeatherIcon(code, timeStr, temp) {
     const hour = parseInt(timeStr.slice(0, 2));
     const isNight = hour < 6 || hour > 22;
-    
-    if (temp < -15) return "🥶"; // Apkallt!
-    
-    // WMO Weather interpretation codes
-    if (code === 0) return isNight ? "🌙" : "☀️"; // Klart
-    if (code >= 1 && code <= 3) return isNight ? "☁️" : "🌤️"; // Molnigt
-    if (code >= 45 && code <= 48) return "🌫️"; // Dimma
-    if (code >= 51 && code <= 67) return "🌧️"; // Regn
-    if (code >= 71 && code <= 77) return "❄️"; // Snö
-    if (code >= 80 && code <= 82) return "🌦️"; // Skurar
-    if (code >= 85 && code <= 86) return "🌨️"; // Snöbyar
-    if (code >= 95) return "⛈️"; // Åska
+    if (temp < -15) return "🥶"; // Apkallt
+    if (code === 0) return isNight ? "🌙" : "☀️";
+    if (code <= 3) return isNight ? "☁️" : "🌤️";
+    if (code >= 45 && code <= 48) return "🌫️";
+    if (code >= 51 && code <= 67) return "🌧️";
+    if (code >= 71 && code <= 77) return "❄️";
+    if (code >= 80 && code <= 82) return "🌦️";
+    if (code >= 85 && code <= 86) return "🌨️";
+    if (code >= 95) return "⛈️";
     return "🌡️";
 }
 
 function getWindColor(speed) {
     if (speed < 6) return "#10B981";
     if (speed < 12) return "#F59E0B";
-    return "#EF4444"; // Storm/Hård vind
+    return "#EF4444";
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -322,15 +307,11 @@ async function fetchWeather() {
         const hour = new Date().getHours();
         const h = fullWeatherData.hourly;
         
-        const speed = h.windspeed_10m[hour];
-        document.getElementById('windMain').textContent = speed.toFixed(1) + ' m/s';
-        document.getElementById('windMain').style.color = getWindColor(speed);
+        document.getElementById('windMain').textContent = h.windspeed_10m[hour].toFixed(1) + ' m/s';
+        document.getElementById('windMain').style.color = getWindColor(h.windspeed_10m[hour]);
         document.getElementById('windGusts').textContent = 'Byar: ' + h.windgusts_10m[hour].toFixed(1);
         document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hour] + 180) % 360}deg)`;
-        
-        // Update main icon
-        const time = h.time[hour].slice(11, 16);
-        document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(h.weathercode[hour], time, h.temperature_2m[hour]);
+        document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(h.weathercode[hour], h.time[hour].slice(11, 16), h.temperature_2m[hour]);
     } catch (e) { console.error(e); }
 }
 
@@ -343,21 +324,17 @@ function renderFullForecast() {
 
     for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
         const time = h.time[i].slice(11, 16);
-        const code = h.weathercode[i];
-        const temp = h.temperature_2m[i];
-        const speed = h.windspeed_10m[i];
-        const gusts = h.windgusts_10m[i];
-        const dir = h.winddirection_10m[i];
-        const color = getWindColor(speed);
-        const icon = getWeatherIcon(code, time, temp);
+        const color = getWindColor(h.windspeed_10m[i]);
+        const icon = getWeatherIcon(h.weathercode[i], time, h.temperature_2m[i]);
+        const rotation = (h.winddirection_10m[i] + 180) % 360;
         
         html += `
             <div class="prognos-row" style="border-left-color: ${color}">
-                <div class="prognos-time">${time}</div>
-                <div class="prognos-icon">${icon}</div>
-                <div class="prognos-wind" style="color: ${color}">${speed.toFixed(1)} <small>(${gusts.toFixed(1)})</small> m/s</div>
-                <div class="prognos-temp">${temp.toFixed(1)}°C</div>
-                <div class="prognos-arrow" style="transform: rotate(${(dir + 180) % 360}deg)">
+                <div class="p-time">${time}</div>
+                <div class="p-icon">${icon}</div>
+                <div class="p-wind" style="color: ${color}">${h.windspeed_10m[i].toFixed(1)} <small>(${h.windgusts_10m[i].toFixed(1)})</small> m/s</div>
+                <div class="p-temp">${h.temperature_2m[i].toFixed(1)}°C</div>
+                <div class="p-arrow" style="transform: rotate(${rotation}deg)">
                     <svg width="20" height="20" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#718096"/></svg>
                 </div>
             </div>
