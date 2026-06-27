@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.4.1</title>
+<title>Färjeräknare BENTO v1.4.2</title>
 <style>
 :root {
   --bg: #05080f;
@@ -15,7 +15,6 @@
   --signal-yellow: #FACC15; 
   --green: #10B981;
   --red: #EF4444;
-  --orange: #F59E0B;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,41 +24,43 @@ body {
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   height: 100vh;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ── DASHBOARD LAYOUT ── */
 .dashboard {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr; 
-  grid-template-rows: repeat(3, 1fr);
-  gap: 15px;
-  padding: 15px;
-  flex: 1;
+  grid-template-rows: 1fr 1fr 1fr; /* Tre jämna rader */
+  gap: 12px;
+  padding: 12px;
+  flex: 1; /* Tar upp allt utrymme utom systemraden */
 }
 
 .tile {
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 28px;
-  padding: 18px;
+  border-radius: 24px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow: hidden;
 }
 
+/* ── POSITIONERING ── */
 #btnGrid {
   grid-column: 1 / 3;
   grid-row: 1 / 4;
   display: grid !important;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 .tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; align-items: center; justify-content: space-between; }
-.tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; justify-content: space-between; }
+.tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; justify-content: space-between; cursor: pointer; }
 .tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; }
 
 /* ── KNAPPAR ── */
@@ -67,84 +68,65 @@ body {
   position: relative;
   width: 100%; height: 100%;
   border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 22px;
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 0px rgba(0,0,0,0.4);
 }
-.v-btn:active { transform: translateY(3px); filter: brightness(1.2); }
-.v-btn-emoji { font-size: clamp(24px, 6vh, 48px); }
-.v-btn-label { font-size: clamp(10px, 1.8vh, 14px); font-weight: 900; margin-top: 4px; text-transform: uppercase; }
+.v-btn:active { transform: translateY(2px); filter: brightness(1.2); }
+.v-btn-emoji { font-size: clamp(24px, 5vh, 44px); }
+.v-btn-label { font-size: clamp(10px, 1.5vh, 13px); font-weight: 900; margin-top: 4px; text-transform: uppercase; }
 
 .v-btn-badge {
   position: absolute;
-  top: -8px; right: -8px;
+  top: -5px; right: -5px;
   background: var(--signal-yellow);
   color: #000;
-  padding: 5px 10px;
-  border-radius: 12px;
-  font-size: clamp(14px, 2.2vh, 20px);
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 18px;
   font-weight: 900;
   border: 2px solid #000;
   z-index: 10;
 }
 
 /* ── INSTRUMENT ── */
-.tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; width: 100%; }
-.water-val { font-size: 38px; font-weight: 900; color: var(--green); margin-top: 5px; }
+.tile-title { font-size: 10px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+.water-val { font-size: 34px; font-weight: 900; color: var(--green); }
+.wind-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 15px; border: 1px solid var(--glass-border); width: 100%; }
 
-.wind-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255,255,255,0.05);
-  padding: 12px 15px;
-  border-radius: 18px;
-  border: 1px solid var(--glass-border);
-  cursor: pointer;
-}
+#speedValDisplay { font-size: 28px; font-weight: 900; }
+.speedo-svg { width: 100%; height: auto; max-height: 90px; }
 
-#speedValDisplay { font-size: 32px; font-weight: 900; margin-top: -5px; }
-.speedo-svg { width: 100%; height: auto; max-height: 110px; }
-
-/* ── SYSTEM STATUS (Uppdaterad v1.4.1) ── */
+/* ── SYSTEM STATUS (Versionsraden) ── */
 .sys-status {
-  padding: 8px 15px;
-  font-size: 11px;
+  height: 25px;
+  padding: 0 15px;
+  font-size: 10px;
   font-weight: 800;
-  color: var(--muted);
+  color: #4a5568;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   background: #000;
-  border-top: 1px solid var(--glass-border);
 }
-.sys-item { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; background: grey; }
-.dot-online { background: var(--green); box-shadow: 0 0 8px var(--green); }
-.dot-offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
+.dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
 
-/* ── WEATHER OVERLAY ── */
+/* ── OVERLAY ── */
 #weatherOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(5, 8, 15, 0.95);
-  z-index: 1000;
-  display: none;
-  flex-direction: column;
-  padding: 20px;
-  backdrop-filter: blur(15px);
+  position: fixed; inset: 0; background: rgba(5, 8, 15, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px;
 }
 #weatherOverlay.show { display: flex; }
-.prognos-row { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); margin-bottom: 8px; padding: 12px; border-radius: 15px; border-left: 4px solid var(--accent); }
+.prognos-row { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); margin-bottom: 5px; padding: 10px; border-radius: 12px; border-left: 4px solid var(--accent); }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
   .dashboard { display: flex; flex-direction: column; height: auto; }
   #btnGrid { grid-template-columns: repeat(3, 1fr); width: 100%; margin-bottom: 15px; }
-  .tile { width: 100%; margin-bottom: 12px; min-height: 200px; }
+  .tile { width: 100%; margin-bottom: 12px; min-height: 180px; }
 }
 </style>
 </head>
@@ -163,51 +145,44 @@ body {
     <div id="speedValDisplay">0.0 kn</div>
   </div>
 
-  <div class="tile tile-env">
+  <div class="tile tile-env" onclick="toggleWeather(true)">
     <div class="tile-title">Vatten & Vind</div>
     <div class="water-val" id="waterDisplay">-- cm</div>
-    <div class="wind-box" onclick="toggleWeather(true)">
+    <div class="wind-box">
         <div style="display: flex; flex-direction: column;">
-            <div id="windMain" style="font-size: 20px; font-weight: 900;">-- m/s</div>
-            <div id="windGusts" style="font-size: 12px; font-weight: 700; color: var(--muted);">Byar: --</div>
+            <div id="windMain" style="font-size: 18px; font-weight: 900;">-- m/s</div>
+            <div id="windGusts" style="font-size: 11px; font-weight: 700; color: #718096;">Byar: --</div>
         </div>
-        <div id="windDir"><svg width="30" height="30" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#3B82F6"/></svg></div>
+        <div id="windDir" style="transition: transform 0.5s;"><svg width="24" height="24" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#3B82F6"/></svg></div>
     </div>
   </div>
 
   <div class="tile tile-log">
     <div class="tile-title">Senaste logg</div>
-    <div id="departureLog" style="overflow-y: auto; width: 100%;"></div>
+    <div id="departureLog" style="overflow-y: auto; width: 100%; font-size: 11px;"></div>
   </div>
 </div>
 
-<!-- SYSTEM STATUS RAD (v1.4.1) -->
 <div class="sys-status">
-    <div class="sys-item">
+    <div style="display: flex; align-items: center;">
         <div id="syncDot" class="status-dot"></div>
-        <span id="syncText">ANSLUTER...</span>
-        <span style="opacity: 0.3; margin: 0 5px;">|</span>
-        <span>v1.4.1-B</span>
+        <span id="syncText">V1.4.2-B</span>
     </div>
-    <div class="sys-item">
-        <span>GPS:</span>
-        <span id="gpsAccDisplay" style="color: var(--muted);">SÖKER...</span>
-    </div>
+    <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
 <div id="weatherOverlay">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2>48h Väderprognos</h2>
-        <button style="background: var(--surface); color: white; padding: 10px; border-radius: 10px; border: 1px solid var(--glass-border);" onclick="toggleWeather(false)">STÄNG ✕</button>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <h2>48h Prognos</h2>
+        <button onclick="toggleWeather(false)" style="color:white; background:none; border: 1px solid white; padding: 5px 15px; border-radius: 10px;">STÄNG</button>
     </div>
-    <div style="flex: 1; overflow-y: auto;" id="prognosContent"></div>
+    <div id="prognosContent" style="overflow-y: auto; flex: 1;"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
-const APP_VERSION = "1.4.1-B";
 const firebaseConfig = {
   apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
   authDomain: "fordonsraknare.firebaseapp.com",
@@ -231,19 +206,17 @@ var db, logsRef, tripsRef, fullWeatherData;
 
 document.addEventListener('DOMContentLoaded', function() {
   const grid = document.getElementById('btnGrid');
-  if (grid) {
-    CATS.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = 'v-btn';
-      btn.style.backgroundColor = cat.color;
-      btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
-      btn.onclick = () => {
-          if (navigator.vibrate) navigator.vibrate(25);
-          if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
-      };
-      grid.appendChild(btn);
-    });
-  }
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'v-btn';
+    btn.style.backgroundColor = cat.color;
+    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
+    btn.onclick = () => {
+        if (navigator.vibrate) navigator.vibrate(25);
+        if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
+    };
+    grid.appendChild(btn);
+  });
   initApp();
   fetchWeather();
 });
@@ -256,17 +229,10 @@ function initApp() {
     logsRef = db.ref('days/' + today + '/logs');
     tripsRef = db.ref('turer/' + today);
 
-    // Live Sync Status
-    const syncDot = document.getElementById('syncDot');
-    const syncText = document.getElementById('syncText');
     db.ref('.info/connected').on('value', snap => {
-        if (snap.val() === true) {
-            syncDot.className = "status-dot dot-online";
-            syncText.textContent = "FIREBASE: ONLINE";
-        } else {
-            syncDot.className = "status-dot dot-offline";
-            syncText.textContent = "FIREBASE: OFFLINE";
-        }
+        const dot = document.getElementById('syncDot');
+        if (snap.val() === true) dot.classList.add('dot-online');
+        else dot.classList.remove('dot-online');
     });
 
     logsRef.on('value', snap => {
@@ -294,23 +260,16 @@ function initApp() {
       if (data) document.getElementById('waterDisplay').textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
     });
 
-    // GPS Telemetri (v1.4.1)
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         const kn = (pos.coords.speed || 0) * 1.94384;
-        const acc = pos.coords.accuracy;
         const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
-        
         document.getElementById('speedNeedle').setAttribute('transform', `rotate(${angle},36,32)`);
         document.getElementById('speedValDisplay').textContent = kn.toFixed(1) + ' kn';
-        
-        const accDisplay = document.getElementById('gpsAccDisplay');
-        accDisplay.textContent = Math.round(acc) + "m";
-        accDisplay.style.color = acc < 10 ? 'var(--green)' : acc < 30 ? 'var(--orange)' : 'var(--red)';
-        
+        document.getElementById('gpsStatus').textContent = "GPS: " + Math.round(pos.coords.accuracy) + "m";
       }, null, { enableHighAccuracy: true });
     }
-  } catch (e) { console.error("Init-fel:", e); }
+  } catch (e) { console.error(e); }
 }
 
 function toggleWeather(show) {
@@ -319,22 +278,15 @@ function toggleWeather(show) {
 }
 
 async function fetchWeather() {
-    const lat = 60.03, lon = 22.92;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
     try {
-        const resp = await fetch(url);
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
         fullWeatherData = await resp.json();
-        updateDashboardWeather();
-    } catch (e) { console.error("Väder-fel:", e); }
-}
-
-function updateDashboardWeather() {
-    if (!fullWeatherData) return;
-    const hour = new Date().getHours();
-    const h = fullWeatherData.hourly;
-    document.getElementById('windMain').textContent = h.windspeed_10m[hour].toFixed(1) + ' m/s';
-    document.getElementById('windGusts').textContent = 'Byar: ' + h.windgusts_10m[hour].toFixed(1);
-    document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hour] + 180) % 360}deg)`;
+        const hour = new Date().getHours();
+        const h = fullWeatherData.hourly;
+        document.getElementById('windMain').textContent = h.windspeed_10m[hour].toFixed(1) + ' m/s';
+        document.getElementById('windGusts').textContent = 'Byar: ' + h.windgusts_10m[hour].toFixed(1);
+        document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hour] + 180) % 360}deg)`;
+    } catch (e) { console.error(e); }
 }
 
 function renderFullForecast() {
@@ -342,7 +294,7 @@ function renderFullForecast() {
     if (!fullWeatherData) return;
     let html = "";
     const h = fullWeatherData.hourly;
-    for (let i = new Date().getHours(); i < h.time.length; i++) {
+    for (let i = new Date().getHours(); i < h.time.length && i < 48; i++) {
         html += `<div class="prognos-row"><b>${h.time[i].slice(11, 16)}</b><span style="flex:1">${h.windspeed_10m[i].toFixed(1)} m/s</span><span>${h.temperature_2m[i].toFixed(1)}°C</span></div>`;
     }
     container.innerHTML = html;
