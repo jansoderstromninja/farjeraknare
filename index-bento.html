@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.3.2</title>
+<title>Färjeräknare BENTO v1.3.3</title>
 <style>
 /* ── FÄRGER & BAS ── */
 :root {
   --bg: #05080f;
   --surface: #121a2b;
-  --glass: rgba(24, 33, 53, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass: rgba(24, 33, 53, 0.95);
+  --glass-border: rgba(255, 255, 255, 0.3);
   --text: #ffffff;
   --accent: #3B82F6;
   --signal-yellow: #FACC15; 
@@ -46,17 +46,17 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 100px;
 }
 
 /* ── POSITIONERING ── */
 #btnGrid {
   grid-column: 1 / 3;
   grid-row: 1 / 4;
-  display: grid !important;
+  display: grid !important; /* Tvinga Grid för knapparna */
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 10px;
+  min-height: 300px; /* Förhindra att lådan kollapsar */
 }
 
 .tile-speed { grid-column: 3 / 5; grid-row: 1 / 3; justify-content: center; align-items: center; }
@@ -71,8 +71,14 @@ body {
     height: auto;
     overflow-y: auto;
   }
-  #btnGrid { width: 100%; margin-bottom: 10px; }
-  .tile { width: 100%; margin-bottom: 10px; min-height: 150px; }
+  #btnGrid { 
+    display: grid !important;
+    width: 100%; 
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: 15px; 
+    min-height: 400px;
+  }
+  .tile { width: 100%; margin-bottom: 12px; min-height: 160px; }
 }
 
 /* ── KNAPPAR ── */
@@ -80,20 +86,20 @@ body {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 0px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 0px rgba(0,0,0,0.4);
   color: white;
 }
 
-.v-btn:active { transform: translateY(2px); filter: brightness(1.2); }
+.v-btn:active { transform: translateY(2px); filter: brightness(1.2); border-color: #fff; }
 .v-btn-emoji { font-size: 38px; }
-.v-btn-label { font-size: 13px; font-weight: 800; margin-top: 4px; text-transform: uppercase; }
+.v-btn-label { font-size: 13px; font-weight: 900; margin-top: 4px; text-transform: uppercase; }
 
 /* ── GULA BADGES ── */
 .v-btn-badge {
@@ -101,17 +107,17 @@ body {
   top: -6px; right: -6px;
   background: var(--signal-yellow);
   color: #000;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 10px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
   border: 2px solid #000;
   z-index: 10;
 }
 
 .tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
-.dep-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
-#speedVal { font-size: 22px; font-weight: 900; }
+.dep-row { display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); }
+#speedVal { font-size: 24px; font-weight: 900; }
 </style>
 </head>
 <body>
@@ -123,7 +129,7 @@ body {
   <!-- SPEEDOMETER -->
   <div class="tile tile-speed">
     <div class="tile-title">Fart (Knop)</div>
-    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 240px;">
+    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 250px;">
         <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="5" stroke-linecap="round"/>
         <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>
         <circle cx="36" cy="32" r="4" fill="#3B82F6"/>
@@ -134,7 +140,7 @@ body {
   <!-- VATTENSTÅND -->
   <div class="tile tile-water">
     <div class="tile-title">Vattenstånd</div>
-    <div id="waterDisplay" style="font-size: 32px; font-weight: 900; color: #10B981;">-- cm</div>
+    <div id="waterDisplay" style="font-size: 38px; font-weight: 900; color: #10B981;">-- cm</div>
   </div>
 
   <!-- LOGG -->
@@ -144,12 +150,11 @@ body {
   </div>
 </div>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
-// 1. DATA DEFINITION
+// 1. DATA
 const CATS = [
   { id: 'personbil',  label: 'Bil', emoji: '🚗', color: '#1D4ED8' },
   { id: 'paketbil',   label: 'Paket', emoji: '🚐', color: '#6D28D9' },
@@ -169,74 +174,84 @@ const firebaseConfig = {
   databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
-// 2. RITA UT GRÄNSSNITTET DIREKT (Innan Firebase)
-const grid = document.getElementById('btnGrid');
-if (grid) {
-  CATS.forEach(cat => {
-    const btn = document.createElement('button');
-    btn.className = 'v-btn';
-    btn.style.backgroundColor = cat.color;
-    btn.innerHTML = `
-        <span class="v-btn-badge" id="b_${cat.id}">0</span>
-        <span class="v-btn-emoji">${cat.emoji}</span>
-        <span class="v-btn-label">${cat.label}</span>
-    `;
-    btn.onclick = () => {
-        if (navigator.vibrate) navigator.vibrate(25);
-        if (typeof logsRef !== 'undefined') logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
-    };
-    grid.appendChild(btn);
-  });
-}
+// Globala referenser så de når alla funktioner
+var db, logsRef, tripsRef;
 
-// 3. STARTA FIREBASE (I en try-catch för att inte krascha allt om det strular)
-try {
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.database();
-  var today = new Date().toISOString().slice(0, 10);
-  var logsRef = db.ref('days/' + today + '/logs');
-  var tripsRef = db.ref('turer/' + today);
-
-  logsRef.on('value', snap => {
-    const logs = snap.val() || {};
-    const c = {};
-    Object.values(logs).forEach(l => { c[l.type] = (c[l.type] || 0) + (l.delta || 1); });
+// 2. BYGG UI NÄR SIDAN ÄR LADDAD
+document.addEventListener('DOMContentLoaded', function() {
+  const grid = document.getElementById('btnGrid');
+  if (grid) {
     CATS.forEach(cat => {
-        const badge = document.getElementById('b_' + cat.id);
-        if (badge) badge.textContent = Math.max(0, c[cat.id] || 0);
+      const btn = document.createElement('button');
+      btn.className = 'v-btn';
+      btn.style.backgroundColor = cat.color;
+      btn.innerHTML = `
+          <span class="v-btn-badge" id="b_${cat.id}">0</span>
+          <span class="v-btn-emoji">${cat.emoji}</span>
+          <span class="v-btn-label">${cat.label}</span>
+      `;
+      btn.onclick = () => {
+          if (navigator.vibrate) navigator.vibrate(25);
+          if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
+      };
+      grid.appendChild(btn);
     });
-  });
+  }
+  
+  // Starta Firebase efter att UI är på plats
+  initApp();
+});
 
-  tripsRef.on('value', snap => {
-    const trips = snap.val() || {};
-    const logDiv = document.getElementById('departureLog');
-    const sorted = Object.values(trips).sort((a,b) => b.ts - a.ts).slice(0,5);
-    if (logDiv) logDiv.innerHTML = sorted.map(t => {
-        const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-        return `<div class="dep-row"><span>${time}</span><span>${t.from || 'Avgång'}</span></div>`;
-    }).join('');
-  });
+// 3. LOGIK
+function initApp() {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    var today = new Date().toISOString().slice(0, 10);
+    logsRef = db.ref('days/' + today + '/logs');
+    tripsRef = db.ref('turer/' + today);
 
-  db.ref('config/watlev').on('value', snap => {
-    const data = snap.val();
-    const disp = document.getElementById('waterDisplay');
-    if (data && disp) disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
-  });
+    logsRef.on('value', snap => {
+      const logs = snap.val() || {};
+      const c = {};
+      Object.values(logs).forEach(l => { c[l.type] = (c[l.type] || 0) + (l.delta || 1); });
+      CATS.forEach(cat => {
+          const badge = document.getElementById('b_' + cat.id);
+          if (badge) badge.textContent = Math.max(0, c[cat.id] || 0);
+      });
+    });
 
-} catch (e) {
-  console.error("Firebase init misslyckades:", e);
-}
+    tripsRef.on('value', snap => {
+      const trips = snap.val() || {};
+      const logDiv = document.getElementById('departureLog');
+      const sorted = Object.values(trips).sort((a,b) => b.ts - a.ts).slice(0,5);
+      if (logDiv) logDiv.innerHTML = sorted.map(t => {
+          const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+          return `<div class="dep-row"><span>${time}</span><span>${t.from || 'Avgång'}</span></div>`;
+      }).join('');
+    });
 
-// 4. GPS
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(pos => {
-    const kn = (pos.coords.speed || 0) * 1.94384;
-    const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
-    const needle = document.getElementById('speedNeedle');
-    if (needle) needle.setAttribute('transform', `rotate(${angle},36,32)`);
-    const val = document.getElementById('speedVal');
-    if (val) val.textContent = kn.toFixed(1) + ' kn';
-  }, null, { enableHighAccuracy: true });
+    db.ref('config/watlev').on('value', snap => {
+      const data = snap.val();
+      const disp = document.getElementById('waterDisplay');
+      if (data && disp) disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+    });
+
+    // GPS startar här
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(pos => {
+        const kn = (pos.coords.speed || 0) * 1.94384;
+        const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
+        const needle = document.getElementById('speedNeedle');
+        if (needle) needle.setAttribute('transform', `rotate(${angle},36,32)`);
+        const val = document.getElementById('speedVal');
+        if (val) val.textContent = kn.toFixed(1) + ' kn';
+      }, null, { enableHighAccuracy: true });
+    }
+
+  } catch (e) {
+    console.error("Init-fel:", e);
+  }
 }
 </script>
 </body>
