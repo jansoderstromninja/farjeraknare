@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.4.4</title>
+<title>Färjeräknare BENTO v1.4.5</title>
 <style>
 :root {
   --bg: #05080f;
@@ -102,22 +102,14 @@ body {
 .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
 .dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
 
-/* ── PROGNOS OVERLAY STILAR (v1.4.4) ── */
 #weatherOverlay {
   position: fixed; inset: 0; background: rgba(5, 8, 15, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px;
 }
 #weatherOverlay.show { display: flex; }
 .prognos-scroll { flex: 1; overflow-y: auto; }
 .prognos-row { 
-  display: flex; align-items: center; gap: 15px; 
-  background: rgba(255,255,255,0.05); margin-bottom: 6px; 
-  padding: 15px; border-radius: 15px; border-left: 5px solid #2d3748; 
+  display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); margin-bottom: 6px; padding: 12px; border-radius: 15px; border-left: 5px solid #2d3748; 
 }
-.p-time { font-weight: 900; min-width: 60px; font-size: 16px; }
-.p-icon { font-size: 24px; min-width: 40px; text-align: center; }
-.p-wind { flex: 1; font-weight: 800; font-size: 16px; }
-.p-temp { font-weight: 800; font-size: 16px; min-width: 70px; text-align: right; }
-.p-arrow { width: 30px; display: flex; justify-content: center; }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
@@ -143,13 +135,13 @@ body {
   </div>
 
   <div class="tile tile-env" onclick="toggleWeather(true)">
-    <div class="tile-title">Vatten & Vind (48h)</div>
+    <div class="tile-title">Hangö Russarö (48h)</div>
     <div class="water-val" id="waterDisplay">-- cm</div>
     <div class="wind-box">
         <div style="display: flex; align-items: center; gap: 10px;">
             <div id="mainWeatherIcon" style="font-size: 28px;">☀️</div>
             <div style="display: flex; flex-direction: column;">
-                <div id="windMain" style="font-size: 20px; font-weight: 900;">-- m/s</div>
+                <div id="windMain" style="font-size: 18px; font-weight: 900;">-- m/s</div>
                 <div id="windGusts" style="font-size: 11px; font-weight: 700; color: #718096;">Byar: --</div>
             </div>
         </div>
@@ -166,14 +158,14 @@ body {
 <div class="sys-status">
     <div style="display: flex; align-items: center;">
         <div id="syncDot" class="status-dot"></div>
-        <span id="syncText">V1.4.4-B</span>
+        <span id="syncText">V1.4.5-B</span>
     </div>
     <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
 <div id="weatherOverlay">
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
-        <h2 style="font-size: 24px;">48h Prognos (Pettu)</h2>
+        <h2 style="font-size: 24px;">48h Prognos</h2>
         <button onclick="toggleWeather(false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 12px 25px; border-radius: 15px; font-weight: 900; cursor: pointer;">STÄNG ✕</button>
     </div>
     <div class="prognos-scroll" id="prognosContent"></div>
@@ -204,26 +196,53 @@ const CATS = [
 
 var db, logsRef, tripsRef, fullWeatherData;
 
-// ── LOGIK FÖR IKONER (v1.4.4) ──
+// ── FMI WATER LEVEL LOGIC (v1.4.5) ──
+function buildFmiWaterUrl() {
+  const now = new Date();
+  const end = now.toISOString().slice(0, 19) + 'Z';
+  const start = new Date(now - 2 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
+  return `https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}&endtime=${end}`;
+}
+
+function parseFmiWater(xmlText) {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(xmlText, "text/xml");
+    const elements = xml.getElementsByTagNameNS("*", "BsWfsElement");
+    let latestVal = null;
+    for (let el of elements) {
+        const param = el.getElementsByTagNameNS("*", "ParameterName")[0]?.textContent;
+        const val = el.getElementsByTagNameNS("*", "ParameterValue")[0]?.textContent;
+        if (param === "WATLEV") latestVal = parseFloat(val);
+    }
+    return latestVal; // Returneras i mm
+}
+
+async function updateWaterLevel() {
+    try {
+        const resp = await fetch(buildFmiWaterUrl());
+        const text = await resp.text();
+        const mm = parseFmiWater(text);
+        if (mm !== null) {
+            const cm = Math.round(mm / 10);
+            if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
+            const disp = document.getElementById('waterDisplay');
+            disp.textContent = (cm > 0 ? '+' : '') + cm + ' cm';
+            disp.style.color = (cm < -20 || cm > 20) ? 'var(--red)' : 'var(--green)';
+        }
+    } catch (e) { console.error("FMI Water Error:", e); }
+}
+
+// ── WEATHER HELPERS ──
 function getWeatherIcon(code, timeStr, temp) {
     const hour = parseInt(timeStr.slice(0, 2));
     const isNight = hour < 6 || hour > 22;
-    if (temp < -15) return "🥶"; // Apkallt
+    if (temp < -15) return "🥶";
     if (code === 0) return isNight ? "🌙" : "☀️";
     if (code <= 3) return isNight ? "☁️" : "🌤️";
-    if (code >= 45 && code <= 48) return "🌫️";
     if (code >= 51 && code <= 67) return "🌧️";
     if (code >= 71 && code <= 77) return "❄️";
-    if (code >= 80 && code <= 82) return "🌦️";
-    if (code >= 85 && code <= 86) return "🌨️";
     if (code >= 95) return "⛈️";
-    return "🌡️";
-}
-
-function getWindColor(speed) {
-    if (speed < 6) return "#10B981";
-    if (speed < 12) return "#F59E0B";
-    return "#EF4444";
+    return "🌤️";
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -241,7 +260,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   initApp();
   fetchWeather();
+  updateWaterLevel();
   setInterval(fetchWeather, 1000 * 60 * 30);
+  setInterval(updateWaterLevel, 1000 * 60 * 15); // Kolla vatten var 15:e min
 });
 
 function initApp() {
@@ -278,9 +299,14 @@ function initApp() {
       }).join('');
     });
 
+    // Lyssna på vattenstånd (för att synka mellan enheter)
     db.ref('config/watlev').on('value', snap => {
       const data = snap.val();
-      if (data) document.getElementById('waterDisplay').textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+      if (data) {
+          const disp = document.getElementById('waterDisplay');
+          disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+          disp.style.color = (data.value < -20 || data.value > 20) ? 'var(--red)' : 'var(--green)';
+      }
     });
 
     if (navigator.geolocation) {
@@ -306,9 +332,7 @@ async function fetchWeather() {
         fullWeatherData = await resp.json();
         const hour = new Date().getHours();
         const h = fullWeatherData.hourly;
-        
         document.getElementById('windMain').textContent = h.windspeed_10m[hour].toFixed(1) + ' m/s';
-        document.getElementById('windMain').style.color = getWindColor(h.windspeed_10m[hour]);
         document.getElementById('windGusts').textContent = 'Byar: ' + h.windgusts_10m[hour].toFixed(1);
         document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hour] + 180) % 360}deg)`;
         document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(h.weathercode[hour], h.time[hour].slice(11, 16), h.temperature_2m[hour]);
@@ -321,22 +345,17 @@ function renderFullForecast() {
     let html = "";
     const h = fullWeatherData.hourly;
     const nowIdx = new Date().getHours();
-
     for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
         const time = h.time[i].slice(11, 16);
-        const color = getWindColor(h.windspeed_10m[i]);
         const icon = getWeatherIcon(h.weathercode[i], time, h.temperature_2m[i]);
         const rotation = (h.winddirection_10m[i] + 180) % 360;
-        
         html += `
-            <div class="prognos-row" style="border-left-color: ${color}">
+            <div class="prognos-row" style="border-left-color: ${h.windspeed_10m[i] < 12 ? 'var(--accent)' : 'var(--red)'}">
                 <div class="p-time">${time}</div>
-                <div class="p-icon">${icon}</div>
-                <div class="p-wind" style="color: ${color}">${h.windspeed_10m[i].toFixed(1)} <small>(${h.windgusts_10m[i].toFixed(1)})</small> m/s</div>
-                <div class="p-temp">${h.temperature_2m[i].toFixed(1)}°C</div>
-                <div class="p-arrow" style="transform: rotate(${rotation}deg)">
-                    <svg width="20" height="20" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#718096"/></svg>
-                </div>
+                <div style="font-size:22px">${icon}</div>
+                <div class="p-wind" style="flex:1; margin-left:10px">${h.windspeed_10m[i].toFixed(1)} <small>(${h.windgusts_10m[i].toFixed(1)})</small> m/s</div>
+                <div style="font-weight:800">${h.temperature_2m[i].toFixed(1)}°C</div>
+                <div style="transform: rotate(${rotation}deg); margin-left:15px"><svg width="20" height="20" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#718096"/></svg></div>
             </div>
         `;
     }
