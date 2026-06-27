@@ -3,186 +3,127 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.3.1</title>
+<title>Färjeräknare BENTO v1.3.2</title>
 <style>
-/* ── GRUNDSTIL & FÄRGER ── */
+/* ── FÄRGER & BAS ── */
 :root {
   --bg: #05080f;
   --surface: #121a2b;
   --glass: rgba(24, 33, 53, 0.9);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.25);
   --text: #ffffff;
   --accent: #3B82F6;
   --signal-yellow: #FACC15; 
 }
 
-*, *::before, *::after { 
-  box-sizing: border-box; 
-  margin: 0; 
-  padding: 0; 
-  -webkit-tap-highlight-color: transparent;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto; /* Tillåter scroll på mobilen */
   display: flex;
   flex-direction: column;
 }
 
-/* ── DASHBOARD LAYOUT (Desktop/Landskap) ── */
+/* ── DASHBOARD LAYOUT ── */
 .dashboard {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 15px;
-  padding: 15px;
+  gap: 12px;
+  padding: 12px;
   flex: 1;
-  height: 100vh; /* Fyller skärmen på Mac/Platta */
+  height: 100vh;
 }
 
-/* ── MOBIL-ANPASSNING (FIXEN FÖR STAPLING) ── */
-@media (max-width: 900px) {
-  .dashboard {
-    display: flex; 
-    flex-direction: column;
-    height: auto;
-    padding-bottom: 40px;
-  }
-
-  #btnGrid {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    width: 100% !important;
-    margin-bottom: 15px;
-  }
-
-  .tile {
-    width: 100% !important;
-    margin-bottom: 12px;
-    min-height: 160px;
-  }
-
-  .tile-speed { min-height: 200px; }
-}
-
-/* ── BOXARNAS STIL ── */
 .tile {
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 28px;
-  padding: 20px;
+  border-radius: 24px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   position: relative;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  min-height: 100px;
 }
 
-.tile-title {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  margin-bottom: 12px;
-}
-
-/* ── POSITIONERING DESKTOP ── */
+/* ── POSITIONERING ── */
 #btnGrid {
   grid-column: 1 / 3;
   grid-row: 1 / 4;
   display: grid !important;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .tile-speed { grid-column: 3 / 5; grid-row: 1 / 3; justify-content: center; align-items: center; }
 .tile-water { grid-column: 3 / 4; grid-row: 3 / 4; }
 .tile-log   { grid-column: 4 / 5; grid-row: 3 / 4; }
 
-/* ── OPERATÖRS-KNAPPAR ── */
+/* ── MOBIL-ANPASSNING (Stapling) ── */
+@media (max-width: 900px) {
+  .dashboard {
+    display: flex; 
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+  }
+  #btnGrid { width: 100%; margin-bottom: 10px; }
+  .tile { width: 100%; margin-bottom: 10px; min-height: 150px; }
+}
+
+/* ── KNAPPAR ── */
 .v-btn {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.1s, filter 0.1s;
-  box-shadow: 0 6px 0px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 0px rgba(0,0,0,0.3);
+  color: white;
 }
 
-.v-btn:active { 
-  transform: translateY(3px); 
-  filter: brightness(1.3);
-  border-color: #fff;
-}
+.v-btn:active { transform: translateY(2px); filter: brightness(1.2); }
+.v-btn-emoji { font-size: 38px; }
+.v-btn-label { font-size: 13px; font-weight: 800; margin-top: 4px; text-transform: uppercase; }
 
-.v-btn-emoji { 
-  font-size: 44px; 
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-}
-
-.v-btn-label { 
-  font-size: 14px; 
-  font-weight: 900; 
-  margin-top: 6px; 
-  color: #fff;
-  text-transform: uppercase;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-}
-
-/* ── GULA HÖGKONTRAST-BADGES ── */
+/* ── GULA BADGES ── */
 .v-btn-badge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: -6px; right: -6px;
   background: var(--signal-yellow);
   color: #000;
-  padding: 6px 12px;
-  border-radius: 14px;
-  font-size: 20px;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 18px;
   font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
   border: 2px solid #000;
   z-index: 10;
 }
 
-/* ── LOGG & SPEEDO TEXT ── */
-.dep-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--glass-border);
-  font-weight: 600;
-}
-.dep-time { color: var(--muted); }
-
-#speedVal { font-size: 24px; font-weight: 900; fill: #fff; }
-
+.tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
+.dep-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
+#speedVal { font-size: 22px; font-weight: 900; }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
-  <!-- KNAPP-GRID -->
+  <!-- KNAPPAR -->
   <div id="btnGrid"></div>
 
   <!-- SPEEDOMETER -->
   <div class="tile tile-speed">
     <div class="tile-title">Fart (Knop)</div>
-    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 280px;">
+    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 240px;">
         <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="5" stroke-linecap="round"/>
         <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>
         <circle cx="36" cy="32" r="4" fill="#3B82F6"/>
@@ -193,8 +134,7 @@ body {
   <!-- VATTENSTÅND -->
   <div class="tile tile-water">
     <div class="tile-title">Vattenstånd</div>
-    <div id="waterDisplay" style="font-size: 38px; font-weight: 900; color: #10B981;">-- cm</div>
-    <div id="waterTrend" style="font-size: 12px; color: var(--muted); margin-top: 5px;">Hämtar från Hangö...</div>
+    <div id="waterDisplay" style="font-size: 32px; font-weight: 900; color: #10B981;">-- cm</div>
   </div>
 
   <!-- LOGG -->
@@ -209,14 +149,7 @@ body {
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
 <script>
-// ── KONFIGURATION ──
-const firebaseConfig = {
-  apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
-  authDomain: "fordonsraknare.firebaseapp.com",
-  projectId: "fordonsraknare",
-  databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
-};
-
+// 1. DATA DEFINITION
 const CATS = [
   { id: 'personbil',  label: 'Bil', emoji: '🚗', color: '#1D4ED8' },
   { id: 'paketbil',   label: 'Paket', emoji: '🚐', color: '#6D28D9' },
@@ -229,24 +162,82 @@ const CATS = [
   { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#3730A3' },
 ];
 
-// ── INITIERING ──
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const today = new Date().toISOString().slice(0, 10);
-const logsRef = db.ref('days/' + today + '/logs');
-const tripsRef = db.ref('turer/' + today);
+const firebaseConfig = {
+  apiKey: "AIzaSyDregBlw1hjcHotJAk8938xXAjQKbHXS1Q",
+  authDomain: "fordonsraknare.firebaseapp.com",
+  projectId: "fordonsraknare",
+  databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
+};
 
-// ── FIREBASE LYSSNARE ──
-logsRef.on('value', snap => {
+// 2. RITA UT GRÄNSSNITTET DIREKT (Innan Firebase)
+const grid = document.getElementById('btnGrid');
+if (grid) {
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'v-btn';
+    btn.style.backgroundColor = cat.color;
+    btn.innerHTML = `
+        <span class="v-btn-badge" id="b_${cat.id}">0</span>
+        <span class="v-btn-emoji">${cat.emoji}</span>
+        <span class="v-btn-label">${cat.label}</span>
+    `;
+    btn.onclick = () => {
+        if (navigator.vibrate) navigator.vibrate(25);
+        if (typeof logsRef !== 'undefined') logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
+    };
+    grid.appendChild(btn);
+  });
+}
+
+// 3. STARTA FIREBASE (I en try-catch för att inte krascha allt om det strular)
+try {
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.database();
+  var today = new Date().toISOString().slice(0, 10);
+  var logsRef = db.ref('days/' + today + '/logs');
+  var tripsRef = db.ref('turer/' + today);
+
+  logsRef.on('value', snap => {
     const logs = snap.val() || {};
     const c = {};
-    Object.values(logs).forEach(l => {
-        c[l.type] = (c[l.type] || 0) + (l.delta || 1);
-    });
+    Object.values(logs).forEach(l => { c[l.type] = (c[l.type] || 0) + (l.delta || 1); });
     CATS.forEach(cat => {
         const badge = document.getElementById('b_' + cat.id);
         if (badge) badge.textContent = Math.max(0, c[cat.id] || 0);
     });
-});
+  });
 
-tripsRef.on('value', snap => {
+  tripsRef.on('value', snap => {
+    const trips = snap.val() || {};
+    const logDiv = document.getElementById('departureLog');
+    const sorted = Object.values(trips).sort((a,b) => b.ts - a.ts).slice(0,5);
+    if (logDiv) logDiv.innerHTML = sorted.map(t => {
+        const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        return `<div class="dep-row"><span>${time}</span><span>${t.from || 'Avgång'}</span></div>`;
+    }).join('');
+  });
+
+  db.ref('config/watlev').on('value', snap => {
+    const data = snap.val();
+    const disp = document.getElementById('waterDisplay');
+    if (data && disp) disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+  });
+
+} catch (e) {
+  console.error("Firebase init misslyckades:", e);
+}
+
+// 4. GPS
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(pos => {
+    const kn = (pos.coords.speed || 0) * 1.94384;
+    const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
+    const needle = document.getElementById('speedNeedle');
+    if (needle) needle.setAttribute('transform', `rotate(${angle},36,32)`);
+    const val = document.getElementById('speedVal');
+    if (val) val.textContent = kn.toFixed(1) + ' kn';
+  }, null, { enableHighAccuracy: true });
+}
+</script>
+</body>
+</html>
