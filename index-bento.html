@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.3.5</title>
+<title>Färjeräknare BENTO v1.3.6</title>
 <style>
 /* ── FÄRGER & BAS ── */
 :root {
@@ -28,10 +28,9 @@ body {
   flex-direction: column;
 }
 
-/* ── DASHBOARD LAYOUT (3-KOLUMN-SYSTEM) ── */
+/* ── DASHBOARD LAYOUT (3-KOLUMNER) ── */
 .dashboard {
   display: grid;
-  /* Vi skapar 3 kolumner. Knapparna tar 2, instrumenten tar 1. */
   grid-template-columns: 1fr 1fr 1fr; 
   grid-template-rows: repeat(3, 1fr);
   gap: 15px;
@@ -46,12 +45,13 @@ body {
   padding: 18px;
   display: flex;
   flex-direction: column;
+  position: relative;
   overflow: hidden;
 }
 
-/* ── VÄNSTER & MITTEN (KNAPPARNA TAR 2/3) ── */
+/* ── POSITIONERING ── */
 #btnGrid {
-  grid-column: 1 / 3; /* Börjar på linje 1, slutar på linje 3 */
+  grid-column: 1 / 3;
   grid-row: 1 / 4;
   display: grid !important;
   grid-template-columns: repeat(3, 1fr);
@@ -59,42 +59,28 @@ body {
   gap: 12px;
 }
 
-/* ── HÖGER PANEL (INSTRUMENT TAR 1/3) ── */
 .tile-speed { 
   grid-column: 3 / 4; 
-  grid-row: 1 / 2; /* Farten tar bara översta rutan nu för att ge plats */
-  justify-content: center; 
+  grid-row: 1 / 2; 
+  justify-content: space-between; /* Isolerar titel, mätare och siffra */
   align-items: center; 
 }
 
-.tile-water {
-  grid-column: 3 / 4;
-  grid-row: 2 / 3;
-  justify-content: center;
-}
+.tile-water { grid-column: 3 / 4; grid-row: 2 / 3; justify-content: center; align-items: center; }
+.tile-log { grid-column: 3 / 4; grid-row: 3 / 4; }
 
-.tile-log {
-  grid-column: 3 / 4;
-  grid-row: 3 / 4;
-}
-
-/* ── MOBIL-ANPASSNING (STAPLING) ── */
+/* ── MOBIL-ANPASSNING ── */
 @media (max-width: 950px) {
   body { overflow-y: auto; }
-  .dashboard {
-    display: flex; 
-    flex-direction: column;
-    height: auto;
-  }
+  .dashboard { display: flex; flex-direction: column; height: auto; }
   #btnGrid { grid-template-columns: repeat(3, 1fr); width: 100%; margin-bottom: 15px; }
-  .tile { width: 100%; margin-bottom: 12px; min-height: 180px; }
+  .tile { width: 100%; margin-bottom: 12px; min-height: 200px; }
 }
 
-/* ── OPERATIONELLA KNAPPAR ── */
+/* ── KNAPPAR & BADGES ── */
 .v-btn {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: 100%; height: 100%;
   border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 22px;
   display: flex;
@@ -104,12 +90,10 @@ body {
   cursor: pointer;
   box-shadow: 0 6px 0px rgba(0,0,0,0.4);
 }
-
-.v-btn:active { transform: translateY(3px); filter: brightness(1.2); border-color: #fff; }
-.v-btn-emoji { font-size: clamp(24px, 6vh, 50px); }
+.v-btn:active { transform: translateY(3px); filter: brightness(1.2); }
+.v-btn-emoji { font-size: clamp(24px, 6vh, 48px); }
 .v-btn-label { font-size: clamp(10px, 1.8vh, 14px); font-weight: 900; margin-top: 4px; text-transform: uppercase; }
 
-/* ── SIGNAL-GULA BADGES ── */
 .v-btn-badge {
   position: absolute;
   top: -8px; right: -8px;
@@ -123,38 +107,50 @@ body {
   z-index: 10;
 }
 
-.tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; }
-.dep-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
-#speedVal { font-size: 28px; font-weight: 900; }
+/* ── INSTRUMENT-DETALJER ── */
+.tile-title { font-size: 11px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 5px; width: 100%; text-align: left; }
+
+#speedValDisplay { 
+  font-size: 32px; 
+  font-weight: 900; 
+  color: #fff; 
+  margin-top: -10px; /* Drar upp siffran mot mätaren */
+}
+
+#waterDisplay { font-size: 42px; font-weight: 900; color: #10B981; }
+
+.dep-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid var(--glass-border); }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
-  <!-- VÄNSTER + MITTEN: 9 KNAPPAR -->
+  <!-- KNAPPAR -->
   <div id="btnGrid"></div>
 
-  <!-- HÖGER TOPP: SPEEDO -->
+  <!-- SPEEDOMETER -->
   <div class="tile tile-speed">
     <div class="tile-title">Fart (Knop)</div>
-    <svg viewBox="0 0 72 44" width="100%" height="100%" style="max-height: 180px;">
-        <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="5" stroke-linecap="round"/>
-        <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="3" stroke-linecap="round"/>
-        <circle cx="36" cy="32" r="4" fill="#3B82F6"/>
-        <text id="speedVal" x="36" y="43" text-anchor="middle" fill="white">0.0 kn</text>
+    <!-- Grafisk mätare -->
+    <svg viewBox="0 0 72 35" width="100%" style="max-height: 120px; margin-top: 5px;">
+        <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="6" stroke-linecap="round"/>
+        <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="36" cy="32" r="5" fill="#3B82F6"/>
     </svg>
+    <!-- Digital siffra under mätaren -->
+    <div id="speedValDisplay">0.0 kn</div>
   </div>
 
-  <!-- HÖGER MITTEN: VATTEN -->
+  <!-- VATTEN -->
   <div class="tile tile-water">
     <div class="tile-title">Vatten</div>
-    <div id="waterDisplay" style="font-size: 38px; font-weight: 900; color: #10B981; text-align: center;">-- cm</div>
+    <div id="waterDisplay">-- cm</div>
   </div>
 
-  <!-- HÖGER BOTTEN: LOGG -->
+  <!-- LOGG -->
   <div class="tile tile-log">
     <div class="tile-title">Logg</div>
-    <div id="departureLog" style="overflow-y: auto; font-size: 11px;"></div>
+    <div id="departureLog" style="overflow-y: auto; width: 100%;"></div>
   </div>
 </div>
 
@@ -185,17 +181,19 @@ var db, logsRef, tripsRef;
 
 document.addEventListener('DOMContentLoaded', function() {
   const grid = document.getElementById('btnGrid');
-  CATS.forEach(cat => {
-    const btn = document.createElement('button');
-    btn.className = 'v-btn';
-    btn.style.backgroundColor = cat.color;
-    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
-    btn.onclick = () => {
-        if (navigator.vibrate) navigator.vibrate(25);
-        if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
-    };
-    grid.appendChild(btn);
-  });
+  if (grid) {
+      CATS.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'v-btn';
+        btn.style.backgroundColor = cat.color;
+        btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
+        btn.onclick = () => {
+            if (navigator.vibrate) navigator.vibrate(25);
+            if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: 1 });
+        };
+        grid.appendChild(btn);
+      });
+  }
   initApp();
 });
 
@@ -239,8 +237,8 @@ function initApp() {
         const angle = (Math.min(kn, 6) / 6 * 180).toFixed(1);
         const needle = document.getElementById('speedNeedle');
         if (needle) needle.setAttribute('transform', `rotate(${angle},36,32)`);
-        const val = document.getElementById('speedVal');
-        if (val) val.textContent = kn.toFixed(1) + ' kn';
+        const valDisp = document.getElementById('speedValDisplay');
+        if (valDisp) valDisp.textContent = kn.toFixed(1) + ' kn';
       }, null, { enableHighAccuracy: true });
     }
   } catch (e) { console.error("Init-fel:", e); }
