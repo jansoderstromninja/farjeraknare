@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.5.2</title>
+<title>Färjeräknare BENTO v1.5.3</title>
 <style>
 :root {
   --bg: #05080f;
@@ -48,13 +48,10 @@ body {
 .v-btn {
   position: relative; width: 100%; height: 100%; border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; transition: transform 0.1s, filter 0.1s, background-color 0.2s;
+  cursor: pointer; transition: transform 0.1s;
 }
-.v-btn:active { transform: scale(0.96); filter: brightness(1.2); }
+.v-btn:active { transform: scale(0.96); }
 .v-btn.removing { background-color: var(--red) !important; transform: scale(0.92); }
-
-.v-btn-emoji { font-size: clamp(24px, 5vh, 44px); pointer-events: none; }
-.v-btn-label { font-size: clamp(10px, 1.5vh, 13px); font-weight: 900; margin-top: 4px; text-transform: uppercase; pointer-events: none; }
 .v-btn-badge {
   position: absolute; top: -5px; right: -5px; background: var(--signal-yellow); color: #000;
   padding: 4px 10px; border-radius: 10px; font-size: 18px; font-weight: 900; border: 2px solid #000; z-index: 10;
@@ -74,21 +71,18 @@ body {
 .overlay.show { display: flex; }
 .overlay-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
-/* MEGA GAUGE FIX (v1.5.2) */
+/* MEGA GAUGE (v1.5.3) */
 .mega-gauge-container {
-    width: 100%; max-width: 360px; margin: 0 auto 10px; position: relative;
+    width: 100%; max-width: 450px; margin: 0 auto 10px; position: relative;
 }
-.mega-speed-text {
-    position: absolute; 
-    top: 42%; /* Flyttad högre upp för att slippa överlapp */
-    left: 50%; transform: translate(-50%, -50%);
-    text-align: center;
+.gauge-label { font-size: 10px; font-weight: 800; fill: #718096; }
+.gauge-unit-text {
+    position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%);
+    font-size: 16px; font-weight: 900; color: #4a5568; text-transform: uppercase; letter-spacing: 2px;
 }
-.mega-speed-val { font-size: 58px; font-weight: 900; line-height: 1; display: block; }
-.mega-speed-unit { font-size: 14px; font-weight: 800; color: var(--muted); text-transform: uppercase; }
 
 .stat-card { background: var(--surface); padding: 15px; border-radius: 20px; margin-bottom: 10px; text-align: center; border: 1px solid var(--glass-border); }
-.stat-big { font-size: 42px; font-weight: 900; color: var(--accent); }
+.stat-big { font-size: 38px; font-weight: 900; color: var(--accent); }
 .stat-label { color: var(--muted); text-transform: uppercase; font-size: 11px; font-weight: 800; }
 
 .sys-status { height: 25px; padding: 0 15px; font-size: 10px; font-weight: 800; color: #4a5568; display: flex; justify-content: space-between; align-items: center; background: #000; }
@@ -140,45 +134,59 @@ body {
 </div>
 
 <div class="sys-status">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.5.2-B</span></div>
+    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.5.3-B</span></div>
     <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
-<!-- NAV OVERLAY -->
+<!-- NAV OVERLAY (MEGA ANALOG GAUGE) -->
 <div id="navOverlay" class="overlay">
     <div class="overlay-hdr">
-        <h2>Navigationshub</h2>
+        <h2>Fart & Navigation</h2>
         <button onclick="toggleOverlay('navOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button>
     </div>
     
     <div class="mega-gauge-container">
-        <svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 40 120 A 70 70 0 1 1 160 120" fill="none" stroke="#1e2d47" stroke-width="12" stroke-linecap="round"/>
-            <g stroke="#4a5568" stroke-width="2">
-                <line x1="100" y1="50" x2="100" y2="60" transform="rotate(-120 100 120)"/>
-                <line x1="100" y1="50" x2="100" y2="60" transform="rotate(-60 100 120)"/>
-                <line x1="100" y1="50" x2="100" y2="60" transform="rotate(0 100 120)"/>
-                <line x1="100" y1="50" x2="100" y2="60" transform="rotate(60 100 120)"/>
-                <line x1="100" y1="50" x2="100" y2="60" transform="rotate(120 100 120)"/>
+        <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#10B981" />
+                    <stop offset="50%" stop-color="#F59E0B" />
+                    <stop offset="100%" stop-color="#EF4444" />
+                </linearGradient>
+            </defs>
+            <!-- Background Arc -->
+            <path d="M 40 120 A 70 70 0 1 1 160 120" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+            
+            <!-- Scale Numbers (0-6) -->
+            <g class="gauge-label" text-anchor="middle">
+                <text x="32" y="135">0</text>
+                <text x="25" y="90">1</text>
+                <text x="60" y="45">2</text>
+                <text x="100" y="30">3</text>
+                <text x="140" y="45">4</text>
+                <text x="175" y="90">5</text>
+                <text x="168" y="135">6</text>
             </g>
-            <circle id="megaMaxMarker" cx="100" cy="50" r="4" fill="#FACC15" transform="rotate(-120 100 120)" opacity="0.6"/>
-            <line id="megaNeedle" x1="100" y1="120" x2="100" y2="55" stroke="#3B82F6" stroke-width="5" stroke-linecap="round" transform="rotate(-120 100 120)"/>
-            <circle cx="100" cy="120" r="8" fill="#3B82F6"/>
+
+            <!-- Max Speed Marker -->
+            <circle id="megaMaxMarker" cx="100" cy="50" r="5" fill="#FACC15" transform="rotate(-120 100 120)" style="transition: transform 1s ease; filter: drop-shadow(0 0 5px #000);"/>
+            
+            <!-- Needle -->
+            <line id="megaNeedle" x1="100" y1="120" x2="100" y2="50" stroke="#ffffff" stroke-width="4" stroke-linecap="round" transform="rotate(-120 100 120)" style="transition: transform 0.3s ease-out; filter: drop-shadow(0 0 3px #000);"/>
+            <circle cx="100" cy="120" r="10" fill="#fff"/>
         </svg>
-        <div class="mega-speed-text">
-            <span class="mega-speed-val" id="megaSpeedVal">0.0</span>
-            <span class="mega-speed-unit">Knop</span>
-        </div>
+        <div class="gauge-unit-text">Knop</div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="stat-card"><div class="stat-label">Högsta fart</div><div id="statMaxSpeed" style="font-size: 24px; font-weight: 900;">0.0 kn</div></div>
+        <div class="stat-card"><div class="stat-label">Maxfart</div><div id="statMaxSpeed" style="font-size: 24px; font-weight: 900;">0.0 kn</div></div>
         <div class="stat-card"><div class="stat-label">Distans</div><div id="statDistance" style="font-size: 24px; font-weight: 900;">0.00 NM</div></div>
     </div>
 </div>
 
+<!-- ANDRA OVERLAYS -->
 <div id="weatherOverlay" class="overlay">
-    <div class="overlay-hdr"><h2>48h Väderprognos</h2><button onclick="toggleOverlay('weatherOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button></div>
+    <div class="overlay-hdr"><h2>48h Prognos</h2><button onclick="toggleOverlay('weatherOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button></div>
     <div id="prognosContent"></div>
 </div>
 
@@ -223,18 +231,15 @@ function calcDist(lat1, lon1, lat2, lon2) {
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 0.539957;
 }
 
-// ── UNDO LOGIC (Långtryck) ──
 function handleVehicleTap(catId, btn) {
     if (navigator.vibrate) navigator.vibrate(25);
     if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: 1 });
 }
 
 function handleVehicleUndo(catId, btn) {
-    // Visuell feedback för borttagning
     btn.classList.add('removing');
     if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-    setTimeout(() => btn.classList.remove('removing'), 3000);
-    
+    setTimeout(() => btn.classList.remove('removing'), 2000);
     if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: -1 });
 }
 
@@ -246,18 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
     
     let pressTimer;
-    btn.onpointerdown = (e) => {
-        pressTimer = window.setTimeout(() => handleVehicleUndo(cat.id, btn), 750);
-    };
+    btn.onpointerdown = () => pressTimer = window.setTimeout(() => handleVehicleUndo(cat.id, btn), 800);
     btn.onpointerup = () => clearTimeout(pressTimer);
     btn.onpointerleave = () => clearTimeout(pressTimer);
-    
-    btn.onclick = (e) => {
-        // Om lång-tryck inte triggats, gör vanlig tap
-        if (!btn.classList.contains('removing')) {
-            handleVehicleTap(cat.id, btn);
-        }
-    };
+    btn.onclick = () => { if (!btn.classList.contains('removing')) handleVehicleTap(cat.id, btn); };
     grid.appendChild(btn);
   });
   initApp(); fetchWeather();
@@ -320,12 +317,11 @@ function initApp() {
         if (lastLat !== null && speed > 0.5) totalDistanceNM += calcDist(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
         lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
 
-        // Mega Gauge Logic
-        const angle = (Math.min(kn, 8) / 8 * 240) - 120;
-        const maxAngle = (Math.min(maxSpeedKn, 8) / 8 * 240) - 120;
+        // Mega Gauge Logic (v1.5.3) - 0 till 6 knop
+        const angle = (Math.min(kn, 6) / 6 * 240) - 120;
+        const maxAngle = (Math.min(maxSpeedKn, 6) / 6 * 240) - 120;
         document.getElementById('megaNeedle').setAttribute('transform', `rotate(${angle} 100 120)`);
         document.getElementById('megaMaxMarker').setAttribute('transform', `rotate(${maxAngle} 100 120)`);
-        document.getElementById('megaSpeedVal').textContent = kn.toFixed(1);
 
         // Bento Speedo
         const bentoAngle = (Math.min(kn, 6) / 6 * 180);
@@ -355,7 +351,7 @@ function renderFullForecast() {
     if (!fullWeatherData) return;
     let html = ""; const h = fullWeatherData.hourly; const now = new Date().getHours();
     for (let i = now; i < now + 48 && i < h.time.length; i++) {
-        html += `<div class="prognos-row" style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.05); margin-bottom:5px; padding:10px; border-radius:12px;">
+        html += `<div style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.05); margin-bottom:5px; padding:10px; border-radius:12px;">
             <div style="font-weight:900; min-width:50px">${h.time[i].slice(11, 16)}</div>
             <div style="flex:1">${h.windspeed_10m[i].toFixed(1)} m/s</div>
             <div>${h.temperature_2m[i].toFixed(1)}°C</div>
