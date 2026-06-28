@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.5.3</title>
+<title>Färjeräknare BENTO v1.5.4</title>
 <style>
 :root {
   --bg: #05080f;
@@ -71,15 +71,11 @@ body {
 .overlay.show { display: flex; }
 .overlay-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
-/* MEGA GAUGE (v1.5.3) */
+/* MEGA GAUGE (v1.5.4 CALIBRATED) */
 .mega-gauge-container {
-    width: 100%; max-width: 450px; margin: 0 auto 10px; position: relative;
+    width: 100%; max-width: 500px; margin: 0 auto; position: relative;
 }
-.gauge-label { font-size: 10px; font-weight: 800; fill: #718096; }
-.gauge-unit-text {
-    position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%);
-    font-size: 16px; font-weight: 900; color: #4a5568; text-transform: uppercase; letter-spacing: 2px;
-}
+.gauge-label { font-size: 13px; font-weight: 900; fill: #a0b4cc; }
 
 .stat-card { background: var(--surface); padding: 15px; border-radius: 20px; margin-bottom: 10px; text-align: center; border: 1px solid var(--glass-border); }
 .stat-big { font-size: 38px; font-weight: 900; color: var(--accent); }
@@ -134,19 +130,19 @@ body {
 </div>
 
 <div class="sys-status">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.5.3-B</span></div>
+    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.4.5-B</span></div>
     <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
-<!-- NAV OVERLAY (MEGA ANALOG GAUGE) -->
+<!-- NAV OVERLAY -->
 <div id="navOverlay" class="overlay">
     <div class="overlay-hdr">
-        <h2>Fart & Navigation</h2>
+        <h2>Navigationshub</h2>
         <button onclick="toggleOverlay('navOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button>
     </div>
     
     <div class="mega-gauge-container">
-        <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stop-color="#10B981" />
@@ -154,32 +150,35 @@ body {
                     <stop offset="100%" stop-color="#EF4444" />
                 </linearGradient>
             </defs>
-            <!-- Background Arc -->
-            <path d="M 40 120 A 70 70 0 1 1 160 120" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+            <!-- Background Arc: Centered at 100, 110 -->
+            <path d="M 35 143 A 75 75 0 1 1 165 143" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round"/>
             
-            <!-- Scale Numbers (0-6) -->
+            <!-- Scale Numbers (Calibrated to arc) -->
             <g class="gauge-label" text-anchor="middle">
-                <text x="32" y="135">0</text>
-                <text x="25" y="90">1</text>
-                <text x="60" y="45">2</text>
-                <text x="100" y="30">3</text>
-                <text x="140" y="45">4</text>
-                <text x="175" y="90">5</text>
-                <text x="168" y="135">6</text>
+                <text x="25" y="155">0</text>
+                <text x="18" y="105">1</text>
+                <text x="50" y="55">2</text>
+                <text x="100" y="38">3</text>
+                <text x="150" y="55">4</text>
+                <text x="182" y="105">5</text>
+                <text x="175" y="155">6</text>
             </g>
 
             <!-- Max Speed Marker -->
-            <circle id="megaMaxMarker" cx="100" cy="50" r="5" fill="#FACC15" transform="rotate(-120 100 120)" style="transition: transform 1s ease; filter: drop-shadow(0 0 5px #000);"/>
+            <circle id="megaMaxMarker" cx="100" cy="35" r="5" fill="#FACC15" transform="rotate(-120 100 110)" style="transition: transform 1s ease; filter: drop-shadow(0 0 5px #000);"/>
             
-            <!-- Needle -->
-            <line id="megaNeedle" x1="100" y1="120" x2="100" y2="50" stroke="#ffffff" stroke-width="4" stroke-linecap="round" transform="rotate(-120 100 120)" style="transition: transform 0.3s ease-out; filter: drop-shadow(0 0 3px #000);"/>
-            <circle cx="100" cy="120" r="10" fill="#fff"/>
+            <!-- Needle: Rooted at 100, 110 -->
+            <g id="megaNeedleGroup" transform="rotate(-120 100 110)" style="transition: transform 0.3s ease-out;">
+                <line x1="100" y1="110" x2="100" y2="35" stroke="#ffffff" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 0 3px #000);"/>
+                <!-- Needle tip indicator -->
+                <line x1="100" y1="45" x2="100" y2="35" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+            </g>
+            <circle cx="100" cy="110" r="10" fill="#fff" stroke="#121a2b" stroke-width="2"/>
         </svg>
-        <div class="gauge-unit-text">Knop</div>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="stat-card"><div class="stat-label">Maxfart</div><div id="statMaxSpeed" style="font-size: 24px; font-weight: 900;">0.0 kn</div></div>
+        <div class="stat-card"><div class="stat-label">Högsta fart</div><div id="statMaxSpeed" style="font-size: 24px; font-weight: 900;">0.0 kn</div></div>
         <div class="stat-card"><div class="stat-label">Distans</div><div id="statDistance" style="font-size: 24px; font-weight: 900;">0.00 NM</div></div>
     </div>
 </div>
@@ -317,11 +316,12 @@ function initApp() {
         if (lastLat !== null && speed > 0.5) totalDistanceNM += calcDist(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
         lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
 
-        // Mega Gauge Logic (v1.5.3) - 0 till 6 knop
+        // Mega Gauge Logic (0 to 6 knots over 240 degrees)
         const angle = (Math.min(kn, 6) / 6 * 240) - 120;
         const maxAngle = (Math.min(maxSpeedKn, 6) / 6 * 240) - 120;
-        document.getElementById('megaNeedle').setAttribute('transform', `rotate(${angle} 100 120)`);
-        document.getElementById('megaMaxMarker').setAttribute('transform', `rotate(${maxAngle} 100 120)`);
+        
+        document.getElementById('megaNeedleGroup').setAttribute('transform', `rotate(${angle} 100 110)`);
+        document.getElementById('megaMaxMarker').setAttribute('transform', `rotate(${maxAngle} 100 110)`);
 
         // Bento Speedo
         const bentoAngle = (Math.min(kn, 6) / 6 * 180);
