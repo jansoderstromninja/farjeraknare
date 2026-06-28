@@ -3,209 +3,193 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.5.7</title>
+<title>Färjeräknare TACTICAL BENTO v1.6.0</title>
 <style>
 :root {
-  --bg: #05080f;
-  --surface: #121a2b;
-  --glass: rgba(24, 33, 53, 0.95);
-  --glass-border: rgba(255, 255, 255, 0.2);
+  --bg: #000000;
+  --panel: #0a0c14;
+  --border: #1e2d47;
   --text: #ffffff;
-  --accent: #3B82F6;
-  --signal-yellow: #FACC15; 
-  --green: #10B981;
-  --red: #ff3b30; /* Den klarröda från bilden */
-  --muted: #718096;
+  --accent: #ff3b30; /* Tactical Red */
+  --safe: #10B981;   /* Signal Green */
+  --warning: #FACC15; /* Signal Yellow */
+  --dim: #4a5568;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 body {
   background: var(--bg); color: var(--text);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'SF Mono', 'Roboto Mono', 'Cascadia Code', monospace;
   height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
 }
 
+/* ── TACTICAL BENTO GRID ── */
 .dashboard {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(3, 1fr);
-  gap: 12px; padding: 12px; flex: 1;
+  display: grid; 
+  grid-template-columns: 1fr 1fr 1.2fr; /* Bredare högerkolumn för mätaren */
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 8px; padding: 8px; flex: 1;
 }
 
 .tile {
-  background: var(--glass); border: 1px solid var(--glass-border);
-  border-radius: 28px; padding: 18px; display: flex; flex-direction: column;
-  position: relative; overflow: hidden;
+  background: var(--panel); 
+  border: 1px solid var(--border);
+  border-radius: 12px; /* Skarpare hörn för industriell look */
+  padding: 15px; display: flex; flex-direction: column;
+  position: relative;
 }
 
+.tile-header {
+    font-size: 10px; font-weight: 800; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 10px; border-bottom: 1px solid var(--border);
+    padding-bottom: 5px; display: flex; justify-content: space-between;
+}
+
+/* ── KONTROLLER (VÄNSTER + MITTEN) ── */
 #btnGrid {
   grid-column: 1 / 3; grid-row: 1 / 4;
-  display: grid !important; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
+  display: grid !important; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px;
 }
-.tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; align-items: center; justify-content: space-between; cursor: pointer; }
-.tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; justify-content: space-between; cursor: pointer; }
-.tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
 
-/* KNAPPAR */
+/* ── TACTICAL SPEEDO (UPPE HÖGER) ── */
+.tile-speed { 
+    grid-column: 3 / 4; grid-row: 1 / 2; 
+    justify-content: center; align-items: center;
+    background: radial-gradient(circle at center, #0a0c14 0%, #000 100%);
+}
+
+.tile-env { grid-column: 3 / 4; grid-row: 2 / 3; cursor: pointer; }
+.tile-log { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
+
+/* ── TACTICAL BUTTONS ── */
 .v-btn {
-  position: relative; width: 100%; height: 100%; border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; transition: transform 0.1s;
+  position: relative; width: 100%; height: 100%; 
+  border: 1px solid var(--border);
+  background: #050505;
+  border-radius: 8px; display: flex; flex-direction: column; 
+  align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.1s;
 }
-.v-btn:active { transform: scale(0.96); }
-.v-btn.removing { background-color: var(--red) !important; transform: scale(0.92); }
-.v-btn-emoji { font-size: 55px; pointer-events: none; }
-.v-btn-label { font-size: 14px; font-weight: 900; margin-top: 4px; text-transform: uppercase; pointer-events: none; }
+.v-btn:active { background: #1a1a1a; transform: scale(0.98); border-color: var(--accent); }
+.v-btn.removing { background-color: var(--accent) !important; color: #000; }
+
+.v-btn-emoji { font-size: 48px; margin-bottom: 5px; }
+.v-btn-label { font-size: 12px; font-weight: 800; color: var(--dim); text-transform: uppercase; }
+
 .v-btn-badge {
-  position: absolute; top: -5px; right: -5px; background: var(--signal-yellow); color: #000;
-  padding: 4px 10px; border-radius: 10px; font-size: 18px; font-weight: 900; border: 2px solid #000; z-index: 10;
+  position: absolute; top: 5px; right: 5px; 
+  background: var(--bg); color: var(--accent);
+  padding: 2px 8px; border: 1px solid var(--accent);
+  border-radius: 4px; font-size: 16px; font-weight: 900;
 }
 
-/* INSTRUMENT */
-.tile-title { font-size: 10px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; width: 100%; }
-.water-val { font-size: 34px; font-weight: 900; color: var(--green); }
-.wind-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 15px; border: 1px solid var(--glass-border); width: 100%; }
-#speedValDisplay { font-size: 28px; font-weight: 900; }
-.speedo-svg { width: 100%; height: auto; max-height: 90px; }
+/* ── MEGA SPEEDO ARC (v1.6.0) ── */
+.speedo-wrap { width: 100%; position: relative; display: flex; justify-content: center; }
+.speedo-val { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%); text-align: center; }
+.speedo-num { font-size: 72px; font-weight: 300; line-height: 0.8; }
+.speedo-unit { font-size: 14px; font-weight: 900; color: var(--accent); display: block; margin-top: 5px; }
 
-/* ── TACTICAL GAUGE STYLES (v1.5.7) ── */
-.gauge-wrap {
-    width: 100%; max-width: 320px; margin: 0 auto; position: relative;
+/* ── ENV & LOG ── */
+.water-display { font-size: 38px; font-weight: 300; color: var(--safe); }
+.wind-row-t { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+.dep-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #111; color: var(--dim); }
+.dep-row span:first-child { color: var(--text); font-weight: 800; }
+
+/* ── TELEMETRY SYSTEM BAR ── */
+.sys-bar {
+  height: 25px; background: #000; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 15px; font-size: 9px; font-weight: 800; color: var(--dim);
 }
-.gauge-center-text {
-    position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%);
-    text-align: center; width: 100%;
-}
-.gauge-speed-num { font-size: 110px; font-weight: 400; line-height: 0.8; color: #fff; font-family: 'Helvetica Neue', sans-serif; }
-.gauge-speed-unit { font-size: 20px; font-weight: 900; color: var(--red); display: block; margin-top: 10px; }
-
-.gauge-metrics {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;
-    border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;
-}
-.m-item { display: flex; flex-direction: column; align-items: center; }
-.m-label { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
-.m-val { font-size: 28px; font-weight: 400; }
-.m-unit { font-size: 12px; font-weight: 800; color: var(--red); margin-left: 3px; }
-
-/* SYSTEM STATUS */
-.sys-status { height: 25px; padding: 0 15px; font-size: 10px; font-weight: 800; color: #4a5568; display: flex; justify-content: space-between; align-items: center; background: #000; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
-.dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
-
-/* OVERLAYS */
-.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px; overflow-y: auto; }
-.overlay.show { display: flex; }
-.prognos-row { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); margin-bottom: 6px; padding: 15px; border-radius: 15px; border-left: 5px solid #2d3748; }
+.status-item { display: flex; align-items: center; gap: 5px; }
+.dot { width: 6px; height: 6px; border-radius: 1px; background: #222; }
+.dot-on { background: var(--safe); box-shadow: 0 0 5px var(--safe); }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
   .dashboard { display: flex; flex-direction: column; height: auto; }
-  #btnGrid { grid-template-columns: repeat(3, 1fr); width: 100%; margin-bottom: 15px; min-height: 400px; }
-  .tile { width: 100%; margin-bottom: 12px; min-height: 180px; }
+  #btnGrid { grid-template-columns: repeat(3, 1fr); min-height: 400px; }
+  .tile { min-height: 180px; margin-bottom: 5px; }
 }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
+  <!-- PRIMARY CONTROLS -->
   <div id="btnGrid"></div>
 
+  <!-- TACTICAL SPEEDOMETER -->
   <div class="tile tile-speed" onclick="toggleOverlay('navOverlay', true)">
-    <div class="tile-title">Fart & Navigation</div>
-    <svg class="speedo-svg" viewBox="0 0 72 44" xmlns="http://www.w3.org/2000/svg">
-        <path d="M 8 32 A 28 28 0 0 1 64 32" fill="none" stroke="#1e2d47" stroke-width="6" stroke-linecap="round"/>
-        <line id="speedNeedle" x1="36" y1="32" x2="12" y2="32" stroke="#3B82F6" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="36" cy="32" r="5" fill="#3B82F6"/>
-    </svg>
-    <div id="speedValDisplay">0.0 kn</div>
-  </div>
-
-  <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
-    <div class="tile-title">Miljö & Väder (48h)</div>
-    <div class="water-val" id="waterDisplay">-- cm</div>
-    <div class="wind-box">
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <div id="mainWeatherIcon" style="font-size: 24px;">☀️</div>
-            <div style="display: flex; flex-direction: column;">
-                <div id="windMain" style="font-size: 18px; font-weight: 900;">-- m/s</div>
-                <div id="windGusts" style="font-size: 11px; font-weight: 700; color: #718096;">Byar: --</div>
-            </div>
-        </div>
-        <div id="windDir" style="transition: transform 0.5s;"><svg width="24" height="24" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#3B82F6"/></svg></div>
-    </div>
-  </div>
-
-  <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
-    <div class="tile-title">Logg & Statistik</div>
-    <div id="departureLog" style="overflow-y: auto; width: 100%; font-size: 11px;"></div>
-  </div>
-</div>
-
-<div class="sys-status">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.5.7-B</span></div>
-    <div id="gpsStatus">GPS: SÖKER...</div>
-</div>
-
-<!-- NAV OVERLAY (TACTICAL STYLE) -->
-<div id="navOverlay" class="overlay">
-    <div style="display:flex; justify-content: flex-end; margin-bottom: 10px;">
-        <button onclick="toggleOverlay('navOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 8px 20px; border-radius: 12px; font-weight: 800; cursor: pointer;">STÄNG ✕</button>
-    </div>
-
-    <div class="gauge-wrap">
-        <!-- Segmented Speed Arc -->
-        <svg viewBox="0 0 200 200">
-            <!-- Background Arc (The grey track) -->
-            <path d="M 40 160 A 80 80 0 1 1 160 160" fill="none" stroke="#1e2d47" stroke-width="12" stroke-dasharray="8 2"/>
-            <!-- Active Speed Trail (The red blocks) -->
-            <path id="tacticalSpeedArc" d="M 40 160 A 80 80 0 1 1 160 160" fill="none" stroke="#ff3b30" stroke-width="12" stroke-dasharray="0 1000" style="transition: stroke-dasharray 0.5s ease;"/>
-            
-            <!-- Scale Labels -->
-            <text x="35" y="175" fill="#718096" font-size="10" font-weight="800">0</text>
-            <text x="160" y="175" fill="#718096" font-size="10" font-weight="800">10</text>
-
-            <!-- Bottom Accuracy Arc -->
-            <path d="M 60 180 A 80 80 0 0 1 140 180" fill="none" stroke="#1e2d47" stroke-width="4" stroke-dasharray="4 2"/>
-            <text id="gaugeAccText" x="100" y="192" fill="#718096" font-size="9" font-weight="800" text-anchor="middle">ACCURACY -- M</text>
+    <div class="tile-header"><span>VELOCITY / TACTICAL</span><span id="miniAcc">GPS: --</span></div>
+    <div class="speedo-wrap">
+        <svg viewBox="0 0 200 120" width="100%">
+            <!-- Segmented Arc Background -->
+            <path d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="#111" stroke-width="12" stroke-dasharray="8 2"/>
+            <!-- Live Speed Segment -->
+            <path id="speedArc" d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="var(--accent)" stroke-width="12" stroke-dasharray="0 1000" style="transition: stroke-dasharray 0.4s ease-out;"/>
         </svg>
-
-        <div class="gauge-center-text">
-            <span class="gauge-speed-num" id="gaugeSpeedNum">0</span>
-            <span class="gauge-speed-unit">KN</span>
+        <div class="speedo-val">
+            <span class="speedo-num" id="mainSpeedNum">0</span>
+            <span class="speedo-unit">KNOTS</span>
         </div>
     </div>
+  </div>
 
-    <div class="gauge-metrics">
-        <div class="m-item">
-            <span class="m-label">Max Speed</span>
-            <div><span class="m-val" id="mMaxSpeed">0</span><span class="m-unit">KN</span></div>
+  <!-- ENV MONITOR -->
+  <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
+    <div class="tile-header">ENVIRONMENT / HANGÖ</div>
+    <div class="water-display" id="waterDisplay">-- CM</div>
+    <div class="wind-row-t">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="mainWeatherIcon" style="font-size: 20px;">☀️</span>
+            <span id="windMain" style="font-weight: 800;">-- M/S</span>
         </div>
-        <div class="m-item">
-            <span class="m-label">Distance</span>
-            <div><span class="m-val" id="mDist">0.0</span><span class="m-unit">NM</span></div>
-        </div>
-        <div class="m-item">
-            <span class="m-label">Latitude</span>
-            <span class="m-val" id="mLat" style="font-size: 16px;">--</span>
-        </div>
-        <div class="m-item">
-            <span class="m-label">Longitude</span>
-            <span class="m-val" id="mLon" style="font-size: 16px;">--</span>
-        </div>
+        <div id="windDir"><svg width="20" height="20" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="var(--accent)"/></svg></div>
+    </div>
+  </div>
+
+  <!-- MISSION LOG -->
+  <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
+    <div class="tile-header">MISSION LOG / STATS</div>
+    <div id="departureLog" style="overflow-y: auto; flex: 1;"></div>
+  </div>
+</div>
+
+<div class="sys-bar">
+    <div class="status-item">
+        <div id="syncDot" class="dot"></div>
+        <span>FIREBASE_READY / v1.6.0-B</span>
+    </div>
+    <div class="status-item">
+        <span>TELEM_GPS:</span>
+        <span id="gpsStatusText">SCANNING</span>
     </div>
 </div>
 
-<!-- OTHER OVERLAYS -->
-<div id="weatherOverlay" class="overlay">
-    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;"><h2>48h Prognos</h2><button onclick="toggleOverlay('weatherOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG</button></div>
+<!-- OVERLAYS (Keep logic but update look) -->
+<div id="navOverlay" style="position:fixed; inset:0; background:#000; z-index:2000; display:none; flex-direction:column; padding:20px;">
+    <div class="tile-header"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div class="tile"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:32px; font-weight:300;">0.0 kn</span></div>
+        <div class="tile"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:32px; font-weight:300;">0.00 NM</span></div>
+    </div>
+    <div class="tile" style="margin-top:10px;"><span class="tile-header">COORDINATES</span><span id="statPos" style="color:var(--safe)">--</span></div>
+</div>
+
+<div id="weatherOverlay" style="position:fixed; inset:0; background:#000; z-index:2000; display:none; flex-direction:column; padding:20px; overflow-y:auto;">
+    <div class="tile-header"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
     <div id="prognosContent"></div>
 </div>
 
-<div id="statsOverlay" class="overlay">
-    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:20px;"><h2>Dagens Statistik</h2><button onclick="toggleOverlay('statsOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG</button></div>
+<div id="statsOverlay" style="position:fixed; inset:0; background:#000; z-index:2000; display:none; flex-direction:column; padding:20px;">
+    <div class="tile-header"><span>TRAFFIC_ANALYSIS</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
     <div id="statsContent" style="display:flex; flex-direction:column; gap:10px;">
-        <div style="background:var(--surface); padding:20px; border-radius:20px; text-align:center;"><div style="font-size:12px; color:var(--muted);">FORDON TOTALT</div><div id="statTotal" style="font-size:48px; font-weight:900; color:var(--accent);">0</div></div>
-        <div style="background:var(--surface); padding:20px; border-radius:20px; text-align:center;"><div style="font-size:12px; color:var(--muted);">AVGÅNGAR</div><div id="statTrips" style="font-size:48px; font-weight:900;">0</div></div>
+        <div class="tile"><span class="tile-header">TOTAL_VEHICLES</span><span id="statTotal" style="font-size:48px; font-weight:300; color:var(--accent);">0</span></div>
+        <div class="tile"><span class="tile-header">TOTAL_DEPARTURES</span><span id="statTrips" style="font-size:48px; font-weight:300;">0</span></div>
     </div>
 </div>
 
@@ -219,113 +203,68 @@ const firebaseConfig = {
 };
 
 const CATS = [
-  { id: 'personbil',  label: 'Bil', emoji: '🚗', color: '#1D4ED8' },
-  { id: 'paketbil',   label: 'Paket', emoji: '🚐', color: '#6D28D9' },
-  { id: 'lastbil',    label: 'Lastbil', emoji: '🚛', color: '#B91C1C' },
-  { id: 'traktor',    label: 'Traktor', emoji: '🚜', color: '#92400E' },
-  { id: 'cykel',      label: 'Cykel', emoji: '🚲', color: '#065F46' },
-  { id: 'mc',         label: 'MC', emoji: '🏍️', color: '#C2410C' },
-  { id: 'fotgangare', label: 'Gående', emoji: '🚶', color: '#0E7490' },
-  { id: 'moped',      label: 'Moped', emoji: 'Mopo', color: '#9D174D' },
-  { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#3730A3' }
+  { id: 'personbil',  label: 'Car', emoji: '🚗', color: '#1a1a1a' },
+  { id: 'paketbil',   label: 'Van', emoji: '🚐', color: '#1a1a1a' },
+  { id: 'lastbil',    label: 'Truck', emoji: '🚛', color: '#1a1a1a' },
+  { id: 'traktor',    label: 'Tractor', emoji: '🚜', color: '#1a1a1a' },
+  { id: 'cykel',      label: 'Bike', emoji: '🚲', color: '#1a1a1a' },
+  { id: 'mc',         label: 'Moto', emoji: '🏍️', color: '#1a1a1a' },
+  { id: 'fotgangare', label: 'Walk', emoji: '🚶', color: '#1a1a1a' },
+  { id: 'moped',      label: 'Mope', emoji: '🛵', color: '#1a1a1a' },
+  { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#1a1a1a' }
 ];
 
 var db, logsRef, tripsRef, fullWeatherData;
 var currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 
-// ── UTILITIES ──
-function calcDist(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2-lat1) * Math.PI / 180;
-    const dLon = (lon2-lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 0.539957;
-}
-
-function handleVehicleTap(catId, btn) {
-    if (navigator.vibrate) navigator.vibrate(25);
-    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: 1 });
-}
-
-function handleVehicleUndo(catId, btn) {
-    btn.classList.add('removing');
-    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-    setTimeout(() => btn.classList.remove('removing'), 1500);
-    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: -1 });
-}
-
+// ── TACTICAL LOGIC ──
 function toggleOverlay(id, show) {
     document.getElementById(id).style.display = show ? 'flex' : 'none';
-    if (show && id === 'statsOverlay') {
-        document.getElementById('statTotal').textContent = Object.values(currentLogs).reduce((sum, l) => sum + (l.delta || 1), 0);
-        document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
-    }
+    if (show && id === 'statsOverlay') calculateStats();
     if (show && id === 'weatherOverlay') renderFullForecast();
 }
 
-// ── WEATHER ──
-function getWeatherIcon(code, timeStr, temp) {
-    const hour = parseInt(timeStr.slice(0, 2));
-    const isNight = hour < 6 || hour > 22;
-    if (temp < -15) return "🥶";
-    if (code === 0) return isNight ? "🌙" : "☀️";
-    if (code <= 3) return isNight ? "☁️" : "🌤️";
-    if (code >= 51 && code <= 67) return "🌧️";
-    return "🌤️";
+function calculateStats() {
+    const logs = Object.values(currentLogs);
+    document.getElementById('statTotal').textContent = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
+    document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
 }
 
-async function fetchWeather() {
-    try {
-        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,weathercode&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
-        fullWeatherData = await resp.json();
-        const hr = new Date().getHours(); const h = fullWeatherData.hourly;
-        document.getElementById('windMain').textContent = h.windspeed_10m[hr].toFixed(1) + ' m/s';
-        document.getElementById('windGusts').textContent = 'Byar: ' + h.windgusts_10m[hr].toFixed(1);
-        document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hr] + 180) % 360}deg)`;
-        const codes = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
-        document.getElementById('mainWeatherIcon').textContent = codes[h.weathercode[hr]] || "🌤️";
-    } catch (e) {}
+function handleTap(id, btn) {
+    if (navigator.vibrate) navigator.vibrate(20);
+    if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: 1 });
 }
 
-function renderFullForecast() {
-    const container = document.getElementById('prognosContent');
-    if (!fullWeatherData) return;
-    let html = ""; const h = fullWeatherData.hourly; const now = new Date().getHours();
-    for (let i = now; i < now + 48 && i < h.time.length; i++) {
-        const rotation = (h.winddirection_10m[i] + 180) % 360;
-        html += `<div class="prognos-row">
-            <div style="font-weight:900; min-width:50px">${h.time[i].slice(11, 16)}</div>
-            <div style="font-size:22px">${getWeatherIcon(h.weathercode[i], h.time[i].slice(11, 16), h.temperature_2m[i])}</div>
-            <div style="flex:1; font-weight:800">${h.windspeed_10m[i].toFixed(1)} m/s</div>
-            <div style="font-weight:800; min-width:60px; text-align:right;">${h.temperature_2m[i].toFixed(1)}°C</div>
-            <div style="transform: rotate(${rotation}deg); margin-left:15px; display:flex;"><svg width="20" height="20" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="#718096"/></svg></div>
-        </div>`;
-    }
-    container.innerHTML = html;
+function handleUndo(id, btn) {
+    btn.classList.add('removing');
+    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+    setTimeout(() => btn.classList.remove('removing'), 1500);
+    if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: -1 });
 }
 
-// ── MAIN INIT ──
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', () => {
   const grid = document.getElementById('btnGrid');
   CATS.forEach(cat => {
     const btn = document.createElement('button');
-    btn.className = 'v-btn'; btn.style.backgroundColor = cat.color;
+    btn.className = 'v-btn';
     btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
-    let pressTimer;
-    btn.onpointerdown = () => pressTimer = window.setTimeout(() => handleVehicleUndo(cat.id, btn), 800);
-    btn.onpointerup = () => clearTimeout(pressTimer);
-    btn.onpointerleave = () => clearTimeout(pressTimer);
-    btn.onclick = () => { if (!btn.classList.contains('removing')) handleVehicleTap(cat.id, btn); };
+    
+    let timer;
+    btn.onpointerdown = () => timer = setTimeout(() => handleUndo(cat.id, btn), 800);
+    btn.onpointerup = () => clearTimeout(timer);
+    btn.onclick = () => { if(!btn.classList.contains('removing')) handleTap(cat.id, btn); };
     grid.appendChild(btn);
   });
-  
-  firebase.initializeApp(firebaseConfig); db = firebase.database();
+
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
   const today = new Date().toISOString().slice(0, 10);
-  logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
-  
-  db.ref('.info/connected').on('value', s => document.getElementById('syncDot').classList.toggle('dot-online', s.val() === true));
-  
+  logsRef = db.ref('days/' + today + '/logs');
+  tripsRef = db.ref('turer/' + today);
+
+  db.ref('.info/connected').on('value', s => document.getElementById('syncDot').classList.toggle('dot-on', s.val() === true));
+
   logsRef.on('value', snap => {
     currentLogs = snap.val() || {};
     CATS.forEach(cat => {
@@ -341,46 +280,53 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   db.ref('config/watlev').on('value', snap => {
-    const data = snap.val();
-    if (data) document.getElementById('waterDisplay').textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+    if (snap.val()) document.getElementById('waterDisplay').textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
   });
 
   navigator.geolocation.watchPosition(pos => {
-    const speed = pos.coords.speed || 0;
-    const kn = speed * 1.94384;
+    const kn = pos.coords.speed * 1.94384 || 0;
     const acc = pos.coords.accuracy;
     
-    // Update Bento Main Speed
-    document.getElementById('speedValDisplay').textContent = kn.toFixed(1) + ' kn';
-    document.getElementById('gpsStatus').textContent = "GPS: " + Math.round(acc) + "m";
-
-    // Update Tactical Gauge
-    const gaugeNum = document.getElementById('gaugeSpeedNum');
-    gaugeNum.textContent = Math.floor(kn);
-    
-    // Scale 0-10 knots for the arc (10 kn is full dash-array ~400)
-    const arc = document.getElementById('tacticalSpeedArc');
-    const totalLength = 400; // Ungefärlig båglängd
-    const fill = (Math.min(kn, 10) / 10) * totalLength;
+    // Update Tactical Speedo
+    document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
+    const arc = document.getElementById('speedArc');
+    const fill = (Math.min(kn, 10) / 10) * 400; // Segmented feel
     arc.style.strokeDasharray = `${fill} 1000`;
     
-    // Accuracy text
-    document.getElementById('gaugeAccText').textContent = `ACCURACY ${Math.round(acc)} M`;
-
-    // Metrics
+    document.getElementById('miniAcc').textContent = `GPS: ${Math.round(acc)}M`;
+    document.getElementById('gpsStatusText').textContent = acc < 15 ? 'HIGH_PRECISION' : 'SIGNAL_DEGRADED';
+    
     if (kn > maxSpeedKn) maxSpeedKn = kn;
-    if (lastLat !== null && speed > 0.5) totalDistanceNM += calcDist(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
-    lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
-
-    document.getElementById('mMaxSpeed').textContent = Math.round(maxSpeedKn);
-    document.getElementById('mDist').textContent = totalDistanceNM.toFixed(1);
-    document.getElementById('mLat').textContent = pos.coords.latitude.toFixed(4);
-    document.getElementById('mLon').textContent = pos.coords.longitude.toFixed(4);
-
+    document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
+    document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
   }, null, { enableHighAccuracy: true });
 
   fetchWeather();
 });
+
+async function fetchWeather() {
+    try {
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
+        const data = await resp.json();
+        const hr = new Date().getHours();
+        document.getElementById('windMain').textContent = data.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
+        document.getElementById('windDir').style.transform = `rotate(${(data.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
+        fullWeatherData = data;
+    } catch (e) {}
+}
+
+function renderFullForecast() {
+    const container = document.getElementById('prognosContent');
+    if (!fullWeatherData) return;
+    let html = ""; const h = fullWeatherData.hourly; const now = new Date().getHours();
+    for (let i = now; i < now + 48 && i < h.time.length; i++) {
+        html += `<div class="prognos-row">
+            <div style="font-weight:900; min-width:60px">${h.time[i].slice(11, 16)}</div>
+            <div style="flex:1">${h.windspeed_10m[i].toFixed(1)} M/S</div>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
 </script>
 </body>
 </html>
