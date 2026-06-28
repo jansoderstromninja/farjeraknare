@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare BENTO v1.5.4</title>
+<title>Färjeräknare BENTO v1.5.5</title>
 <style>
 :root {
   --bg: #05080f;
@@ -26,7 +26,7 @@ body {
 }
 
 .dashboard {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(3, 1fr);
   gap: 12px; padding: 12px; flex: 1;
 }
 
@@ -44,7 +44,7 @@ body {
 .tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; justify-content: space-between; cursor: pointer; }
 .tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
 
-/* KNAPPAR */
+/* KNAPPAR - STÖRRE IKONER */
 .v-btn {
   position: relative; width: 100%; height: 100%; border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -52,38 +52,41 @@ body {
 }
 .v-btn:active { transform: scale(0.96); }
 .v-btn.removing { background-color: var(--red) !important; transform: scale(0.92); }
+
+.v-btn-emoji { font-size: 55px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); pointer-events: none; }
+.v-btn-label { font-size: 14px; font-weight: 900; margin-top: 4px; text-transform: uppercase; pointer-events: none; }
+
 .v-btn-badge {
   position: absolute; top: -5px; right: -5px; background: var(--signal-yellow); color: #000;
   padding: 4px 10px; border-radius: 10px; font-size: 18px; font-weight: 900; border: 2px solid #000; z-index: 10;
 }
 
-/* INSTRUMENT */
+/* INSTRUMENT PANEL */
 .tile-title { font-size: 10px; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; width: 100%; }
 .water-val { font-size: 34px; font-weight: 900; color: var(--green); }
 .wind-box { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 15px; border: 1px solid var(--glass-border); width: 100%; }
+
 #speedValDisplay { font-size: 28px; font-weight: 900; }
 .speedo-svg { width: 100%; height: auto; max-height: 90px; }
 
-/* OVERLAY */
+/* SYSTEM STATUS */
+.sys-status { height: 25px; padding: 0 15px; font-size: 10px; font-weight: 800; color: #4a5568; display: flex; justify-content: space-between; align-items: center; background: #000; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
+.dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
+
+/* OVERLAYS */
 .overlay {
   position: fixed; inset: 0; background: rgba(5, 8, 15, 0.98); z-index: 1000; display: none; flex-direction: column; padding: 20px; overflow-y: auto;
 }
 .overlay.show { display: flex; }
 .overlay-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.prognos-row { display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.05); margin-bottom: 5px; padding: 12px; border-radius: 15px; border-left: 4px solid var(--accent); }
 
-/* MEGA GAUGE FIX (v1.5.4) */
+/* MEGA GAUGE (FIXED GEOMETRY v1.5.5) */
 .mega-gauge-container {
     width: 100%; max-width: 420px; margin: 0 auto; position: relative;
 }
-.gauge-label { font-size: 12px; font-weight: 900; fill: #718096; }
-
-.stat-card { background: var(--surface); padding: 15px; border-radius: 20px; margin-bottom: 10px; text-align: center; border: 1px solid var(--glass-border); }
-.stat-big { font-size: 38px; font-weight: 900; color: var(--accent); }
-.stat-label { color: var(--muted); text-transform: uppercase; font-size: 11px; font-weight: 800; }
-
-.sys-status { height: 25px; padding: 0 15px; font-size: 10px; font-weight: 800; color: #4a5568; display: flex; justify-content: space-between; align-items: center; background: #000; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #2d3748; margin-right: 5px; }
-.dot-online { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.gauge-label { font-size: 14px; font-weight: 900; fill: #a0b4cc; }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
@@ -109,7 +112,7 @@ body {
   </div>
 
   <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
-    <div class="tile-title">Miljö & Väder</div>
+    <div class="tile-title">Vatten & Vind</div>
     <div class="water-val" id="waterDisplay">-- cm</div>
     <div class="wind-box">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -130,11 +133,14 @@ body {
 </div>
 
 <div class="sys-status">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="status-dot"></div><span>V1.5.4-B</span></div>
+    <div style="display: flex; align-items: center;">
+        <div id="syncDot" class="status-dot"></div>
+        <span id="syncText">V1.5.5-B</span>
+    </div>
     <div id="gpsStatus">GPS: SÖKER...</div>
 </div>
 
-<!-- NAV OVERLAY (CALIBRATED MEGA GAUGE) -->
+<!-- NAV OVERLAY -->
 <div id="navOverlay" class="overlay">
     <div class="overlay-hdr">
         <h2>Fart & Navigation</h2>
@@ -150,48 +156,58 @@ body {
                     <stop offset="100%" stop-color="#EF4444" />
                 </linearGradient>
             </defs>
-            <!-- Background Arc centered at 100, 110 -->
-            <path d="M 35 143 A 75 75 0 1 1 165 143" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+            <!-- Båge: Radie 75, Center 100,110 -->
+            <path d="M 35 147 A 75 75 0 1 1 165 147" fill="none" stroke="url(#gaugeGradient)" stroke-width="16" stroke-linecap="round" opacity="0.9"/>
             
-            <!-- Scale Numbers (0-6) mapped to arc -->
+            <!-- Siffror flyttade UTANFÖR bågen (Radius ~92) -->
             <g class="gauge-label" text-anchor="middle">
-                <text x="25" y="155">0</text>
-                <text x="18" y="105">1</text>
-                <text x="50" y="55">2</text>
-                <text x="100" y="38">3</text>
-                <text x="150" y="55">4</text>
-                <text x="182" y="105">5</text>
-                <text x="175" y="155">6</text>
+                <text x="20" y="155">0</text>
+                <text x="12" y="100">1</text>
+                <text x="45" y="45">2</text>
+                <text x="100" y="25">3</text>
+                <text x="155" y="45">4</text>
+                <text x="188" y="100">5</text>
+                <text x="180" y="155">6</text>
             </g>
 
-            <!-- Max Speed Marker -->
-            <circle id="megaMaxMarker" cx="100" cy="35" r="5" fill="#FACC15" transform="rotate(-120 100 110)" style="transition: transform 1s ease; filter: drop-shadow(0 0 5px #000);"/>
-            
-            <!-- Needle pivoted at 100, 110 -->
+            <!-- Nål och Pivot (Center 100, 110) -->
             <g id="megaNeedleGroup" transform="rotate(-120 100 110)" style="transition: transform 0.3s ease-out;">
-                <line x1="100" y1="110" x2="100" y2="35" stroke="#ffffff" stroke-width="4" stroke-linecap="round" style="filter: drop-shadow(0 0 3px #000);"/>
-                <line x1="100" y1="45" x2="100" y2="35" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+                <line x1="100" y1="110" x2="100" y2="35" stroke="#ffffff" stroke-width="5" stroke-linecap="round" style="filter: drop-shadow(0 0 4px #000);"/>
+                <line x1="100" y1="45" x2="100" y2="35" stroke="#EF4444" stroke-width="5" stroke-linecap="round"/>
             </g>
             <circle cx="100" cy="110" r="10" fill="#fff" stroke="#121a2b" stroke-width="2"/>
         </svg>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="stat-card"><div class="stat-label">Maxfart</div><div id="statMaxSpeed" style="font-size: 24px; font-weight: 900;">0.0 kn</div></div>
-        <div class="stat-card"><div class="stat-label">Distans</div><div id="statDistance" style="font-size: 24px; font-weight: 900;">0.00 NM</div></div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+        <div style="background:var(--surface); padding:15px; border-radius:20px; text-align:center;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Högsta fart</div>
+            <div id="statMaxSpeed" style="font-size:32px; font-weight:900;">0.0 kn</div>
+        </div>
+        <div style="background:var(--surface); padding:15px; border-radius:20px; text-align:center;">
+            <div style="font-size:11px; color:var(--muted); text-transform:uppercase;">Distans</div>
+            <div id="statDistance" style="font-size:32px; font-weight:900;">0.00 NM</div>
+        </div>
     </div>
 </div>
 
+<!-- ANDRA OVERLAYS -->
 <div id="weatherOverlay" class="overlay">
-    <div class="overlay-hdr"><h2>48h Väderprognos</h2><button onclick="toggleOverlay('weatherOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button></div>
+    <div class="overlay-hdr"><h2>48h Prognos</h2><button onclick="toggleOverlay('weatherOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button></div>
     <div id="prognosContent"></div>
 </div>
 
 <div id="statsOverlay" class="overlay">
     <div class="overlay-hdr"><h2>Dagens Statistik</h2><button onclick="toggleOverlay('statsOverlay', false)" style="color:white; background:#1e2d47; border: 1px solid white; padding: 10px 20px; border-radius: 12px; font-weight: 800;">STÄNG ✕</button></div>
-    <div id="statsContent">
-        <div class="stat-card"><div class="stat-label">Fordon totalt</div><div id="statTotal" class="stat-big">0</div></div>
-        <div class="stat-card"><div class="stat-label">Avgångar</div><div id="statTrips" class="stat-big">0</div></div>
+    <div id="statsContent" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="background:var(--surface); padding:20px; border-radius:20px; text-align:center;">
+            <div style="font-size:12px; color:var(--muted);">FORDON TOTALT</div>
+            <div id="statTotal" style="font-size:48px; font-weight:900; color:var(--accent);">0</div>
+        </div>
+        <div style="background:var(--surface); padding:20px; border-radius:20px; text-align:center;">
+            <div style="font-size:12px; color:var(--muted);">AVGÅNGAR</div>
+            <div id="statTrips" style="font-size:48px; font-weight:900;">0</div>
+        </div>
     </div>
 </div>
 
@@ -212,7 +228,7 @@ const CATS = [
   { id: 'cykel',      label: 'Cykel', emoji: '🚲', color: '#065F46' },
   { id: 'mc',         label: 'MC', emoji: '🏍️', color: '#C2410C' },
   { id: 'fotgangare', label: 'Gående', emoji: '🚶', color: '#0E7490' },
-  { id: 'moped',      label: 'Moped', emoji: 'Mopo', color: '#9D174D' },
+  { id: 'moped',      label: 'Moped', emoji: '🛵', color: '#9D174D' },
   { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️', color: '#3730A3' }
 ];
 
@@ -220,110 +236,27 @@ var db, logsRef, tripsRef, fullWeatherData;
 var currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 
-function calcDist(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2-lat1) * Math.PI / 180;
-    const dLon = (lon2-lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 0.539957;
-}
-
-function handleVehicleTap(catId, btn) {
-    if (navigator.vibrate) navigator.vibrate(25);
-    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: 1 });
-}
-
-function handleVehicleUndo(catId, btn) {
-    btn.classList.add('removing');
-    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-    setTimeout(() => btn.classList.remove('removing'), 2000);
-    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: -1 });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  const grid = document.getElementById('btnGrid');
-  CATS.forEach(cat => {
-    const btn = document.createElement('button');
-    btn.className = 'v-btn'; btn.style.backgroundColor = cat.color;
-    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
-    
-    let pressTimer;
-    btn.onpointerdown = () => pressTimer = window.setTimeout(() => handleVehicleUndo(cat.id, btn), 800);
-    btn.onpointerup = () => clearTimeout(pressTimer);
-    btn.onpointerleave = () => clearTimeout(pressTimer);
-    btn.onclick = () => { if (!btn.classList.contains('removing')) handleVehicleTap(cat.id, btn); };
-    grid.appendChild(btn);
-  });
-  initApp(); fetchWeather();
-  setInterval(fetchWeather, 1800000);
-});
-
-function toggleOverlay(id, show) {
-    document.getElementById(id).classList.toggle('show', show);
-    if (show && id === 'statsOverlay') calculateStats();
-    if (show && id === 'navOverlay') updateNavOverlay();
-}
-
-function calculateStats() {
-    const logs = Object.values(currentLogs);
-    document.getElementById('statTotal').textContent = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
-    document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
-}
-
-function updateNavOverlay() {
-    document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
-    document.getElementById('statDistance').textContent = totalDistanceNM.toFixed(2) + " NM";
-}
-
-function initApp() {
+function parseFmiRobust(xmlText) {
   try {
-    firebase.initializeApp(firebaseConfig); db = firebase.database();
-    const today = new Date().toISOString().slice(0, 10);
-    logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
-    db.ref('.info/connected').on('value', s => document.getElementById('syncDot').classList.toggle('dot-online', s.val() === true));
-    
-    logsRef.on('value', snap => {
-      currentLogs = snap.val() || {};
-      CATS.forEach(cat => {
-          let count = 0; 
-          Object.values(currentLogs).forEach(l => { if(l.type === cat.id) count += (l.delta || 1); });
-          document.getElementById('b_' + cat.id).textContent = Math.max(0, count);
-      });
-    });
-
-    tripsRef.on('value', snap => {
-      currentTrips = snap.val() || {};
-      const sorted = Object.values(currentTrips).sort((a,b) => b.ts - a.ts).slice(0,4);
-      document.getElementById('departureLog').innerHTML = sorted.map(t => `<div class="dep-row"><span>${new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'})}</span><span>${t.from || '---'}</span></div>`).join('');
-    });
-
-    db.ref('config/watlev').on('value', snap => {
-      const data = snap.val();
-      if (data) {
-          const disp = document.getElementById('waterDisplay');
-          disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
-          disp.style.color = (data.value < -20 || data.value > 20) ? 'var(--red)' : 'var(--green)';
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
+    if (bsElements.length > 0) {
+      for (let el of bsElements) {
+        if (el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent === 'WATLEV') 
+            return parseFloat(el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent);
       }
-    });
+    }
+  } catch (e) {} return null;
+}
 
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(pos => {
-        const speed = pos.coords.speed || 0;
-        const kn = speed * 1.94384;
-        if (kn > maxSpeedKn) maxSpeedKn = kn;
-        if (lastLat !== null && speed > 0.5) totalDistanceNM += calcDist(lastLat, lastLon, pos.coords.latitude, pos.coords.longitude);
-        lastLat = pos.coords.latitude; lastLon = pos.coords.longitude;
-
-        const angle = (Math.min(kn, 6) / 6 * 240) - 120;
-        const maxAngle = (Math.min(maxSpeedKn, 6) / 6 * 240) - 120;
-        document.getElementById('megaNeedleGroup').setAttribute('transform', `rotate(${angle} 100 110)`);
-        document.getElementById('megaMaxMarker').setAttribute('transform', `rotate(${maxAngle} 100 110)`);
-
-        const bentoAngle = (Math.min(kn, 6) / 6 * 180);
-        document.getElementById('speedNeedle').setAttribute('transform', `rotate(${bentoAngle},36,32)`);
-        document.getElementById('speedValDisplay').textContent = kn.toFixed(1) + ' kn';
-        document.getElementById('gpsStatus').textContent = "GPS: " + Math.round(pos.coords.accuracy) + "m";
-      }, null, { enableHighAccuracy: true });
+async function updateWaterLevel() {
+  const start = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
+  try {
+    const resp = await fetch(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}`);
+    const mm = parseFmiRobust(await resp.text());
+    if (mm !== null) {
+      const cm = Math.round(mm / 10);
+      if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
     }
   } catch (e) {}
 }
@@ -340,6 +273,95 @@ async function fetchWeather() {
         document.getElementById('mainWeatherIcon').textContent = codes[h.weathercode[hr]] || "🌤️";
     } catch (e) {}
 }
+
+function handleVehicleTap(catId, btn) {
+    if (navigator.vibrate) navigator.vibrate(25);
+    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: 1 });
+}
+
+function handleVehicleUndo(catId, btn) {
+    btn.classList.add('removing');
+    if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+    setTimeout(() => btn.classList.remove('removing'), 1500);
+    if (logsRef) logsRef.push({ type: catId, ts: Date.now(), delta: -1 });
+}
+
+function toggleOverlay(id, show) {
+    document.getElementById(id).classList.toggle('show', show);
+    if (show && id === 'statsOverlay') {
+        const total = Object.values(currentLogs).reduce((sum, l) => sum + (l.delta || 1), 0);
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
+    }
+    if (show && id === 'weatherOverlay') renderFullForecast();
+}
+
+function renderFullForecast() {
+    const container = document.getElementById('prognosContent');
+    if (!fullWeatherData) return;
+    let html = ""; const h = fullWeatherData.hourly; const now = new Date().getHours();
+    for (let i = now; i < now + 48 && i < h.time.length; i++) {
+        html += `<div class="prognos-row">
+            <div style="font-weight:900; min-width:50px">${h.time[i].slice(11, 16)}</div>
+            <div style="flex:1">${h.windspeed_10m[i].toFixed(1)} m/s</div>
+            <div>${h.temperature_2m[i].toFixed(1)}°C</div>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const grid = document.getElementById('btnGrid');
+  CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'v-btn'; btn.style.backgroundColor = cat.color;
+    btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
+    let pressTimer;
+    btn.onpointerdown = () => pressTimer = window.setTimeout(() => handleVehicleUndo(cat.id, btn), 800);
+    btn.onpointerup = () => clearTimeout(pressTimer);
+    btn.onpointerleave = () => clearTimeout(pressTimer);
+    btn.onclick = () => { if (!btn.classList.contains('removing')) handleVehicleTap(cat.id, btn); };
+    grid.appendChild(btn);
+  });
+  
+  firebase.initializeApp(firebaseConfig); db = firebase.database();
+  const today = new Date().toISOString().slice(0, 10);
+  logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
+  
+  db.ref('.info/connected').on('value', s => document.getElementById('syncDot').classList.toggle('dot-online', s.val() === true));
+  logsRef.on('value', snap => {
+    currentLogs = snap.val() || {};
+    CATS.forEach(cat => {
+        let count = 0; Object.values(currentLogs).forEach(l => { if(l.type === cat.id) count += (l.delta || 1); });
+        document.getElementById('b_' + cat.id).textContent = Math.max(0, count);
+    });
+  });
+  tripsRef.on('value', snap => {
+    currentTrips = snap.val() || {};
+    const sorted = Object.values(currentTrips).sort((a,b) => b.ts - a.ts).slice(0,4);
+    document.getElementById('departureLog').innerHTML = sorted.map(t => `<div class="dep-row"><span>${new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'})}</span><span>${t.from || '---'}</span></div>`).join('');
+  });
+  db.ref('config/watlev').on('value', snap => {
+    const data = snap.val();
+    if (data) {
+        const disp = document.getElementById('waterDisplay');
+        disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' cm';
+        disp.style.color = (data.value < -20 || data.value > 20) ? 'var(--red)' : 'var(--green)';
+    }
+  });
+
+  navigator.geolocation.watchPosition(pos => {
+    const kn = (pos.coords.speed || 0) * 1.94384;
+    document.getElementById('megaNeedleGroup').setAttribute('transform', `rotate(${(Math.min(kn, 6) / 6 * 240) - 120} 100 110)`);
+    document.getElementById('speedValDisplay').textContent = kn.toFixed(1) + ' kn';
+    document.getElementById('gpsStatus').textContent = "GPS: " + Math.round(pos.coords.accuracy) + "m";
+    if (kn > maxSpeedKn) maxSpeedKn = kn;
+    document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
+  }, null, { enableHighAccuracy: true });
+
+  fetchWeather(); updateWaterLevel();
+  setInterval(fetchWeather, 1800000); setInterval(updateWaterLevel, 900000);
+});
 </script>
 </body>
 </html>
