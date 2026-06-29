@@ -3,16 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare TACTICAL GREY v1.6.3</title>
+<title>Färjeräknare TACTICAL GREY v1.6.4</title>
 <style>
 :root {
   --bg: #000000;
-  --panel: #161b22; /* Mörkgrå "Tactical Grey" */
+  --panel: #161b22; 
   --border: #30363d;
   --text: #ffffff;
   --accent: #ff3b30; 
   --safe: #10B981;   
-  --warning: #FACC15; 
   --dim: #8b949e;
 }
 
@@ -21,7 +20,8 @@
 body {
   background: var(--bg); color: var(--text);
   font-family: 'SF Mono', 'Roboto Mono', monospace;
-  height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+  height: 100dvh; width: 100vw;
+  display: flex; flex-direction: column; overflow: hidden;
 }
 
 /* ── DASHBOARD GRID ── */
@@ -36,7 +36,6 @@ body {
   background: var(--panel); border: 1px solid var(--border);
   border-radius: 12px; padding: 15px; display: flex; flex-direction: column;
   position: relative; overflow: hidden;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
 }
 
 .tile-header {
@@ -55,7 +54,7 @@ body {
 .tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; cursor: pointer; }
 .tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
 
-/* KNAPPAR - STÖRRE BILDER */
+/* KNAPPAR - XL IKONER */
 .v-btn {
   position: relative; width: 100%; height: 100%; 
   border: 1px solid var(--border); background: #0d1117;
@@ -63,7 +62,7 @@ body {
   align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.1s;
 }
-.v-btn:active { background: #21262d; transform: scale(0.97); border-color: var(--accent); }
+.v-btn:active { background: #21262d; transform: scale(0.97); }
 .v-btn.removing { background-color: var(--accent) !important; }
 
 .v-btn-emoji { font-size: clamp(45px, 8vh, 65px); margin-bottom: 2px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
@@ -72,46 +71,48 @@ body {
 .v-btn-badge {
   position: absolute; top: 8px; right: 8px; 
   background: var(--bg); color: var(--accent);
-  padding: 2px 8px; border: 2px solid var(--accent);
+  padding: 2px 8px; border: 1px solid var(--accent);
   border-radius: 6px; font-size: 16px; font-weight: 900;
 }
 
-/* ── SPEEDO ── */
-.speedo-wrap { width: 100%; position: relative; display: flex; justify-content: center; }
-.speedo-val { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -40%); text-align: center; }
-.speedo-num { font-size: 64px; font-weight: 300; }
-.speedo-unit { font-size: 12px; font-weight: 900; color: var(--accent); display: block; }
-
-/* ── ENV ── */
-.water-display { font-size: 38px; font-weight: 300; color: var(--safe); }
-.wind-row-t { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-
-/* ── OVERLAYS (FIXED SCROLL) ── */
+/* ── OVERLAYS (THE SCROLL FIX) ── */
 .overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000;
-  display: none; flex-direction: column; padding: 25px;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #000000; z-index: 2000;
+  display: none; flex-direction: column;
 }
 .overlay.show { display: flex; }
-.overlay-content { 
-  flex: 1; 
-  overflow-y: scroll !important; /* Tvinga fram skrollning */
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 60px;
+
+.overlay-hdr-fixed {
+  flex-shrink: 0; padding: 25px; background: #000;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.overlay-scroll-area {
+  flex: 1; overflow-y: auto !important; /* Denna rad är kritisk */
+  -webkit-overflow-scrolling: touch; 
+  padding: 20px;
 }
 
 .prognos-row {
   display: flex; align-items: center; gap: 12px; 
-  background: #161b22; margin-bottom: 6px; padding: 15px;
+  background: var(--panel); margin-bottom: 6px; padding: 15px;
   border: 1px solid var(--border); border-left: 4px solid var(--accent);
   border-radius: 4px;
 }
+
+/* ── ELEMENTS ── */
+.speedo-wrap { width: 100%; position: relative; display: flex; justify-content: center; }
+.speedo-num { font-size: 64px; font-weight: 300; }
+.water-display { font-size: 38px; font-weight: 300; color: var(--safe); }
+.dep-row { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 0; border-bottom: 1px solid #111; color: var(--dim); }
 
 .sys-bar {
   height: 25px; background: #000; border-top: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 15px; font-size: 9px; font-weight: 800; color: var(--dim);
 }
-.dot-on { background: var(--safe); box-shadow: 0 0 5px var(--safe); width: 6px; height: 6px; border-radius: 1px; margin-right: 5px; }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
@@ -126,50 +127,47 @@ body {
 <div class="dashboard">
   <div id="btnGrid"></div>
 
-  <!-- SPEEDO -->
   <div class="tile tile-speed" onclick="toggleOverlay('navOverlay', true)">
-    <div class="tile-header"><span>VELOCITY / TACTICAL</span><span id="miniAcc">GPS: --</span></div>
+    <div class="tile-header"><span>VELOCITY / TACTICAL</span><span id="miniAcc">--</span></div>
     <div class="speedo-wrap">
         <svg viewBox="0 0 200 120" width="100%">
             <path d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="#222" stroke-width="12" stroke-dasharray="8 2"/>
-            <path id="speedArc" d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="var(--accent)" stroke-width="12" stroke-dasharray="0 1000" style="transition: stroke-dasharray 0.4s;"/>
+            <path id="speedArc" d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="var(--accent)" stroke-width="12" stroke-dasharray="0 1000" />
         </svg>
-        <div class="speedo-val">
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -40%); text-align:center;">
             <span class="speedo-num" id="mainSpeedNum">0.0</span>
-            <span class="speedo-unit">KNOTS</span>
+            <span style="font-size:12px; font-weight:900; color:var(--accent); display:block;">KNOTS</span>
         </div>
     </div>
   </div>
 
-  <!-- ENV -->
   <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
     <div class="tile-header">ENVIRONMENT / RUSSARÖ</div>
     <div class="water-display" id="waterDisplay">-- CM</div>
-    <div class="wind-row-t">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="mainWeatherIcon" style="font-size: 28px;">☀️</span>
-            <span id="windMain" style="font-weight: 800; font-size: 20px;">-- M/S</span>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span id="mainWeatherIcon" style="font-size:28px;">☀️</span>
+            <span id="windMain" style="font-weight:800; font-size:20px;">-- M/S</span>
         </div>
         <div id="windDir"><svg width="24" height="24" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="var(--accent)"/></svg></div>
     </div>
   </div>
 
-  <!-- LOG -->
   <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
     <div class="tile-header">MISSION LOG / STATS</div>
-    <div id="departureLog" style="overflow-y: hidden; flex: 1; font-size: 11px;"></div>
+    <div id="departureLog" style="flex:1;"></div>
   </div>
 </div>
 
 <div class="sys-bar">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="dot-on"></div><span>v1.6.3-B / GREY_TACTICAL</span></div>
-    <div id="gpsStatusText">GPS_READY</div>
+    <div style="display:flex; align-items:center;"><div style="width:6px; height:6px; background:var(--safe); border-radius:1px; margin-right:5px;"></div><span>v1.6.4-B / SCROLL_REINFORCED</span></div>
+    <div id="gpsStatusText">GPS_LOCKED</div>
 </div>
 
-<!-- OVERLAYS -->
+<!-- OVERLAYS WITH FIXED SCROLL CONTAINERS -->
 <div id="navOverlay" class="overlay">
-    <div class="tile-header"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
-    <div class="overlay-content">
+    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div class="overlay-scroll-area">
         <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:48px;">0.0 kn</span></div>
         <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:48px;">0.00 NM</span></div>
         <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:18px; color:var(--safe)">--</span></div>
@@ -177,13 +175,13 @@ body {
 </div>
 
 <div id="weatherOverlay" class="overlay">
-    <div class="tile-header"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
-    <div id="prognosContent" class="overlay-content"></div>
+    <div class="overlay-hdr-fixed"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div id="prognosContent" class="overlay-scroll-area"></div>
 </div>
 
 <div id="statsOverlay" class="overlay">
-    <div class="tile-header"><span>TRAFFIC_ANALYSIS_REPORT</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
-    <div id="statsContent" class="overlay-content">
+    <div class="overlay-hdr-fixed"><span>TRAFFIC_ANALYSIS</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div id="statsContent" class="overlay-scroll-area">
         <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_VEHICLES</span><div id="statTotal" style="font-size:64px; color:var(--safe);">0</div></div>
         <div class="tile"><span class="tile-header">TOTAL_DEPARTURES</span><div id="statTrips" style="font-size:64px;">0</div></div>
     </div>
@@ -209,9 +207,38 @@ const CATS = [
 var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 
-function getCompassLabel(deg) {
-    const sectors = ["N", "NO", "O", "SO", "S", "SV", "V", "NV"];
-    return sectors[Math.round(deg / 45) % 8];
+function parseFmiRobust(xmlText) {
+  try {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
+    if (bsElements.length > 0) {
+      for (let el of bsElements) {
+        if (el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent === 'WATLEV') 
+            return parseFloat(el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent);
+      }
+    }
+  } catch (e) {} return null;
+}
+
+async function updateWaterLevel() {
+  const start = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
+  try {
+    const resp = await fetch(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}`);
+    const mm = parseFmiRobust(await resp.text());
+    if (mm !== null) {
+      const cm = Math.round(mm / 10);
+      if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
+    }
+  } catch (e) {}
+}
+
+function getWeatherIcon(code, hour) {
+    const isNight = hour < 6 || hour > 22;
+    if (code === 0) return isNight ? "🌙" : "☀️";
+    if (code <= 3) return isNight ? "☁️" : "🌤️";
+    if (code >= 51 && code <= 67) return "🌧️";
+    if (code >= 71 && code <= 77) return "❄️";
+    return "🌤️";
 }
 
 function toggleOverlay(id, show) {
@@ -231,32 +258,18 @@ function renderFullForecast() {
         const time = h.time[i].slice(11, 16);
         const speed = h.windspeed_10m[i];
         const color = speed < 6 ? "#10B981" : speed < 12 ? "#F59E0B" : "#ff3b30";
-        const deg = h.winddirection_10m[i];
-        const rotation = (deg + 180) % 360;
-        
+        const rotation = (h.winddirection_10m[i] + 180) % 360;
         html += `<div class="prognos-row" style="border-left-color: ${color}">
-            <div style="font-weight:900; min-width:55px; font-size:14px;">${time}</div>
-            <div style="font-size:22px; min-width:40px; text-align:center;">${getWeatherIcon(h.weathercode[i], time, h.temperature_2m[i])}</div>
+            <div style="font-weight:900; min-width:55px;">${time}</div>
+            <div style="font-size:24px; min-width:40px; text-align:center;">${getWeatherIcon(h.weathercode[i], parseInt(time))}</div>
             <div style="flex:1; color:${color}; font-weight:800;">${speed.toFixed(1)} m/s</div>
             <div style="font-weight:800; min-width:60px; text-align:right;">${h.temperature_2m[i].toFixed(1)}°C</div>
-            <div style="transform: rotate(${rotation}deg); margin-left:15px; display:flex; flex-direction:column; align-items:center;">
+            <div style="transform: rotate(${rotation}deg); margin-left:15px; display:flex;">
                 <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg>
-                <span style="font-size:8px; font-weight:800; margin-top:2px;">${getCompassLabel(deg)}</span>
             </div>
         </div>`;
     }
     container.innerHTML = html;
-}
-
-function getWeatherIcon(code, timeStr, temp) {
-    const hour = parseInt(timeStr.slice(0, 2));
-    const isNight = hour < 6 || hour > 22;
-    if (temp < -15) return "🥶";
-    if (code === 0) return isNight ? "🌙" : "☀️";
-    if (code <= 3) return isNight ? "☁️" : "🌤️";
-    if (code >= 51 && code <= 67) return "🌧️";
-    if (code >= 71 && code <= 77) return "❄️";
-    return "🌤️";
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -280,7 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(firebaseConfig); db = firebase.database();
   const today = new Date().toISOString().slice(0, 10);
   logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
-  
+
   logsRef.on('value', snap => {
     currentLogs = snap.val() || {};
     CATS.forEach(cat => {
@@ -294,10 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('departureLog').innerHTML = sorted.map(t => `<div class="dep-row"><span>${new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'})}</span><span>${t.from || '---'}</span></div>`).join('');
   });
   db.ref('config/watlev').on('value', snap => {
-    if (snap.val()) {
-        const val = snap.val().value;
-        document.getElementById('waterDisplay').textContent = (val > 0 ? '+' : '') + val + ' CM';
-    }
+    if (snap.val()) document.getElementById('waterDisplay').textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
   });
 
   navigator.geolocation.watchPosition(pos => {
@@ -305,13 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const acc = pos.coords.accuracy;
     document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
     document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
-    document.getElementById('miniAcc').textContent = `GPS: ${Math.round(acc)}M`;
+    document.getElementById('miniAcc').textContent = `${Math.round(acc)}M`;
     if (kn > maxSpeedKn) maxSpeedKn = kn;
     document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
     document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
   }, null, { enableHighAccuracy: true });
 
-  fetchWeather();
+  fetchWeather(); updateWaterLevel();
 });
 
 async function fetchWeather() {
@@ -321,7 +331,7 @@ async function fetchWeather() {
         const hr = new Date().getHours();
         document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
         document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
-        document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(fullWeatherData.hourly.weathercode[hr], hr + ":00", fullWeatherData.hourly.temperature_2m[hr]);
+        document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(fullWeatherData.hourly.weathercode[hr], hr);
     } catch (e) {}
 }
 </script>
