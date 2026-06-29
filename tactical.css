@@ -6,6 +6,7 @@
   --accent: #ff453a; 
   --safe: #30d158;   
   --warning: #ffd60a; 
+  --eng-orange: #f97316; /* Ny färg för Engineering */
   --dim: #8e8e93;
 }
 
@@ -39,12 +40,6 @@ body {
   border-radius: 12px; padding: 10px; 
   display: flex; flex-direction: column;
   position: relative; overflow: hidden; min-height: 0;
-  transition: background-color 0.2s;
-}
-
-/* Visuell feedback för klickbara rutor */
-.tile[onclick]:active {
-    background-color: #3d4451;
 }
 
 .tile-header {
@@ -54,6 +49,13 @@ body {
     padding-bottom: 3px; flex-shrink: 0;
     display: flex; justify-content: space-between;
 }
+
+/* Engineering-specifik stil */
+.tile-eng {
+    border-color: var(--eng-orange);
+    background: linear-gradient(145deg, #2d333b 0%, #1a1f26 100%);
+}
+.tile-eng .tile-header { color: var(--eng-orange); }
 
 @keyframes blink-red { 0%, 100% { color: #fff; } 50% { color: var(--accent); } }
 .alert-active { animation: blink-red 1s infinite; }
@@ -71,31 +73,46 @@ body {
   border-radius: 8px; display: flex; flex-direction: column; 
   align-items: center; justify-content: center;
   cursor: pointer; transition: background 0.1s;
-  touch-action: none;
 }
 .v-btn:active { background: #3d4451; transform: scale(0.98); }
 .v-btn.removing { background-color: var(--accent) !important; color: #000; }
 
-.v-btn-emoji { font-size: clamp(30px, 7.5vh, 60px); pointer-events: none; margin-bottom: 1px; }
+.v-btn-emoji { font-size: clamp(30px, 7.5vh, 60px); line-height: 1; pointer-events: none; }
 .v-btn-label { font-size: clamp(8px, 1.3vh, 11px); font-weight: 800; color: #fff; text-transform: uppercase; pointer-events: none; }
 
 .v-btn-badge {
   position: absolute; top: 4px; right: 4px; 
   background: var(--warning); color: #000;
   padding: 1px 4px; border: 1px solid #000;
-  border-radius: 3px; font-size: clamp(10px, 1.8vh, 15px); font-weight: 900;
+  border-radius: 3px; font-size: clamp(10px, 1.8vh, 14px); font-weight: 900;
 }
 
-.tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; justify-content: center; align-items: center; cursor: pointer; }
-.tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; cursor: pointer; justify-content: space-between; }
-.tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
+/* ── INSTRUMENTS ── */
+.tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; justify-content: center; align-items: center; }
+.tile-env   { grid-column: 3 / 4; grid-row: 2 / 2.5; cursor: pointer; justify-content: space-between; }
+.tile-log   { grid-column: 3 / 4; grid-row: 2.5 / 3.3; cursor: pointer; }
+.tile-eng   { grid-column: 3 / 4; grid-row: 3.3 / 4; cursor: pointer; }
 
 .speedo-num { font-size: clamp(35px, 8.5vh, 68px); font-weight: 300; color: #fff; line-height: 1; }
-.water-display { font-size: clamp(24px, 4.5vh, 38px); font-weight: 300; color: var(--safe); }
+.water-display { font-size: clamp(20px, 4.5vh, 34px); font-weight: 300; color: var(--safe); }
 
-.dep-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 4px; margin-top: 5px; pointer-events: none; }
+.dep-list { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 3px; }
+.dep-row { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid #111; font-size: 10px; }
 
-.dep-row { 
-    display: grid; grid-template-columns: 45px 1fr 35px; align-items: center;
-    padding: 5px 8px; background: rgba(0,0,0,0.2); border-radius: 4px;
-    border-left: 2px solid var(--border); font-size
+/* ── OVERLAY STYLES ── */
+.overlay { position: fixed; inset: 0; background: #000; z-index: 2000; display: none; flex-direction: column; padding: 15px; }
+.overlay.show { display: flex; }
+.overlay-scroll { flex: 1; overflow-y: auto; }
+
+.sop-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+.sop-title { color: var(--eng-orange); font-weight: 900; font-size: 12px; margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 5px;}
+.sop-step { font-size: 13px; margin-bottom: 8px; line-height: 1.4; color: #fff; display: flex; gap: 10px; }
+.sop-step span { color: var(--eng-orange); font-weight: 900; }
+
+.check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #111; font-size: 14px; }
+
+@media (max-width: 950px) or (orientation: portrait) {
+  body { overflow-y: auto; }
+  .dashboard { display: flex; flex-direction: column; height: auto; min-height: auto; }
+  .tile { min-height: 140px; margin-bottom: 5px; }
+}
