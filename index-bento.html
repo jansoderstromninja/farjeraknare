@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Färjeräknare TACTICAL v1.9.0</title>
+<title>Färjeräknare TACTICAL v1.9.1</title>
 <link rel="stylesheet" href="tactical.css">
 </head>
 <body>
@@ -53,7 +53,7 @@
 
   <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
     <div class="tile-header">ENVIRONMENT / HANGÖ</div>
-    <div style="font-size: clamp(24px, 4.5vh, 38px); font-weight: 300; color: var(--safe);" id="waterDisplay">-- CM</div>
+    <div class="water-display" id="waterDisplay">-- CM</div>
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:8px;">
             <span id="mainWeatherIcon" style="font-size:24px;">☀️</span>
@@ -63,9 +63,10 @@
     </div>
   </div>
 
-  <div class="tile tile-log" id="logTile">
-    <div class="tile-header" id="missionHeader" onclick="toggleOverlay('statsOverlay', true)" style="cursor:pointer">
-        <span>MISSION CONTROL</span>
+  <!-- MISSION CONTROL: NU HELA RUTAN KLICKBAR -->
+  <div class="tile tile-log" id="logTile" onclick="toggleOverlay('statsOverlay', true)">
+    <div class="tile-header">
+        <span id="missionHeader">MISSION CONTROL</span>
         <span class="alert-text">CHECK_PIER!</span>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
@@ -75,7 +76,7 @@
     <div class="dep-list" id="departureLog"></div>
     <div class="sys-bar-internal">
         <div style="display:flex; align-items:center;"><div id="syncDot" style="width:5px; height:5px; background:grey; border-radius:1px; margin-right:4px;"></div>SYNC</div>
-        <div style="text-align:right;">v1.9.0-B</div>
+        <div style="text-align:right;">v1.9.1-B</div>
         <div>GPS_ACC: <span id="gpsAccTel">--</span></div>
         <div id="gpsStatusTel" style="text-align:right;">SCAN</div>
     </div>
@@ -112,9 +113,7 @@
 
 <div id="statsOverlay" class="overlay">
     <div class="overlay-hdr-fixed"><span style="color:#fff; font-weight:900;">MISSION_SORTIE_LOG</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
-    <div id="statsContent" class="overlay-scroll">
-        <!-- Stats and 20 trips will be injected here -->
-    </div>
+    <div id="statsContent" class="overlay-scroll"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -236,6 +235,7 @@ function renderFullForecast() {
         const speed = h.windspeed_10m[i];
         const color = speed < 6 ? "#30d158" : speed < 12 ? "#ffd60a" : "#ff453a";
         const rotation = (h.winddirection_10m[i] + 180) % 360;
+        
         html += `<div class="prognos-row" style="border-left-color: ${color}">
             <div style="font-weight:900; font-size:14px;">${h.time[i].slice(11, 16)}</div>
             <div style="font-size:22px; text-align:center;">${getWeatherIcon(h.weathercode[i], parseInt(h.time[i].slice(11,13)))}</div>
@@ -287,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const acc = Math.round(pos.coords.accuracy);
     document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
     document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
+    document.getElementById('miniAcc').textContent = acc + 'M';
     document.getElementById('gpsAccTel').textContent = acc + 'M';
     document.getElementById('gpsStatusTel').textContent = acc < 20 ? 'LOCKED' : 'SEARCH';
     if (kn > maxSpeedKn) maxSpeedKn = kn;
