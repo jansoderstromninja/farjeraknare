@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Färjeräknare TACTICAL v1.9.5</title>
+<title>Färjeräknare TACTICAL v1.9.6</title>
 <link rel="stylesheet" href="tactical.css">
 </head>
 <body>
@@ -40,9 +40,10 @@
       </button>
   </div>
 
+  <!-- INSTRUMENT COLUMN -->
   <div class="tile tile-speed" onclick="toggleOverlay('navOverlay', true)">
     <div class="tile-header">VELOCITY / TACTICAL</div>
-    <div class="speedo-wrap">
+    <div style="width:100%; position:relative; display:flex; justify-content:center; flex:1; min-height:0;">
         <svg viewBox="0 0 200 130" style="height: 100%; width: 100%;">
             <path d="M 40 110 A 70 70 0 1 1 160 110" fill="none" stroke="#111" stroke-width="12" stroke-dasharray="8 2"/>
             <path id="speedArc" d="M 40 110 A 70 70 0 1 1 160 110" fill="none" stroke="var(--accent)" stroke-width="12" stroke-dasharray="0 1000" />
@@ -69,30 +70,58 @@
         <span>MISSION CONTROL</span>
         <span class="alert-text">CHECK_PIER!</span>
     </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+        <div style="background:rgba(0,0,0,0.3); padding:4px; text-align:center; border-radius:4px;"><span style="font-size:7px; color:var(--dim); display:block;">VEH</span><span id="miniStatTotal" style="font-size:14px; font-weight:800; color:#fff;">0</span></div>
+        <div style="background:rgba(0,0,0,0.3); padding:4px; text-align:center; border-radius:4px;"><span style="font-size:7px; color:var(--dim); display:block;">DEP</span><span id="miniStatTrips" style="font-size:14px; font-weight:800; color:#fff;">0</span></div>
+    </div>
     <div class="dep-list" id="departureLog"></div>
   </div>
 
-  <!-- NEW ENGINEERING TILE (v1.9.5) -->
   <div class="tile tile-eng" onclick="toggleOverlay('engOverlay', true)">
-      <div class="tile-header"><span>ENGINEERING / Valmet 411</span><span>SOP ⚙️</span></div>
-      <div style="display:flex; justify-content:space-between; margin-top:5px;">
-          <div style="font-size:10px; color:var(--eng-orange); font-weight:800;">READY_FOR_SHIFT</div>
-          <div style="font-size:14px; font-weight:900;">24.5V</div>
+      <div class="tile-header"><span>ENGINEERING / VALMET</span><span>SOP ⚙️</span></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top: auto;">
+          <div style="font-size:9px; color:var(--eng-orange); font-weight:800;">SYS_READY</div>
+          <div style="font-size:8px; color:var(--dim);">v1.9.6-B</div>
       </div>
   </div>
 </div>
 
-<div class="sys-bar-internal" style="background:#000; padding: 2px 10px;">
-    <div style="display:flex; align-items:center;"><div id="syncDot" style="width:6px; height:6px; background:grey; border-radius:1px; margin-right:4px;"></div>SYNC</div>
-    <div style="text-align:right;">v1.9.5-B</div>
+<!-- OVERLAYS (ALL REINSTATED) -->
+<div id="navOverlay" class="overlay">
+    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div class="overlay-scroll">
+        <div class="tile" style="margin-bottom:10px; align-items:center;">
+            <svg viewBox="0 0 200 160" width="100%" style="max-width:300px;">
+                <defs><linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#10B981" /><stop offset="50%" stop-color="#F59E0B" /><stop offset="100%" stop-color="#EF4444" /></linearGradient></defs>
+                <path d="M 35 147 A 75 75 0 1 1 165 147" fill="none" stroke="url(#gaugeGradient)" stroke-width="16" stroke-linecap="round" opacity="0.9"/>
+                <g style="font-size:12px; font-weight:900; fill:#718096" text-anchor="middle">
+                    <text x="20" y="155">0</text><text x="12" y="100">1</text><text x="45" y="45">2</text><text x="100" y="25">3</text><text x="155" y="45">4</text><text x="188" y="100">5</text><text x="180" y="155">6</text>
+                </g>
+                <g id="megaNeedleGroup" transform="rotate(-120 100 110)" style="transition: transform 0.3s ease-out;">
+                    <line x1="100" y1="110" x2="100" y2="35" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="100" y1="45" x2="100" y2="35" stroke="#EF4444" stroke-width="5" stroke-linecap="round"/>
+                </g>
+                <circle cx="100" cy="110" r="10" fill="#fff" stroke="#121a2b" stroke-width="2"/>
+            </svg>
+        </div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:54px; font-weight:300;">0.0 kn</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:54px; font-weight:300;">0.00 NM</span></div>
+        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:16px; color:var(--safe)">--</span></div>
+    </div>
 </div>
 
-<!-- ENGINEERING OVERLAY -->
+<div id="weatherOverlay" class="overlay">
+    <div class="overlay-hdr-fixed"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div id="prognosContent" class="overlay-scroll"></div>
+</div>
+
+<div id="statsOverlay" class="overlay">
+    <div class="overlay-hdr-fixed"><span>MISSION_SORTIE_LOG</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 20px; font-weight:800;">CLOSE</button></div>
+    <div id="statsContent" class="overlay-scroll"></div>
+</div>
+
 <div id="engOverlay" class="overlay">
-    <div class="overlay-hdr-fixed">
-        <span style="color:var(--eng-orange); font-weight:900;">TECHNICAL_SUPPORT_HUB</span>
-        <button onclick="toggleOverlay('engOverlay', false)" style="background:none; border:1px solid var(--eng-orange); color:var(--eng-orange); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button>
-    </div>
+    <div class="overlay-hdr-fixed"><span style="color:var(--eng-orange)">TECHNICAL_SUPPORT_HUB</span><button onclick="toggleOverlay('engOverlay', false)" style="background:none; border:1px solid var(--eng-orange); color:var(--eng-orange); padding:8px 20px; font-weight:800;">CLOSE</button></div>
     <div class="overlay-scroll">
         <div class="sop-card">
             <div class="sop-title">Felsökning: Motor startar ej</div>
@@ -107,19 +136,13 @@
             <div class="sop-step"><span>3</span> Verifiera oljenivå i hydrauloljetanken.</div>
         </div>
         <div class="sop-card">
-            <div class="sop-title">Daglig Checklista (Skiftbyte)</div>
+            <div class="sop-title">Checklista Skiftbyte</div>
             <div class="check-item">☐ Motorolja (mittatikku) min/max.</div>
-            <div class="check-item">☐ Ruoripotkurilaite: Grav.tank (färg?).</div>
-            <div class="check-item">☐ Dränera vatten från Racor-filter.</div>
-            <div class="check-item">☐ Smörj sarvikotelo (rypsolja/fett).</div>
+            <div class="check-item">☐ Ruoripotkurilaite: Grav.tank färg?</div>
+            <div class="check-item">☐ Dränera Racor-filter.</div>
         </div>
     </div>
 </div>
-
-<!-- OTHER OVERLAYS -->
-<div id="navOverlay" class="overlay">...</div> <!-- Logik finns i JS -->
-<div id="weatherOverlay" class="overlay">...</div>
-<div id="statsOverlay" class="overlay">...</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -135,7 +158,7 @@ var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 var lastDepartureTs = Date.now();
 var undoTimer = null, didUndo = false;
 
-// ── CORE LOGIC ──
+// ── CORE FUNCTIONS ──
 function btnDown(id, btn) {
     didUndo = false;
     undoTimer = setTimeout(() => {
@@ -157,33 +180,91 @@ function btnCancel() { clearTimeout(undoTimer); }
 
 function toggleOverlay(id, show) {
     document.getElementById(id).style.display = show ? 'flex' : 'none';
-    if (show && id === 'statsOverlay') renderLogs();
+    if (show && id === 'statsOverlay') calculateStats();
     if (show && id === 'weatherOverlay') renderFullForecast();
+}
+
+function calculateStats() {
+    const logs = Object.values(currentLogs);
+    const trips = Object.values(currentTrips);
+    const total = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
+    
+    document.getElementById('miniStatTotal').textContent = total;
+    document.getElementById('miniStatTrips').textContent = trips.length;
+    
+    const statsContainer = document.getElementById('statsContent');
+    if (statsContainer) {
+        const sortedTrips = trips.sort((a,b) => b.ts - a.ts);
+        const buildRow = (t) => {
+            const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+            const veh = logs.filter(l => Math.abs(l.ts - t.ts) <= 180000).reduce((sum, l) => sum + (l.delta || 1), 0);
+            return `<div class="dep-row"><span class="time">${time}</span><span class="pier">${t.from || '---'}</span><span class="count">${veh}</span></div>`;
+        };
+        
+        statsContainer.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                <div class="tile"><span class="tile-header">VEH_TOTAL</span><div style="font-size:32px;">${total}</div></div>
+                <div class="tile"><span class="tile-header">DEP_TOTAL</span><div style="font-size:32px;">${trips.length}</div></div>
+            </div>
+            <div class="tile-header">RECENT_SORTIES</div>
+            ${sortedTrips.slice(0, 20).map(buildRow).join('')}
+        `;
+    }
+    if (trips.length > 0) lastDepartureTs = Math.max(...trips.map(t => t.ts));
+    renderLogs();
 }
 
 function renderLogs() {
     const logDiv = document.getElementById('departureLog');
-    const statsContainer = document.getElementById('statsOverlay');
     if (!logDiv) return;
-
     const sortedTrips = Object.values(currentTrips).sort((a,b) => b.ts - a.ts);
     const logs = Object.values(currentLogs);
 
-    const buildRow = (t) => {
+    logDiv.innerHTML = sortedTrips.slice(0, 3).map(t => {
         const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-        const vehCount = logs.filter(l => Math.abs(l.ts - t.ts) <= 180000).reduce((sum, l) => sum + (l.delta || 1), 0);
-        return `<div class="dep-row"><span class="time">${time}</span><span class="pier">${t.from || '---'}</span><span class="count">${vehCount}</span></div>`;
-    };
-
-    logDiv.innerHTML = sortedTrips.slice(0, 3).map(buildRow).join('');
+        const veh = logs.filter(l => Math.abs(l.ts - t.ts) <= 180000).reduce((sum, l) => sum + (l.delta || 1), 0);
+        return `<div class="dep-row"><span>${time}</span><span style="color:var(--dim)">${t.from || '---'}</span><span>${veh}</span></div>`;
+    }).join('');
 }
 
 function checkReminder() {
     const header = document.getElementById('missionHeader');
     if (!header) return;
-    const elapsed = Date.now() - lastDepartureTs;
-    if (elapsed > 22 * 60 * 1000) header.classList.add('alert-active');
+    if (Date.now() - lastDepartureTs > 22 * 60 * 1000) header.classList.add('alert-active');
     else header.classList.remove('alert-active');
+}
+
+// ── WEATHER & WATER ──
+async function fetchWeather() {
+    try {
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
+        fullWeatherData = await resp.json();
+        const hr = new Date().getHours();
+        document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
+        document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
+        const icons = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
+        document.getElementById('mainWeatherIcon').textContent = icons[fullWeatherData.hourly.weathercode[hr]] || "🌤️";
+    } catch (e) {}
+}
+
+function renderFullForecast() {
+    const container = document.getElementById('prognosContent');
+    if (!fullWeatherData) return;
+    let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
+    for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
+        const speed = h.windspeed_10m[i];
+        const color = speed < 6 ? "#30d158" : speed < 12 ? "#ffd60a" : "#ff453a";
+        html += `<div class="prognos-row" style="border-left-color: ${color}">
+            <div class="p-time">${h.time[i].slice(11, 16)}</div>
+            <div class="p-icon">☀️</div>
+            <div class="p-wind" style="color:${color}">${speed.toFixed(1)} m/s</div>
+            <div class="p-arrow" style="transform: rotate(${(h.winddirection_10m[i] + 180) % 360}deg)">
+                <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg>
+            </div>
+            <div class="p-temp">${h.temperature_2m[i].toFixed(1)}°C</div>
+        </div>`;
+    }
+    container.innerHTML = html;
 }
 
 // ── INIT ──
@@ -193,27 +274,3 @@ document.addEventListener('DOMContentLoaded', () => {
   logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
 
   db.ref('.info/connected').on('value', s => {
-      const dot = document.getElementById('syncDot');
-      if (dot) dot.style.background = s.val() === true ? 'var(--safe)' : 'grey';
-  });
-
-  logsRef.on('value', snap => {
-    currentLogs = snap.val() || {};
-    ['personbil', 'paketbil', 'lastbil', 'traktor', 'cykel', 'mc', 'fotgangare', 'moped', 'fyrhjuling'].forEach(id => {
-        let count = 0; Object.values(currentLogs).forEach(l => { if(l.type === id) count += (l.delta || 1); });
-        const el = document.getElementById('b_' + id); if (el) el.textContent = Math.max(0, count);
-    });
-    renderLogs();
-  });
-
-  tripsRef.on('value', snap => {
-    currentTrips = snap.val() || {};
-    if (Object.values(currentTrips).length > 0) lastDepartureTs = Math.max(...Object.values(currentTrips).map(t => t.ts));
-    renderLogs();
-  });
-
-  db.ref('config/watlev').on('value', snap => {
-    const data = snap.val();
-    if (data) {
-        const disp = document.getElementById('waterDisplay');
-        i
