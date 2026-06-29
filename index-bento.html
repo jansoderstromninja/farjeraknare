@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare TACTICAL v1.6.6</title>
+<title>Färjeräknare TACTICAL v1.6.7</title>
 <style>
 :root {
   --bg: #000000;
@@ -17,27 +17,26 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-/* Tactical Scrollbars */
-::-webkit-scrollbar { width: 6px; }
+/* Tactical Scrollbar */
+::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #000; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 body {
   background: var(--bg); color: var(--text);
   font-family: 'SF Mono', 'Roboto Mono', monospace;
   min-height: 100dvh; width: 100vw;
-  display: flex; flex-direction: column;
-  /* FIX: Tillåt skroll på huvudvyn om innehållet är för stort */
-  overflow-y: auto; 
-  overflow-x: hidden;
+  display: flex; flex-direction: column; 
+  overflow-y: auto; /* Tillåter skroll på hela dashboarden i Chrome */
 }
 
+/* ── DASHBOARD GRID ── */
 .dashboard {
   display: grid; 
   grid-template-columns: 1fr 1fr 1.2fr;
   grid-template-rows: 1fr 1fr 1fr;
-  gap: 10px; padding: 10px; flex: 1;
-  min-height: 600px; /* Garanterar en minsta höjd */
+  gap: 12px; padding: 12px; flex: 1;
+  min-height: 700px;
 }
 
 .tile {
@@ -53,16 +52,17 @@ body {
     padding-bottom: 5px; display: flex; justify-content: space-between;
 }
 
-#btnGrid {
+/* ── KNAPP-GRID (Hårdkodat) ── */
+.btn-grid-area {
   grid-column: 1 / 3; grid-row: 1 / 4;
-  display: grid !important; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px;
 }
 
 .tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; justify-content: center; align-items: center; }
 .tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; cursor: pointer; }
 .tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
 
-/* KNAPPAR - 65PX */
+/* TACTICAL BUTTONS - 65PX IKONER */
 .v-btn {
   position: relative; width: 100%; height: 100%; 
   border: 1px solid var(--border); background: #0d1117;
@@ -71,9 +71,11 @@ body {
   cursor: pointer; transition: all 0.1s;
 }
 .v-btn:active { background: #21262d; transform: scale(0.97); }
-.v-btn.removing { background-color: var(--accent) !important; }
-.v-btn-emoji { font-size: clamp(45px, 8vh, 65px); margin-bottom: 2px; }
-.v-btn-label { font-size: 12px; font-weight: 800; color: #fff; text-transform: uppercase; }
+.v-btn.removing { background-color: var(--accent) !important; color: #000; }
+
+.v-btn-emoji { font-size: 65px; margin-bottom: 5px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+.v-btn-label { font-size: 13px; font-weight: 800; color: #fff; text-transform: uppercase; }
+
 .v-btn-badge {
   position: absolute; top: 8px; right: 8px; 
   background: var(--bg); color: var(--accent);
@@ -81,11 +83,9 @@ body {
   border-radius: 6px; font-size: 16px; font-weight: 900;
 }
 
-/* OVERLAYS */
+/* ── OVERLAYS (THE SCROLL FIX) ── */
 .overlay {
-  position: fixed; inset: 0;
-  height: 100dvh; width: 100vw;
-  background: #000; z-index: 2000;
+  position: fixed; inset: 0; background: #000; z-index: 2000;
   display: none; flex-direction: column;
 }
 .overlay.show { display: flex; }
@@ -100,7 +100,7 @@ body {
 
 .prognos-row {
   display: flex; align-items: center; gap: 12px; 
-  background: var(--panel); margin-bottom: 6px; padding: 15px;
+  background: var(--panel); margin-bottom: 8px; padding: 15px;
   border: 1px solid var(--border); border-left: 4px solid var(--accent);
 }
 
@@ -112,16 +112,46 @@ body {
 
 @media (max-width: 950px) {
   .dashboard { display: flex; flex-direction: column; height: auto; }
-  #btnGrid { grid-template-columns: repeat(3, 1fr); min-height: 500px; }
-  .tile { min-height: 180px; margin-bottom: 8px; }
+  .btn-grid-area { grid-template-columns: repeat(3, 1fr); min-height: 550px; margin-bottom: 10px; }
+  .tile { min-height: 200px; margin-bottom: 10px; }
 }
 </style>
 </head>
 <body>
 
 <div class="dashboard">
-  <div id="btnGrid"></div>
+  <!-- KONTROLLER (Hårdkodade för stabilitet) -->
+  <div class="btn-grid-area">
+      <button class="v-btn" onpointerdown="startUndo('personbil', this)" onpointerup="stopUndo()" onclick="tap('personbil')">
+          <span class="v-btn-badge" id="b_personbil">0</span><span class="v-btn-emoji">🚗</span><span class="v-btn-label">Bil</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('paketbil', this)" onpointerup="stopUndo()" onclick="tap('paketbil')">
+          <span class="v-btn-badge" id="b_paketbil">0</span><span class="v-btn-emoji">🚐</span><span class="v-btn-label">Paket</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('lastbil', this)" onpointerup="stopUndo()" onclick="tap('lastbil')">
+          <span class="v-btn-badge" id="b_lastbil">0</span><span class="v-btn-emoji">🚛</span><span class="v-btn-label">Lastbil</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('traktor', this)" onpointerup="stopUndo()" onclick="tap('traktor')">
+          <span class="v-btn-badge" id="b_traktor">0</span><span class="v-btn-emoji">🚜</span><span class="v-btn-label">Traktor</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('cykel', this)" onpointerup="stopUndo()" onclick="tap('cykel')">
+          <span class="v-btn-badge" id="b_cykel">0</span><span class="v-btn-emoji">🚲</span><span class="v-btn-label">Cykel</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('mc', this)" onpointerup="stopUndo()" onclick="tap('mc')">
+          <span class="v-btn-badge" id="b_mc">0</span><span class="v-btn-emoji">🏍️</span><span class="v-btn-label">MC</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('fotgangare', this)" onpointerup="stopUndo()" onclick="tap('fotgangare')">
+          <span class="v-btn-badge" id="b_fotgangare">0</span><span class="v-btn-emoji">🚶</span><span class="v-btn-label">Gående</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('moped', this)" onpointerup="stopUndo()" onclick="tap('moped')">
+          <span class="v-btn-badge" id="b_moped">0</span><span class="v-btn-emoji">🛵</span><span class="v-btn-label">Moped</span>
+      </button>
+      <button class="v-btn" onpointerdown="startUndo('fyrhjuling', this)" onpointerup="stopUndo()" onclick="tap('fyrhjuling')">
+          <span class="v-btn-badge" id="b_fyrhjuling">0</span><span class="v-btn-emoji">🏎️</span><span class="v-btn-label">ATV</span>
+      </button>
+  </div>
 
+  <!-- SPEEDO -->
   <div class="tile tile-speed" onclick="toggleOverlay('navOverlay', true)">
     <div class="tile-header"><span>VELOCITY / TACTICAL</span><span id="miniAcc">--</span></div>
     <div style="width:100%; position:relative; display:flex; justify-content:center;">
@@ -136,6 +166,7 @@ body {
     </div>
   </div>
 
+  <!-- ENV -->
   <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
     <div class="tile-header">ENVIRONMENT / RUSSARÖ</div>
     <div style="font-size:38px; font-weight:300; color:var(--safe);" id="waterDisplay">-- CM</div>
@@ -148,6 +179,7 @@ body {
     </div>
   </div>
 
+  <!-- LOG -->
   <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
     <div class="tile-header">MISSION LOG / STATS</div>
     <div id="departureLog" style="flex:1; font-size:11px;"></div>
@@ -155,17 +187,16 @@ body {
 </div>
 
 <div class="sys-bar">
-    <div style="display:flex; align-items:center;"><div style="width:6px; height:6px; background:var(--safe); border-radius:1px; margin-right:5px;"></div><span>v1.6.6-B / STABLE_SCROLL</span></div>
+    <div style="display:flex; align-items:center;"><div style="width:6px; height:6px; background:var(--safe); border-radius:1px; margin-right:5px;"></div><span>v1.6.7-B / HARDCODED_STABILITY</span></div>
     <div id="gpsStatusText">GPS_READY</div>
 </div>
 
 <!-- OVERLAYS -->
 <div id="navOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 20px; font-weight:800; cursor:pointer;">CLOSE</button></div>
+    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div class="overlay-scroll-area">
         <div class="tile" style="margin-bottom:15px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:54px;">0.0 kn</span></div>
         <div class="tile" style="margin-bottom:15px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:54px;">0.00 NM</span></div>
-        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:20px; color:var(--safe)">--</span></div>
     </div>
 </div>
 
@@ -191,77 +222,49 @@ const firebaseConfig = {
   projectId: "fordonsraknare", databaseURL: "https://fordonsraknare-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
-const CATS = [
-  { id: 'personbil',  label: 'Bil', emoji: '🚗' }, { id: 'paketbil',   label: 'Paket', emoji: '🚐' },
-  { id: 'lastbil',    label: 'Lastbil', emoji: '🚛' }, { id: 'traktor',    label: 'Traktor', emoji: '🚜' },
-  { id: 'cykel',      label: 'Cykel', emoji: '🚲' }, { id: 'mc',         label: 'MC', emoji: '🏍️' },
-  { id: 'fotgangare', label: 'Gående', emoji: '🚶' }, { id: 'moped',      label: 'Moped', emoji: 'Mope' },
-  { id: 'fyrhjuling', label: 'ATV', emoji: '🏎️' }
-];
-
 var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
+var undoTimer;
 
-function parseFmiRobust(xmlText) {
-  try {
-    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
-    if (bsElements.length > 0) {
-      for (let el of bsElements) {
-        if (el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent === 'WATLEV') 
-            return parseFloat(el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent);
-      }
-    }
-  } catch (e) {} return null;
+function tap(id) {
+    if (navigator.vibrate) navigator.vibrate(20);
+    if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: 1 });
 }
 
-async function updateWaterLevel() {
-  const start = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
-  try {
-    const resp = await fetch(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}`);
-    const mm = parseFmiRobust(await resp.text());
-    if (mm !== null) {
-      const cm = Math.round(mm / 10);
-      if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
-    }
-  } catch (e) {}
+function startUndo(id, btn) {
+    undoTimer = setTimeout(() => {
+        btn.classList.add('removing');
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+        if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: -1 });
+        setTimeout(() => btn.classList.remove('removing'), 1000);
+    }, 800);
 }
-
-function getWeatherIcon(code, hour) {
-    const isNight = hour < 6 || hour > 22;
-    if (code === 0) return isNight ? "🌙" : "☀️";
-    if (code <= 3) return isNight ? "☁️" : "🌤️";
-    if (code >= 51 && code <= 67) return "🌧️";
-    if (code >= 71 && code <= 77) return "❄️";
-    return "🌤️";
-}
-
-function getCompass(deg) {
-    return ["N", "NO", "O", "SO", "S", "SV", "V", "NV"][Math.round(deg / 45) % 8];
-}
+function stopUndo() { clearTimeout(undoTimer); }
 
 function toggleOverlay(id, show) {
     document.getElementById(id).style.display = show ? 'flex' : 'none';
-    if (show && id === 'statsOverlay') {
-        document.getElementById('statTotal').textContent = Object.values(currentLogs).reduce((sum, l) => sum + (l.delta || 1), 0);
-        document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
-    }
+    if (show && id === 'statsOverlay') calculateStats();
     if (show && id === 'weatherOverlay') renderFullForecast();
 }
+
+function calculateStats() {
+    const logs = Object.values(currentLogs);
+    document.getElementById('statTotal').textContent = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
+    document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
+}
+
+function getCompass(deg) { return ["N", "NO", "O", "SO", "S", "SV", "V", "NV"][Math.round(deg / 45) % 8]; }
 
 function renderFullForecast() {
     const container = document.getElementById('prognosContent');
     if (!fullWeatherData) return;
     let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
     for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
-        const time = h.time[i].slice(11, 16);
         const speed = h.windspeed_10m[i];
         const color = speed < 6 ? "#10B981" : speed < 12 ? "#F59E0B" : "#ff3b30";
         html += `<div class="prognos-row" style="border-left-color: ${color}">
-            <div style="font-weight:900; min-width:55px;">${time}</div>
-            <div style="font-size:22px; min-width:40px; text-align:center;">${getWeatherIcon(h.weathercode[i], parseInt(time))}</div>
+            <div style="font-weight:900; min-width:55px; font-size:14px;">${h.time[i].slice(11, 16)}</div>
             <div style="flex:1; color:${color}; font-weight:800;">${speed.toFixed(1)} m/s</div>
-            <div style="font-weight:800; min-width:60px; text-align:right;">${h.temperature_2m[i].toFixed(1)}°C</div>
             <div style="transform: rotate(${(h.winddirection_10m[i] + 180) % 360}deg); margin-left:15px; display:flex; flex-direction:column; align-items:center;">
                 <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg>
                 <span style="font-size:8px; font-weight:800; color:var(--dim)">${getCompass(h.winddirection_10m[i])}</span>
@@ -272,25 +275,6 @@ function renderFullForecast() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const grid = document.getElementById('btnGrid');
-  if (grid) {
-    CATS.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = 'v-btn';
-      btn.innerHTML = `<span class="v-btn-badge" id="b_${cat.id}">0</span><span class="v-btn-emoji">${cat.emoji}</span><span class="v-btn-label">${cat.label}</span>`;
-      let timer;
-      btn.onpointerdown = () => timer = setTimeout(() => {
-          btn.classList.add('removing');
-          if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-          if (logsRef) logsRef.push({ type: cat.id, ts: Date.now(), delta: -1 });
-          setTimeout(() => btn.classList.remove('removing'), 1000);
-      }, 800);
-      btn.onpointerup = () => clearTimeout(timer);
-      btn.onclick = () => { if(!btn.classList.contains('removing')) { if(navigator.vibrate) navigator.vibrate(20); if(logsRef) logsRef.push({type: cat.id, ts: Date.now(), delta: 1}); } };
-      grid.appendChild(btn);
-    });
-  }
-
   try {
     firebase.initializeApp(firebaseConfig); db = firebase.database();
     const today = new Date().toISOString().slice(0, 10);
@@ -298,46 +282,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     logsRef.on('value', snap => {
       currentLogs = snap.val() || {};
-      CATS.forEach(cat => {
-          let count = 0; Object.values(currentLogs).forEach(l => { if(l.type === cat.id) count += (l.delta || 1); });
-          const badge = document.getElementById('b_' + cat.id);
-          if (badge) badge.textContent = Math.max(0, count);
+      const ids = ['personbil', 'paketbil', 'lastbil', 'traktor', 'cykel', 'mc', 'fotgangare', 'moped', 'fyrhjuling'];
+      ids.forEach(id => {
+          let count = 0; Object.values(currentLogs).forEach(l => { if(l.type === id) count += (l.delta || 1); });
+          const el = document.getElementById('b_' + id);
+          if (el) el.textContent = Math.max(0, count);
       });
     });
+    
     tripsRef.on('value', snap => {
       currentTrips = snap.val() || {};
       const sorted = Object.values(currentTrips).sort((a,b) => b.ts - a.ts).slice(0,4);
       const logDiv = document.getElementById('departureLog');
       if (logDiv) logDiv.innerHTML = sorted.map(t => `<div class="dep-row"><span>${new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'})}</span><span>${t.from || '---'}</span></div>`).join('');
     });
+
     db.ref('config/watlev').on('value', snap => {
       if (snap.val()) document.getElementById('waterDisplay').textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
     });
 
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(pos => {
-        const kn = pos.coords.speed * 1.94384 || 0;
-        const acc = pos.coords.accuracy;
-        document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
-        document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
-        document.getElementById('miniAcc').textContent = `${Math.round(acc)}M`;
-        if (kn > maxSpeedKn) maxSpeedKn = kn;
-        document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
-        document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-      }, null, { enableHighAccuracy: true });
-    }
-    fetchWeather(); updateWaterLevel();
-  } catch (e) {}
+    navigator.geolocation.watchPosition(pos => {
+      const kn = pos.coords.speed * 1.94384 || 0;
+      document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
+      document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
+      document.getElementById('miniAcc').textContent = `${Math.round(pos.coords.accuracy)}M`;
+      if (kn > maxSpeedKn) maxSpeedKn = kn;
+      document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
+    }, null, { enableHighAccuracy: true });
+
+    fetchWeather();
+  } catch (e) { console.error(e); }
 });
 
 async function fetchWeather() {
     try {
-        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
         fullWeatherData = await resp.json();
         const hr = new Date().getHours();
         document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
         document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
-        document.getElementById('mainWeatherIcon').textContent = getWeatherIcon(fullWeatherData.hourly.weathercode[hr], hr);
     } catch (e) {}
 }
 </script>
