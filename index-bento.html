@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Färjeräknare TACTICAL v1.7.3</title>
+<title>Färjeräknare TACTICAL v1.7.4</title>
 <style>
 :root {
   --bg: #000000;
   --panel: #21262d; 
   --border: #3d444d;
   --text: #ffffff;
-  --accent: #ff453a; /* Ljusare, mer mättad taktisk röd */
-  --safe: #30d158;   /* Kraftigare Apple-grön */
-  --warning: #ffd60a; 
-  --dim: #8e8e93;
+  --accent: #ff453a; 
+  --safe: #30d158;   
+  --warning: #ffd60a; /* Signal Yellow */
+  --dim: #c9d1d9;    /* Ljusare grå för sekundär text */
 }
 
-/* ── TOTAL UI LOCK (No selection) ── */
+/* ── UI LOCK ── */
 *, *::before, *::after { 
     box-sizing: border-box; margin: 0; padding: 0; 
     -webkit-tap-highlight-color: transparent;
@@ -43,14 +43,17 @@ body {
   position: relative; overflow: hidden;
 }
 
+/* ── RUBRIKER (MAX KONTRAST v1.7.4) ── */
 .tile-header {
-    font-size: 10px; font-weight: 800; color: var(--accent);
+    font-size: 11px; font-weight: 900; 
+    color: #ffffff; /* Ändrad till vit för max kontrast */
     text-transform: uppercase; letter-spacing: 2px;
-    margin-bottom: 5px; border-bottom: 1px solid var(--border);
-    padding-bottom: 3px; flex-shrink: 0;
+    margin-bottom: 8px; border-bottom: 1px solid var(--border);
+    padding-bottom: 5px; display: flex; justify-content: space-between;
+    flex-shrink: 0;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 
-/* ── KNAPP-GRID ── */
 .btn-grid-area {
   grid-column: 1 / 3; grid-row: 1 / 4;
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px;
@@ -62,7 +65,7 @@ body {
   border-radius: 8px; display: flex; flex-direction: column; 
   align-items: center; justify-content: center;
   cursor: pointer; transition: background 0.1s, transform 0.05s;
-  touch-action: none; /* Stoppar system-gester på knappar */
+  touch-action: none;
 }
 .v-btn:active { background: #30363d; transform: scale(0.96); }
 .v-btn.removing { background-color: var(--accent) !important; color: #000; }
@@ -70,15 +73,18 @@ body {
 .v-btn-emoji { font-size: clamp(35px, 8vh, 65px); pointer-events: none; margin-bottom: 2px; }
 .v-btn-label { font-size: clamp(10px, 1.5vh, 13px); font-weight: 800; color: #fff; text-transform: uppercase; pointer-events: none; }
 
+/* ── BADGES (MAX KONTRAST v1.7.4) ── */
 .v-btn-badge {
   position: absolute; top: 6px; right: 6px; 
-  background: var(--bg); color: var(--accent);
-  padding: 1px 6px; border: 1px solid var(--accent);
-  border-radius: 4px; font-size: clamp(12px, 2vh, 16px); font-weight: 900; pointer-events: none;
+  background: var(--warning); /* Signal-gul */
+  color: #000000;              /* Svart text */
+  padding: 2px 8px; border: 1px solid #000;
+  border-radius: 4px; font-size: clamp(12px, 2vh, 18px); font-weight: 900; 
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-/* ── HIGH CONTRAST DATA ── */
-.speedo-num { font-size: clamp(40px, 10vh, 72px); font-weight: 300; color: #fff; } /* Vit för max läsbarhet */
+.speedo-num { font-size: clamp(40px, 10vh, 72px); font-weight: 300; color: #fff; }
 .water-display { font-size: clamp(24px, 6vh, 42px); font-weight: 300; color: var(--safe); }
 
 .sys-bar {
@@ -87,7 +93,6 @@ body {
   padding: 0 15px; font-size: 9px; font-weight: 800; color: #4a5568;
 }
 
-/* ── WEATHER ROW FIX ── */
 .prognos-row {
   display: grid; grid-template-columns: 55px 40px 1fr 70px 35px;
   align-items: center; gap: 10px; background: var(--panel); 
@@ -167,22 +172,28 @@ body {
 
   <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
     <div class="tile-header">MISSION SUMMARY</div>
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:5px;">
-        <div style="background:rgba(0,0,0,0.3); padding:5px; text-align:center; border-radius:4px;"><span style="font-size:8px; color:var(--dim); display:block;">VEH</span><span id="miniStatTotal" style="font-size:18px; font-weight:800;">0</span></div>
-        <div style="background:rgba(0,0,0,0.3); padding:5px; text-align:center; border-radius:4px;"><span style="font-size:8px; color:var(--dim); display:block;">DEP</span><span id="miniStatTrips" style="font-size:18px; font-weight:800;">0</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+        <div style="background:rgba(0,0,0,0.3); padding:8px; text-align:center; border-radius:4px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:9px; color:var(--dim); display:block; font-weight:800;">VEHICLES</span>
+            <span id="miniStatTotal" style="font-size:22px; font-weight:800; color:#fff;">0</span>
+        </div>
+        <div style="background:rgba(0,0,0,0.3); padding:8px; text-align:center; border-radius:4px; border: 1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:9px; color:var(--dim); display:block; font-weight:800;">TRIPS</span>
+            <span id="miniStatTrips" style="font-size:22px; font-weight:800; color:#fff;">0</span>
+        </div>
     </div>
     <div id="departureLog" style="flex:1; font-size:11px; overflow: hidden;"></div>
   </div>
 </div>
 
 <div class="sys-bar">
-    <div style="display:flex; align-items:center;"><div id="syncDot" style="width:6px; height:6px; background:grey; border-radius:1px; margin-right:5px;"></div><span>v1.7.3-B / COMBAT_READY</span></div>
+    <div style="display:flex; align-items:center;"><div id="syncDot" style="width:6px; height:6px; background:grey; border-radius:1px; margin-right:5px;"></div><span>v1.7.4-B / OPERATIONAL_VISIBILITY</span></div>
     <div id="gpsStatusText">GPS_SCANNING</div>
 </div>
 
 <!-- OVERLAYS -->
 <div id="navOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800;">CLOSE</button></div>
+    <div class="overlay-hdr-fixed"><span style="color:#fff; font-weight:900;">NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div class="overlay-scroll">
         <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:54px; font-weight:300;">0.0 kn</span></div>
         <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:54px; font-weight:300;">0.00 NM</span></div>
@@ -190,12 +201,12 @@ body {
 </div>
 
 <div id="weatherOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800;">CLOSE</button></div>
+    <div class="overlay-hdr-fixed"><span style="color:#fff; font-weight:900;">METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div id="prognosContent" class="overlay-scroll"></div>
 </div>
 
 <div id="statsOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>TRAFFIC_ANALYSIS</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800;">CLOSE</button></div>
+    <div class="overlay-hdr-fixed"><span style="color:#fff; font-weight:900;">TRAFFIC_ANALYSIS</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div id="statsContent" class="overlay-scroll">
         <div class="tile" style="margin-bottom:15px;"><span class="tile-header">TOTAL_VEHICLES</span><div id="statTotalFull" style="font-size:72px; color:var(--safe); font-weight:300;">0</div></div>
         <div class="tile"><span class="tile-header">TOTAL_DEPARTURES</span><div id="statTripsFull" style="font-size:72px; font-weight:300;">0</div></div>
@@ -215,7 +226,6 @@ var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 var undoTimer = null, didUndo = false;
 
-// ── FIXED TAP LOGIC (v1.7.3) ──
 function btnDown(id, btn) {
     didUndo = false;
     undoTimer = setTimeout(() => {
@@ -237,7 +247,6 @@ function btnUp(id, btn) {
 
 function btnCancel() { clearTimeout(undoTimer); }
 
-// ── LOGIC ──
 function toggleOverlay(id, show) {
     document.getElementById(id).style.display = show ? 'flex' : 'none';
     if (show && id === 'statsOverlay') calculateStats();
