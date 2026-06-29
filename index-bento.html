@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Färjeräknare TACTICAL v1.6.2</title>
+<title>Färjeräknare TACTICAL GREY v1.6.3</title>
 <style>
 :root {
   --bg: #000000;
-  --panel: #0a0c14;
-  --border: #1e2d47;
+  --panel: #161b22; /* Mörkgrå "Tactical Grey" */
+  --border: #30363d;
   --text: #ffffff;
   --accent: #ff3b30; 
   --safe: #10B981;   
   --warning: #FACC15; 
-  --dim: #4a5568;
+  --dim: #8b949e;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -29,13 +29,14 @@ body {
   display: grid; 
   grid-template-columns: 1fr 1fr 1.2fr;
   grid-template-rows: 1fr 1fr 1fr;
-  gap: 8px; padding: 8px; flex: 1;
+  gap: 10px; padding: 10px; flex: 1;
 }
 
 .tile {
   background: var(--panel); border: 1px solid var(--border);
-  border-radius: 8px; padding: 15px; display: flex; flex-direction: column;
+  border-radius: 12px; padding: 15px; display: flex; flex-direction: column;
   position: relative; overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
 }
 
 .tile-header {
@@ -47,32 +48,32 @@ body {
 
 #btnGrid {
   grid-column: 1 / 3; grid-row: 1 / 4;
-  display: grid !important; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px;
+  display: grid !important; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px;
 }
 
 .tile-speed { grid-column: 3 / 4; grid-row: 1 / 2; justify-content: center; align-items: center; }
 .tile-env   { grid-column: 3 / 4; grid-row: 2 / 3; cursor: pointer; }
 .tile-log   { grid-column: 3 / 4; grid-row: 3 / 4; cursor: pointer; }
 
-/* KNAPPAR */
+/* KNAPPAR - STÖRRE BILDER */
 .v-btn {
   position: relative; width: 100%; height: 100%; 
-  border: 1px solid var(--border); background: #050505;
-  border-radius: 6px; display: flex; flex-direction: column; 
+  border: 1px solid var(--border); background: #0d1117;
+  border-radius: 8px; display: flex; flex-direction: column; 
   align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.1s;
 }
-.v-btn:active { background: #111; transform: scale(0.98); }
+.v-btn:active { background: #21262d; transform: scale(0.97); border-color: var(--accent); }
 .v-btn.removing { background-color: var(--accent) !important; }
 
-.v-btn-emoji { font-size: clamp(30px, 6vh, 50px); margin-bottom: 5px; }
-.v-btn-label { font-size: 11px; font-weight: 800; color: var(--dim); text-transform: uppercase; }
+.v-btn-emoji { font-size: clamp(45px, 8vh, 65px); margin-bottom: 2px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+.v-btn-label { font-size: 12px; font-weight: 800; color: #fff; text-transform: uppercase; }
 
 .v-btn-badge {
-  position: absolute; top: 5px; right: 5px; 
+  position: absolute; top: 8px; right: 8px; 
   background: var(--bg); color: var(--accent);
-  padding: 1px 6px; border: 1px solid var(--accent);
-  border-radius: 3px; font-size: 14px; font-weight: 900;
+  padding: 2px 8px; border: 2px solid var(--accent);
+  border-radius: 6px; font-size: 16px; font-weight: 900;
 }
 
 /* ── SPEEDO ── */
@@ -85,35 +86,38 @@ body {
 .water-display { font-size: 38px; font-weight: 300; color: var(--safe); }
 .wind-row-t { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
 
-/* ── OVERLAYS ── */
+/* ── OVERLAYS (FIXED SCROLL) ── */
 .overlay {
-  position: fixed; inset: 0; background: #000; z-index: 2000;
-  display: none; flex-direction: column; padding: 20px;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 2000;
+  display: none; flex-direction: column; padding: 25px;
 }
 .overlay.show { display: flex; }
-.overlay-content { flex: 1; overflow-y: auto; padding-bottom: 40px; }
+.overlay-content { 
+  flex: 1; 
+  overflow-y: scroll !important; /* Tvinga fram skrollning */
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 60px;
+}
 
 .prognos-row {
   display: flex; align-items: center; gap: 12px; 
-  background: #0a0a0a; margin-bottom: 4px; padding: 12px;
-  border-left: 3px solid var(--border);
+  background: #161b22; margin-bottom: 6px; padding: 15px;
+  border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  border-radius: 4px;
 }
-.p-dir-box { display: flex; flex-direction: column; align-items: center; min-width: 40px; }
-.p-dir-label { font-size: 9px; font-weight: 800; color: var(--dim); margin-top: 2px; }
 
 .sys-bar {
   height: 25px; background: #000; border-top: 1px solid var(--border);
   display: flex; justify-content: space-between; align-items: center;
   padding: 0 15px; font-size: 9px; font-weight: 800; color: var(--dim);
 }
-.dot { width: 6px; height: 6px; border-radius: 1px; background: #222; margin-right: 5px; }
-.dot-on { background: var(--safe); box-shadow: 0 0 5px var(--safe); }
+.dot-on { background: var(--safe); box-shadow: 0 0 5px var(--safe); width: 6px; height: 6px; border-radius: 1px; margin-right: 5px; }
 
 @media (max-width: 950px) {
   body { overflow-y: auto; }
   .dashboard { display: flex; flex-direction: column; height: auto; }
-  #btnGrid { grid-template-columns: repeat(3, 1fr); min-height: 450px; }
-  .tile { min-height: 180px; margin-bottom: 5px; }
+  #btnGrid { grid-template-columns: repeat(3, 1fr); min-height: 480px; }
+  .tile { min-height: 180px; margin-bottom: 8px; }
 }
 </style>
 </head>
@@ -122,11 +126,12 @@ body {
 <div class="dashboard">
   <div id="btnGrid"></div>
 
+  <!-- SPEEDO -->
   <div class="tile tile-speed" onclick="toggleOverlay('navOverlay', true)">
     <div class="tile-header"><span>VELOCITY / TACTICAL</span><span id="miniAcc">GPS: --</span></div>
     <div class="speedo-wrap">
         <svg viewBox="0 0 200 120" width="100%">
-            <path d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="#111" stroke-width="12" stroke-dasharray="8 2"/>
+            <path d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="#222" stroke-width="12" stroke-dasharray="8 2"/>
             <path id="speedArc" d="M 40 100 A 70 70 0 1 1 160 100" fill="none" stroke="var(--accent)" stroke-width="12" stroke-dasharray="0 1000" style="transition: stroke-dasharray 0.4s;"/>
         </svg>
         <div class="speedo-val">
@@ -136,36 +141,38 @@ body {
     </div>
   </div>
 
+  <!-- ENV -->
   <div class="tile tile-env" onclick="toggleOverlay('weatherOverlay', true)">
     <div class="tile-header">ENVIRONMENT / RUSSARÖ</div>
     <div class="water-display" id="waterDisplay">-- CM</div>
     <div class="wind-row-t">
         <div style="display: flex; align-items: center; gap: 10px;">
-            <span id="mainWeatherIcon" style="font-size: 24px;">☀️</span>
-            <span id="windMain" style="font-weight: 800; font-size: 18px;">-- M/S</span>
+            <span id="mainWeatherIcon" style="font-size: 28px;">☀️</span>
+            <span id="windMain" style="font-weight: 800; font-size: 20px;">-- M/S</span>
         </div>
         <div id="windDir"><svg width="24" height="24" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="var(--accent)"/></svg></div>
     </div>
   </div>
 
+  <!-- LOG -->
   <div class="tile tile-log" onclick="toggleOverlay('statsOverlay', true)">
     <div class="tile-header">MISSION LOG / STATS</div>
-    <div id="departureLog" style="overflow-y: auto; flex: 1; font-size: 11px;"></div>
+    <div id="departureLog" style="overflow-y: hidden; flex: 1; font-size: 11px;"></div>
   </div>
 </div>
 
 <div class="sys-bar">
-    <div style="display: flex; align-items: center;"><div id="syncDot" class="dot"></div><span>v1.6.2-B / TACTICAL_RESTORED</span></div>
-    <div id="gpsStatusText">GPS_SCANNING</div>
+    <div style="display: flex; align-items: center;"><div id="syncDot" class="dot-on"></div><span>v1.6.3-B / GREY_TACTICAL</span></div>
+    <div id="gpsStatusText">GPS_READY</div>
 </div>
 
 <!-- OVERLAYS -->
 <div id="navOverlay" class="overlay">
     <div class="tile-header"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
     <div class="overlay-content">
-        <div class="tile" style="margin-bottom:8px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:48px;">0.0 kn</span></div>
-        <div class="tile" style="margin-bottom:8px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:48px;">0.00 NM</span></div>
-        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:18px; color:var(--safe); margin-top:10px;">--</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:48px;">0.0 kn</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:48px;">0.00 NM</span></div>
+        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:18px; color:var(--safe)">--</span></div>
     </div>
 </div>
 
@@ -177,7 +184,7 @@ body {
 <div id="statsOverlay" class="overlay">
     <div class="tile-header"><span>TRAFFIC_ANALYSIS_REPORT</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:5px 15px; cursor:pointer; font-weight:800;">CLOSE</button></div>
     <div id="statsContent" class="overlay-content">
-        <div class="tile" style="margin-bottom:8px;"><span class="tile-header">TOTAL_VEHICLES</span><div id="statTotal" style="font-size:64px; color:var(--safe);">0</div></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_VEHICLES</span><div id="statTotal" style="font-size:64px; color:var(--safe);">0</div></div>
         <div class="tile"><span class="tile-header">TOTAL_DEPARTURES</span><div id="statTrips" style="font-size:64px;">0</div></div>
     </div>
 </div>
@@ -202,35 +209,43 @@ const CATS = [
 var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 
-// ── UTILITIES ──
 function getCompassLabel(deg) {
     const sectors = ["N", "NO", "O", "SO", "S", "SV", "V", "NV"];
     return sectors[Math.round(deg / 45) % 8];
 }
 
-function parseFmiRobust(xmlText) {
-  try {
-    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
-    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
-    if (bsElements.length > 0) {
-      for (let el of bsElements) {
-        if (el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent === 'WATLEV') 
-            return parseFloat(el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent);
-      }
+function toggleOverlay(id, show) {
+    document.getElementById(id).style.display = show ? 'flex' : 'none';
+    if (show && id === 'statsOverlay') {
+        document.getElementById('statTotal').textContent = Object.values(currentLogs).reduce((sum, l) => sum + (l.delta || 1), 0);
+        document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
     }
-  } catch (e) {} return null;
+    if (show && id === 'weatherOverlay') renderFullForecast();
 }
 
-async function updateWaterLevel() {
-  const start = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
-  try {
-    const resp = await fetch(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}`);
-    const mm = parseFmiRobust(await resp.text());
-    if (mm !== null) {
-      const cm = Math.round(mm / 10);
-      if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
+function renderFullForecast() {
+    const container = document.getElementById('prognosContent');
+    if (!fullWeatherData) return;
+    let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
+    for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
+        const time = h.time[i].slice(11, 16);
+        const speed = h.windspeed_10m[i];
+        const color = speed < 6 ? "#10B981" : speed < 12 ? "#F59E0B" : "#ff3b30";
+        const deg = h.winddirection_10m[i];
+        const rotation = (deg + 180) % 360;
+        
+        html += `<div class="prognos-row" style="border-left-color: ${color}">
+            <div style="font-weight:900; min-width:55px; font-size:14px;">${time}</div>
+            <div style="font-size:22px; min-width:40px; text-align:center;">${getWeatherIcon(h.weathercode[i], time, h.temperature_2m[i])}</div>
+            <div style="flex:1; color:${color}; font-weight:800;">${speed.toFixed(1)} m/s</div>
+            <div style="font-weight:800; min-width:60px; text-align:right;">${h.temperature_2m[i].toFixed(1)}°C</div>
+            <div style="transform: rotate(${rotation}deg); margin-left:15px; display:flex; flex-direction:column; align-items:center;">
+                <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg>
+                <span style="font-size:8px; font-weight:800; margin-top:2px;">${getCompassLabel(deg)}</span>
+            </div>
+        </div>`;
     }
-  } catch (e) {}
+    container.innerHTML = html;
 }
 
 function getWeatherIcon(code, timeStr, temp) {
@@ -244,51 +259,6 @@ function getWeatherIcon(code, timeStr, temp) {
     return "🌤️";
 }
 
-function getWindColor(speed) {
-    if (speed < 6) return "#10B981";
-    if (speed < 12) return "#F59E0B";
-    return "#ff3b30";
-}
-
-function toggleOverlay(id, show) {
-    document.getElementById(id).style.display = show ? 'flex' : 'none';
-    if (show && id === 'statsOverlay') calculateStats();
-    if (show && id === 'weatherOverlay') renderFullForecast();
-}
-
-function calculateStats() {
-    const logs = Object.values(currentLogs);
-    document.getElementById('statTotal').textContent = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
-    document.getElementById('statTrips').textContent = Object.values(currentTrips).length;
-}
-
-function renderFullForecast() {
-    const container = document.getElementById('prognosContent');
-    if (!fullWeatherData) return;
-    let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
-    for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
-        const time = h.time[i].slice(11, 16);
-        const color = getWindColor(h.windspeed_10m[i]);
-        const deg = h.winddirection_10m[i];
-        const rotation = (deg + 180) % 360; // Pilen pekar VART det blåser
-        
-        html += `<div class="prognos-row" style="border-left-color: ${color}">
-            <div style="font-weight:900; min-width:55px; font-size:14px;">${time}</div>
-            <div style="font-size:22px; min-width:40px; text-align:center;">${getWeatherIcon(h.weathercode[i], time, h.temperature_2m[i])}</div>
-            <div style="flex:1; color:${color}; font-weight:800;">${h.windspeed_10m[i].toFixed(1)} m/s</div>
-            <div style="font-weight:800; min-width:60px; text-align:right; color:var(--dim)">${h.temperature_2m[i].toFixed(1)}°C</div>
-            <div class="p-dir-box">
-                <div style="transform: rotate(${rotation}deg); display:flex;">
-                    <svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg>
-                </div>
-                <div class="p-dir-label">${getCompassLabel(deg)}</div>
-            </div>
-        </div>`;
-    }
-    container.innerHTML = html;
-}
-
-// ── MAIN INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   const grid = document.getElementById('btnGrid');
   CATS.forEach(cat => {
@@ -310,8 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(firebaseConfig); db = firebase.database();
   const today = new Date().toISOString().slice(0, 10);
   logsRef = db.ref('days/' + today + '/logs'); tripsRef = db.ref('turer/' + today);
-
-  db.ref('.info/connected').on('value', s => document.getElementById('syncDot').classList.toggle('dot-on', s.val() === true));
+  
   logsRef.on('value', snap => {
     currentLogs = snap.val() || {};
     CATS.forEach(cat => {
@@ -328,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (snap.val()) {
         const val = snap.val().value;
         document.getElementById('waterDisplay').textContent = (val > 0 ? '+' : '') + val + ' CM';
-        document.getElementById('waterDisplay').style.color = (val < -20 || val > 20) ? 'var(--accent)' : 'var(--safe)';
     }
   });
 
@@ -338,14 +306,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
     document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
     document.getElementById('miniAcc').textContent = `GPS: ${Math.round(acc)}M`;
-    document.getElementById('gpsStatusText').textContent = acc < 15 ? 'HIGH_PRECISION' : 'SIGNAL_DEGRADED';
     if (kn > maxSpeedKn) maxSpeedKn = kn;
     document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
     document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
   }, null, { enableHighAccuracy: true });
 
-  fetchWeather(); updateWaterLevel();
-  setInterval(fetchWeather, 1800000); setInterval(updateWaterLevel, 900000);
+  fetchWeather();
 });
 
 async function fetchWeather() {
