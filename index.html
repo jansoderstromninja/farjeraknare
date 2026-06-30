@@ -879,7 +879,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.8";
+const APP_VERSION = "7.9";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
@@ -2422,21 +2422,20 @@ async function loadWeather() {
     lat = lastKnownGpsPos.lat; lon = lastKnownGpsPos.lng; gpsUsed = true;
   }
   const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,cape,weathercode&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
-  try {
-    const [omResp, fmiWaterResp] = await Promise.all([
-      fetch(omUrl),
-      fetch(buildFmiWaterUrl()).catch(() => null),
-    ]);
-    if (!omResp.ok) throw new Error('HTTP ' + omResp.status);
-    weatherData = await omResp.json();
-    weatherLastFetch = Date.now();
 
+  // allSettled: ett misslyckat anrop blockerar inte det andra
+  const [omResult, fmiResult] = await Promise.allSettled([
+    fetch(omUrl),
+    fetch(buildFmiWaterUrl()).catch(() => null),
+  ]);
+
+  // ── FMI vattenstånd (oberoende — fel här påverkar inte timprognosen) ──
+  try {
+    const fmiWaterResp = fmiResult.status === 'fulfilled' ? fmiResult.value : null;
     let fmiWater = null;
     if (fmiWaterResp?.ok) {
       fmiWater = parseFmiSimple(await fmiWaterResp.text(), null);
     }
-
-    // FMI water level card
     if (fmiStatus && fmiWater?.WATLEV != null) {
       const cm  = Math.round(fmiWater.WATLEV.value / 10);
       const col = waterLevelColor(cm);
@@ -2463,8 +2462,33 @@ async function loadWeather() {
         `<div class="fmi-card-label">${lang === 'fi' ? 'Vedenpinta Hanko' : 'Vattenstånd Hangö'}</div>` +
         `</div></div>`;
     }
+  } catch (fmiErr) {
+    console.error('[FMI] Fel vid rendering:', fmiErr);
+  }
 
-    // Hourly forecast rows (Open-Meteo)
+  // ── Open-Meteo timprognos ──
+  if (omResult.status === 'rejected') {
+    console.error('[OM] fetch-fel:', omResult.reason);
+    container.innerHTML = `<div class="empty">${t('weatherError')}</div>`;
+    if (updEl) updEl.textContent = '';
+    updateThunderWarning(null);
+    return;
+  }
+  const omResp = omResult.value;
+  console.log('[OM] HTTP', omResp.status, omUrl.slice(0, 80));
+  if (!omResp.ok) {
+    const body = await omResp.text().catch(() => '');
+    console.error('[OM] HTTP-fel', omResp.status, ':', body.slice(0, 300));
+    container.innerHTML = `<div class="empty">${t('weatherError')}</div>`;
+    if (updEl) updEl.textContent = '';
+    updateThunderWarning(null);
+    return;
+  }
+  try {
+    weatherData = await omResp.json();
+    console.log('[OM] JSON OK, timmar:', weatherData?.hourly?.time?.length);
+    weatherLastFetch = Date.now();
+
     const now    = new Date();
     const locStr = now.toLocaleString('sv-SE', { timeZone: 'Europe/Helsinki' });
     const hDate  = locStr.slice(0, 10), hHour = locStr.slice(11, 13);
@@ -2473,8 +2497,8 @@ async function loadWeather() {
     if (idx < 0) idx = 0;
     let html = '';
     for (let i = idx; i < idx + 48 && i < times.length; i++) {
-      const speed = weatherData.hourly.windspeed_10m[i];
-      const gusts = weatherData.hourly.windgusts_10m[i];
+      const speed = weatherData.hourly.windspeed_10m[i] ?? 0;
+      const gusts = weatherData.hourly.windgusts_10m[i] ?? 0;
       const dir   = weatherData.hourly.winddirection_10m[i];
       const temp  = weatherData.hourly.temperature_2m[i];
       const wcode = weatherData.hourly.weathercode?.[i];
@@ -2487,7 +2511,7 @@ async function loadWeather() {
           `<div class="wind-main">` +
             `<span class="wind-speed" style="color:${color};${bold}">${t('windLabel')}: ${speed.toFixed(1)} m/s</span>` +
             `<span class="wind-gust">${t('gustLabel')}: ${gusts.toFixed(1)} m/s</span>` +
-            `<span class="wind-temp">🌡️ ${temp.toFixed(1)}°C</span>` +
+            `<span class="wind-temp">🌡️ ${temp != null ? temp.toFixed(1) : '—'}°C</span>` +
           `</div>` +
           `<div class="wind-dir">${windDirArrow(dir)}</div>` +
         `</div>`;
@@ -2498,7 +2522,8 @@ async function loadWeather() {
     if (!gpsUsed && mode === 'ferry')
       container.insertAdjacentHTML('beforeend', `<div class="weather-note">${t('weatherGpsError')}</div>`);
     updateThunderWarning(thunderInfo(idx));
-  } catch (_) {
+  } catch (e) {
+    console.error('[OM] JSON/rendering-fel:', e);
     container.innerHTML = `<div class="empty">${t('weatherError')}</div>`;
     if (updEl) updEl.textContent = '';
     updateThunderWarning(null);

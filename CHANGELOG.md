@@ -1,5 +1,12 @@
 # Changelog
 
+## v7.8 – 2026-06-30
+- Bugg fixad: Open-Meteo timprognos visades inte trots att FMI-vattenståndskortet fungerade
+- Promise.all ersatt med Promise.allSettled — ett misslyckat API-anrop blockerar inte längre det andra
+- FMI-blocket har nu en egen try-catch, isolerat från timprognos-renderingen
+- Null-guards i timprognos-loopen (speed ?? 0, gusts ?? 0) — Open-Meteo returnerar ibland null för enstaka timmar
+- console.log på OM HTTP-status och antal timmar för felsökning; console.error vid nätverksfel eller HTTP-fel
+
 ## v7.7 – 2026-06-30
 - Bugg fixad: radering av avgångsrad tog inte bort kopplade fordonsloggar — totalen stämde inte
 - deleteDeparture() identifierar nu logs inom ±TRIP_VEHICLE_WINDOW_MS och tar bort dem från Firebase och localStorage
