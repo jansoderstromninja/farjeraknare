@@ -1,5 +1,10 @@
 # Changelog
 
+## v7.7 – 2026-06-30
+- Bugg fixad: radering av avgångsrad tog inte bort kopplade fordonsloggar — totalen stämde inte
+- deleteDeparture() identifierar nu logs inom ±TRIP_VEHICLE_WINDOW_MS och tar bort dem från Firebase och localStorage
+- console.log visar antal kopplade loggar och nettopåverkan på fordonsräkningen
+
 ## v7.6 – 2026-06-27
 - Driftsgeofence: avgångar registreras bara inom 1000 m från Pettu eller Utö
 - Ny funktion isWithinOperatingArea() återanvänder befintlig Haversine + bryggorConfig

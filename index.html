@@ -879,7 +879,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.7";
+const APP_VERSION = "7.8";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
@@ -1585,11 +1585,30 @@ function deleteDeparture(tripId) {
   const d = load();
   const trip = d.trips.find(t => t.id === tripId);
   if (!trip) return;
+
+  // Find and remove vehicle logs tied to this departure's time window
+  const linked = d.logs.filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS);
+  const netVehicles = linked.reduce((s, l) => s + (l.delta ?? 1), 0);
+  console.log('[deleteDeparture] tripId:', tripId, '— kopplade loggar:', linked.length, '(netto', netVehicles, 'fordon)');
+  if (db && linked.length > 0) {
+    const dateStr = localDate();
+    linked.forEach(l => {
+      if (l.id && !String(l.id).startsWith('local_')) {
+        db.ref('days/' + dateStr + '/logs/' + l.id).remove()
+          .then(() => console.log('[deleteDeparture] Borttagen log', l.id, l.type, 'delta:', l.delta))
+          .catch(() => {});
+      }
+    });
+  }
+  d.logs = d.logs.filter(l => Math.abs(l.ts - trip.ts) > TRIP_VEHICLE_WINDOW_MS);
+
+  // Remove the departure itself
   if (db && tripId && !String(tripId).startsWith('local_')) {
     db.ref('turer/' + localDate() + '/' + tripId).remove().catch(() => {});
   }
   d.trips = d.trips.filter(t => t.id !== tripId);
   save(d);
+
   if (lastDepartureFbKey === tripId) {
     lastDepartureFbKey  = null;
     lastDepartureFbDate = null;
