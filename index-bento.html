@@ -3,38 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Färjeräknare TACTICAL v1.9.9</title>
+<title>Färjeräknare TACTICAL v2.0.0</title>
 <link rel="stylesheet" href="tactical.css">
 </head>
 <body>
 
 <div class="dashboard">
   <div class="btn-grid-area">
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('personbil', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('personbil', this)" onpointerup="btnUp('personbil', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_personbil">0</span><span class="v-btn-emoji">🚗</span><span class="v-btn-label">Bil</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('paketbil', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('paketbil', this)" onpointerup="btnUp('paketbil', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_paketbil">0</span><span class="v-btn-emoji">🚐</span><span class="v-btn-label">Paket</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('lastbil', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('lastbil', this)" onpointerup="btnUp('lastbil', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_lastbil">0</span><span class="v-btn-emoji">🚛</span><span class="v-btn-label">Lastbil</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('traktor', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('traktor', this)" onpointerup="btnUp('traktor', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_traktor">0</span><span class="v-btn-emoji">🚜</span><span class="v-btn-label">Traktor</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('cykel', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('cykel', this)" onpointerup="btnUp('cykel', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_cykel">0</span><span class="v-btn-emoji">🚲</span><span class="v-btn-label">Cykel</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('mc', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('mc', this)" onpointerup="btnUp('mc', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_mc">0</span><span class="v-btn-emoji">🏍️</span><span class="v-btn-label">MC</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('fotgangare', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('fotgangare', this)" onpointerup="btnUp('fotgangare', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_fotgangare">0</span><span class="v-btn-emoji">🚶</span><span class="v-btn-label">Gående</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('moped', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('moped', this)" onpointerup="btnUp('moped', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_moped">0</span><span class="v-btn-emoji">🛵</span><span class="v-btn-label">Moped</span>
       </button>
-      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('fyrhjuling', this)" onpointerleave="btnStop()">
+      <button class="v-btn" onpointerdown="btnDown('fyrhjuling', this)" onpointerup="btnUp('fyrhjuling', this)" onpointerleave="btnCancel()">
           <span class="v-btn-badge" id="b_fyrhjuling">0</span><span class="v-btn-emoji">🏎️</span><span class="v-btn-label">ATV</span>
       </button>
   </div>
@@ -63,8 +63,8 @@
     </div>
   </div>
 
-  <div class="tile tile-log" id="logTile">
-    <div class="tile-header" id="missionHeader" onclick="toggleOverlay('statsOverlay', true)" style="cursor:pointer">
+  <div class="tile tile-log" id="logTile" onclick="toggleOverlay('statsOverlay', true)">
+    <div class="tile-header" id="missionHeader">
         <span>MISSION CONTROL</span>
         <span class="alert-text">CHECK_PIER!</span>
     </div>
@@ -73,15 +73,12 @@
         <div style="background:rgba(0,0,0,0.3); padding:4px; text-align:center; border-radius:4px;"><span style="font-size:7px; color:var(--dim); display:block;">DEP</span><span id="miniStatTrips" style="font-size:16px; font-weight:800; color:#fff;">0</span></div>
     </div>
     <div class="dep-list" id="departureLog"></div>
-    
     <div class="sys-bar-internal">
         <div style="display:flex; align-items:center;">
             <div id="syncDot" style="width:5px; height:5px; background:grey; border-radius:1px; margin-right:4px;"></div>
             <span id="autoLogToggle" class="tel-link active" onclick="toggleAutoLog(event)">AUTO_LOG: ON</span>
         </div>
-        <div style="text-align:right;">v1.9.9-B</div>
-        <div>GPS_ACC: <span id="gpsAccTel">--</span></div>
-        <div id="gpsStatusTel" style="text-align:right;">SCAN</div>
+        <div style="text-align:right;">v2.0.0-B</div>
     </div>
   </div>
 </div>
@@ -104,8 +101,9 @@
                 <circle cx="100" cy="110" r="10" fill="#fff" stroke="#121a2b" stroke-width="2"/>
             </svg>
         </div>
-        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:48px; font-weight:300;">0.0 kn</span></div>
-        <div class="tile"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:48px; font-weight:300;">0.00 NM</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:54px; font-weight:300;">0.0 kn</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:54px; font-weight:300;">0.00 NM</span></div>
+        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:18px; color:var(--safe)">--</span></div>
     </div>
 </div>
 
@@ -132,11 +130,10 @@ var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 var lastDepartureTs = Date.now();
 var undoTimer = null, didUndo = false;
-var autoLogActive = true; // MASTER SWITCH
+var autoLogActive = true;
 
-// ── MASTER SWITCH LOGIC ──
 function toggleAutoLog(e) {
-    e.stopPropagation(); // Stoppa rutan från att öppna stats
+    e.stopPropagation();
     autoLogActive = !autoLogActive;
     const el = document.getElementById('autoLogToggle');
     el.textContent = `AUTO_LOG: ${autoLogActive ? 'ON' : 'OFF'}`;
@@ -144,28 +141,24 @@ function toggleAutoLog(e) {
     if (navigator.vibrate) navigator.vibrate(50);
 }
 
-// ── CORE FUNCTIONS ──
-function btnStart(btn) {
+function btnDown(id, btn) {
     didUndo = false;
     undoTimer = setTimeout(() => {
         didUndo = true;
         btn.classList.add('removing');
-    }, 700);
-}
-function btnStop() { clearTimeout(undoTimer); }
-
-function btnEnd(id, btn) {
-    clearTimeout(undoTimer);
-    if (didUndo) {
         if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
         if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: -1 });
-        setTimeout(() => btn.classList.remove('removing'), 1000);
-    } else {
+        setTimeout(() => btn.classList.remove('removing'), 700);
+    }, 700);
+}
+function btnUp(id, btn) {
+    clearTimeout(undoTimer);
+    if (!didUndo) {
         if (navigator.vibrate) navigator.vibrate(20);
         if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: 1 });
     }
-    didUndo = false;
 }
+function btnCancel() { clearTimeout(undoTimer); }
 
 function toggleOverlay(id, show) {
     document.getElementById(id).style.display = show ? 'flex' : 'none';
@@ -175,12 +168,11 @@ function toggleOverlay(id, show) {
 
 function calculateStats() {
     const logs = Object.values(currentLogs);
+    const trips = Object.values(currentTrips);
     const total = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
     document.getElementById('miniStatTotal').textContent = total;
-    document.getElementById('miniStatTrips').textContent = Object.values(currentTrips).length;
-    if (Object.values(currentTrips).length > 0) {
-        lastDepartureTs = Math.max(...Object.values(currentTrips).map(t => t.ts));
-    }
+    document.getElementById('miniStatTrips').textContent = trips.length;
+    if (trips.length > 0) lastDepartureTs = Math.max(...trips.map(t => t.ts));
     renderMiniLog();
 }
 
@@ -202,7 +194,6 @@ function renderFullStats() {
     const logs = Object.values(currentLogs);
     const trips = Object.values(currentTrips).sort((a,b) => b.ts - a.ts);
     const total = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
-    
     container.innerHTML = `
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
             <div class="tile"><span class="tile-header">VEH_TOTAL</span><div style="font-size:32px;">${total}</div></div>
@@ -217,6 +208,26 @@ function renderFullStats() {
     `;
 }
 
+function renderFullForecast() {
+    const container = document.getElementById('prognosContent');
+    if (!fullWeatherData) return;
+    let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
+    for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
+        const speed = h.windspeed_10m[i];
+        const color = speed < 6 ? "#30d158" : speed < 12 ? "#ffd60a" : "#ff453a";
+        const rotation = (h.winddirection_10m[i] + 180) % 360;
+        const codes = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
+        html += `<div class="prognos-row" style="border-left-color: ${color}">
+            <div style="font-weight:900; font-size:14px;">${h.time[i].slice(11, 16)}</div>
+            <div style="font-size:22px; text-align:center;">${codes[h.weathercode[i]] || "🌤️"}</div>
+            <div style="font-weight:800; color:${color}">${speed.toFixed(1)} m/s</div>
+            <div style="transform: rotate(${rotation}deg); display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg></div>
+            <div style="font-weight:800; text-align:right; color:#fff">${h.temperature_2m[i].toFixed(1)}°C</div>
+        </div>`;
+    }
+    container.innerHTML = html;
+}
+
 function checkReminder() {
     const header = document.getElementById('missionHeader');
     if (!header) return;
@@ -224,16 +235,19 @@ function checkReminder() {
     else header.parentElement.classList.remove('alert-active');
 }
 
-// ── GPS ENGINE ──
-function calcDist(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2-lat1) * Math.PI / 180;
-    const dLon = (lon2-lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) * 0.539957;
+async function fetchWeather() {
+    try {
+        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
+        fullWeatherData = await resp.json();
+        const hr = new Date().getHours();
+        document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
+        document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
+        const codes = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
+        document.getElementById('mainWeatherIcon').textContent = codes[fullWeatherData.hourly.weathercode[hr]] || "🌤️";
+        if (document.getElementById('weatherOverlay').style.display === 'flex') renderFullForecast();
+    } catch (e) {}
 }
 
-// ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(firebaseConfig); db = firebase.database();
   const today = new Date().toISOString().slice(0, 10);
@@ -259,53 +273,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   db.ref('config/watlev').on('value', snap => {
-    if (snap.val()) document.getElementById('waterDisplay').textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
+    if (snap.val()) {
+        const disp = document.getElementById('waterDisplay');
+        if (disp) disp.textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
+    }
   });
 
   navigator.geolocation.watchPosition(pos => {
     const kn = pos.coords.speed * 1.94384 || 0;
     const acc = Math.round(pos.coords.accuracy);
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-
-    // UI Updates
     document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
     document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
-    document.getElementById('gpsAccTel').textContent = acc + 'M';
-    document.getElementById('gpsStatusTel').textContent = acc < 20 ? 'LOCKED' : 'SEARCH';
-    
     if (kn > maxSpeedKn) maxSpeedKn = kn;
     document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
-    if (lastLat !== null && kn > 0.5) totalDistanceNM += calcDist(lastLat, lastLon, lat, lon);
-    lastLat = lat; lastLon = lon;
-    document.getElementById('statDistance').textContent = totalDistanceNM.toFixed(2) + " NM";
+    document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
     document.getElementById('megaNeedleGroup').setAttribute('transform', `rotate(${(Math.min(kn, 6) / 6 * 240) - 120} 100 110)`);
-
-    // ── AUTO DEPARTURE LOGIC (Blocked if switch is OFF) ──
-    if (autoLogActive && kn >= 1.5 && (Date.now() - lastDepartureTs > 300000)) {
-        // Logik för att registrera avgång om farten är > 1.5 knop och det gått 5 min
-        const date = new Date().toISOString().slice(0, 10);
-        db.ref('turer/' + date).push({ ts: Date.now(), from: 'AUTO' });
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    }
-
   }, null, { enableHighAccuracy: true });
 
+  fetchWeather();
   setInterval(checkReminder, 10000);
 });
-
-async function fetchWeather() {
-    try {
-        const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
-        fullWeatherData = await resp.json();
-        const hr = new Date().getHours();
-        document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
-        document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
-        const code = fullWeatherData.hourly.weathercode[hr];
-        const icons = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
-        document.getElementById('mainWeatherIcon').textContent = icons[code] || "🌤️";
-    } catch (e) {}
-}
 </script>
 </body>
 </html>
