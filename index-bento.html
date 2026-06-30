@@ -3,38 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Färjeräknare TACTICAL v2.0.0</title>
+<title>Färjeräknare TACTICAL v2.0.1</title>
 <link rel="stylesheet" href="tactical.css">
 </head>
 <body>
 
 <div class="dashboard">
   <div class="btn-grid-area">
-      <button class="v-btn" onpointerdown="btnDown('personbil', this)" onpointerup="btnUp('personbil', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('personbil', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_personbil">0</span><span class="v-btn-emoji">🚗</span><span class="v-btn-label">Bil</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('paketbil', this)" onpointerup="btnUp('paketbil', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('paketbil', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_paketbil">0</span><span class="v-btn-emoji">🚐</span><span class="v-btn-label">Paket</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('lastbil', this)" onpointerup="btnUp('lastbil', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('lastbil', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_lastbil">0</span><span class="v-btn-emoji">🚛</span><span class="v-btn-label">Lastbil</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('traktor', this)" onpointerup="btnUp('traktor', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('traktor', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_traktor">0</span><span class="v-btn-emoji">🚜</span><span class="v-btn-label">Traktor</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('cykel', this)" onpointerup="btnUp('cykel', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('cykel', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_cykel">0</span><span class="v-btn-emoji">🚲</span><span class="v-btn-label">Cykel</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('mc', this)" onpointerup="btnUp('mc', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('mc', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_mc">0</span><span class="v-btn-emoji">🏍️</span><span class="v-btn-label">MC</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('fotgangare', this)" onpointerup="btnUp('fotgangare', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('fotgangare', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_fotgangare">0</span><span class="v-btn-emoji">🚶</span><span class="v-btn-label">Gående</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('moped', this)" onpointerup="btnUp('moped', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('moped', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_moped">0</span><span class="v-btn-emoji">🛵</span><span class="v-btn-label">Moped</span>
       </button>
-      <button class="v-btn" onpointerdown="btnDown('fyrhjuling', this)" onpointerup="btnUp('fyrhjuling', this)" onpointerleave="btnCancel()">
+      <button class="v-btn" onpointerdown="btnStart(this)" onpointerup="btnEnd('fyrhjuling', this)" onpointerleave="btnStop()">
           <span class="v-btn-badge" id="b_fyrhjuling">0</span><span class="v-btn-emoji">🏎️</span><span class="v-btn-label">ATV</span>
       </button>
   </div>
@@ -63,8 +63,8 @@
     </div>
   </div>
 
-  <div class="tile tile-log" id="logTile" onclick="toggleOverlay('statsOverlay', true)">
-    <div class="tile-header" id="missionHeader">
+  <div class="tile tile-log" id="logTile">
+    <div class="tile-header" id="missionHeader" onclick="toggleOverlay('statsOverlay', true)" style="cursor:pointer">
         <span>MISSION CONTROL</span>
         <span class="alert-text">CHECK_PIER!</span>
     </div>
@@ -76,16 +76,16 @@
     <div class="sys-bar-internal">
         <div style="display:flex; align-items:center;">
             <div id="syncDot" style="width:5px; height:5px; background:grey; border-radius:1px; margin-right:4px;"></div>
-            <span id="autoLogToggle" class="tel-link active" onclick="toggleAutoLog(event)">AUTO_LOG: ON</span>
+            <span id="autoLogToggle" class="tel-link inactive" onclick="toggleAutoLog(event)">AUTO_LOG: OFF</span>
         </div>
-        <div style="text-align:right;">v2.0.0-B</div>
+        <div style="text-align:right;">v2.0.1-B</div>
     </div>
   </div>
 </div>
 
 <!-- OVERLAYS -->
 <div id="navOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><span style="color:#fff; font-weight:900;">NAVIGATION_DEEP_DATA</span><button onclick="toggleOverlay('navOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:8px 15px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div class="overlay-scroll">
         <div class="tile" style="margin-bottom:10px; align-items:center;">
             <svg viewBox="0 0 200 160" width="100%" style="max-width:300px;">
@@ -101,19 +101,18 @@
                 <circle cx="100" cy="110" r="10" fill="#fff" stroke="#121a2b" stroke-width="2"/>
             </svg>
         </div>
-        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:54px; font-weight:300;">0.0 kn</span></div>
-        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:54px; font-weight:300;">0.00 NM</span></div>
-        <div class="tile"><span class="tile-header">COORDINATES</span><span id="statPos" style="font-size:18px; color:var(--safe)">--</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">MAX_VELOCITY</span><span id="statMaxSpeed" style="font-size:48px; font-weight:300;">0.0 kn</span></div>
+        <div class="tile" style="margin-bottom:10px;"><span class="tile-header">TOTAL_DISTANCE</span><span id="statDistance" style="font-size:48px; font-weight:300;">0.00 NM</span></div>
     </div>
 </div>
 
 <div id="weatherOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>METEOROLOGICAL_REPORT_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><span style="color:#fff; font-weight:900;">WEATHER_48H</span><button onclick="toggleOverlay('weatherOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div id="prognosContent" class="overlay-scroll"></div>
 </div>
 
 <div id="statsOverlay" class="overlay">
-    <div class="overlay-hdr-fixed"><span>MISSION_SORTIE_LOG</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;"><span style="color:#fff; font-weight:900;">MISSION_SORTIE_LOG</span><button onclick="toggleOverlay('statsOverlay', false)" style="background:none; border:1px solid var(--accent); color:var(--accent); padding:10px 25px; font-weight:800; cursor:pointer;">CLOSE</button></div>
     <div id="statsContent" class="overlay-scroll"></div>
 </div>
 
@@ -130,7 +129,7 @@ var db, logsRef, tripsRef, fullWeatherData, currentLogs = {}, currentTrips = {};
 var maxSpeedKn = 0, totalDistanceNM = 0, lastLat = null, lastLon = null;
 var lastDepartureTs = Date.now();
 var undoTimer = null, didUndo = false;
-var autoLogActive = true;
+var autoLogActive = false; // DEFAULT OFF
 
 function toggleAutoLog(e) {
     e.stopPropagation();
@@ -141,29 +140,56 @@ function toggleAutoLog(e) {
     if (navigator.vibrate) navigator.vibrate(50);
 }
 
-function btnDown(id, btn) {
+// ── BUTTON LOGIC ──
+function btnStart(btn) {
     didUndo = false;
     undoTimer = setTimeout(() => {
         didUndo = true;
         btn.classList.add('removing');
-        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-        if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: -1 });
-        setTimeout(() => btn.classList.remove('removing'), 700);
     }, 700);
 }
-function btnUp(id, btn) {
+function btnStop() { clearTimeout(undoTimer); }
+function btnEnd(id, btn) {
     clearTimeout(undoTimer);
-    if (!didUndo) {
+    if (didUndo) {
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+        if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: -1 });
+        setTimeout(() => btn.classList.remove('removing'), 1000);
+    } else {
         if (navigator.vibrate) navigator.vibrate(20);
         if (logsRef) logsRef.push({ type: id, ts: Date.now(), delta: 1 });
     }
+    didUndo = false;
 }
-function btnCancel() { clearTimeout(undoTimer); }
 
-function toggleOverlay(id, show) {
-    document.getElementById(id).style.display = show ? 'flex' : 'none';
-    if (show && id === 'statsOverlay') renderFullStats();
-    if (show && id === 'weatherOverlay') fetchWeather();
+// ── DATA HANDLING ──
+function parseFmiRobust(xmlText) {
+  try {
+    const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+    const bsElements = doc.getElementsByTagNameNS('*', 'BsWfsElement');
+    if (bsElements.length > 0) {
+      for (let el of bsElements) {
+        if (el.getElementsByTagNameNS('*', 'ParameterName')[0]?.textContent === 'WATLEV') 
+            return parseFloat(el.getElementsByTagNameNS('*', 'ParameterValue')[0]?.textContent);
+      }
+    }
+    const tvps = doc.getElementsByTagNameNS('*', 'MeasurementTVP');
+    if (tvps.length > 0) {
+      return parseFloat(tvps[tvps.length - 1].getElementsByTagNameNS('*', 'value')[0]?.textContent);
+    }
+  } catch (e) {} return null;
+}
+
+async function updateWaterLevel() {
+  const start = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 19) + 'Z';
+  try {
+    const resp = await fetch(`https://opendata.fmi.fi/wfs?service=WFS&version=2.0.0&request=getFeature&storedquery_id=fmi::observations::mareograph::instant::simple&fmisid=134253&starttime=${start}`);
+    const mm = parseFmiRobust(await resp.text());
+    if (mm !== null) {
+      const cm = Math.round(mm / 10);
+      if (db) db.ref('config/watlev').set({ value: cm, ts: Date.now() });
+    }
+  } catch (e) {}
 }
 
 function calculateStats() {
@@ -173,79 +199,66 @@ function calculateStats() {
     document.getElementById('miniStatTotal').textContent = total;
     document.getElementById('miniStatTrips').textContent = trips.length;
     if (trips.length > 0) lastDepartureTs = Math.max(...trips.map(t => t.ts));
-    renderMiniLog();
+    renderLogs();
 }
 
-function renderMiniLog() {
+function renderLogs() {
     const logDiv = document.getElementById('departureLog');
+    const statsContainer = document.getElementById('statsContent');
     if (!logDiv) return;
     const sortedTrips = Object.values(currentTrips).sort((a,b) => b.ts - a.ts);
     const logs = Object.values(currentLogs);
-    logDiv.innerHTML = sortedTrips.slice(0, 3).map(t => {
+    const buildRow = (t) => {
         const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
         const veh = logs.filter(l => Math.abs(l.ts - t.ts) <= 180000).reduce((sum, l) => sum + (l.delta || 1), 0);
         return `<div class="dep-row"><span>${time}</span><span style="color:var(--dim)">${t.from || '---'}</span><span>${veh}</span></div>`;
-    }).join('');
-}
-
-function renderFullStats() {
-    const container = document.getElementById('statsContent');
-    if (!container) return;
-    const logs = Object.values(currentLogs);
-    const trips = Object.values(currentTrips).sort((a,b) => b.ts - a.ts);
-    const total = logs.reduce((sum, l) => sum + (l.delta || 1), 0);
-    container.innerHTML = `
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
-            <div class="tile"><span class="tile-header">VEH_TOTAL</span><div style="font-size:32px;">${total}</div></div>
-            <div class="tile"><span class="tile-header">DEP_TOTAL</span><div style="font-size:32px;">${trips.length}</div></div>
-        </div>
-        <div class="tile-header">RECENT_SORTIE_LOG</div>
-        ${trips.slice(0, 20).map(t => {
-            const time = new Date(t.ts).toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-            const veh = logs.filter(l => Math.abs(l.ts - t.ts) <= 180000).reduce((sum, l) => sum + (l.delta || 1), 0);
-            return `<div class="dep-row"><span>${time}</span><span>${t.from || '---'}</span><span style="color:var(--warning)">${veh}</span></div>`;
-        }).join('')}
-    `;
-}
-
-function renderFullForecast() {
-    const container = document.getElementById('prognosContent');
-    if (!fullWeatherData) return;
-    let html = ""; const h = fullWeatherData.hourly; const nowIdx = new Date().getHours();
-    for (let i = nowIdx; i < h.time.length && i < nowIdx + 48; i++) {
-        const speed = h.windspeed_10m[i];
-        const color = speed < 6 ? "#30d158" : speed < 12 ? "#ffd60a" : "#ff453a";
-        const rotation = (h.winddirection_10m[i] + 180) % 360;
-        const codes = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
-        html += `<div class="prognos-row" style="border-left-color: ${color}">
-            <div style="font-weight:900; font-size:14px;">${h.time[i].slice(11, 16)}</div>
-            <div style="font-size:22px; text-align:center;">${codes[h.weathercode[i]] || "🌤️"}</div>
-            <div style="font-weight:800; color:${color}">${speed.toFixed(1)} m/s</div>
-            <div style="transform: rotate(${rotation}deg); display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg></div>
-            <div style="font-weight:800; text-align:right; color:#fff">${h.temperature_2m[i].toFixed(1)}°C</div>
-        </div>`;
+    };
+    logDiv.innerHTML = sortedTrips.slice(0, 3).map(buildRow).join('');
+    if (statsContainer) {
+        statsContainer.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+                <div class="tile"><span class="tile-header">VEH_TOTAL</span><div style="font-size:32px;">${document.getElementById('miniStatTotal').textContent}</div></div>
+                <div class="tile"><span class="tile-header">DEP_TOTAL</span><div style="font-size:32px;">${document.getElementById('miniStatTrips').textContent}</div></div>
+            </div>
+            <div class="tile-header">RECENT_SORTIE_LOG</div>
+            ${sortedTrips.slice(0, 20).map(buildRow).join('')}
+        `;
     }
-    container.innerHTML = html;
-}
-
-function checkReminder() {
-    const header = document.getElementById('missionHeader');
-    if (!header) return;
-    if (Date.now() - lastDepartureTs > 22 * 60 * 1000) header.parentElement.classList.add('alert-active');
-    else header.parentElement.classList.remove('alert-active');
 }
 
 async function fetchWeather() {
     try {
         const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=60.03&longitude=22.92&hourly=windspeed_10m,winddirection_10m,weathercode,temperature_2m&wind_speed_unit=ms&timezone=Europe%2FHelsinki`);
         fullWeatherData = await resp.json();
-        const hr = new Date().getHours();
-        document.getElementById('windMain').textContent = fullWeatherData.hourly.windspeed_10m[hr].toFixed(1) + ' M/S';
-        document.getElementById('windDir').style.transform = `rotate(${(fullWeatherData.hourly.winddirection_10m[hr] + 180) % 360}deg)`;
-        const codes = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
-        document.getElementById('mainWeatherIcon').textContent = codes[fullWeatherData.hourly.weathercode[hr]] || "🌤️";
-        if (document.getElementById('weatherOverlay').style.display === 'flex') renderFullForecast();
+        const hr = new Date().getHours(); const h = fullWeatherData.hourly;
+        document.getElementById('windMain').textContent = h.windspeed_10m[hr].toFixed(1) + ' M/S';
+        document.getElementById('windDir').style.transform = `rotate(${(h.winddirection_10m[hr] + 180) % 360}deg)`;
+        const icons = { 0: "☀️", 1: "🌤️", 2: "🌤️", 3: "☁️", 45: "🌫️", 51: "🌧️", 61: "🌧️", 71: "❄️", 95: "⛈️" };
+        document.getElementById('mainWeatherIcon').textContent = icons[h.weathercode[hr]] || "🌤️";
+        
+        const container = document.getElementById('prognosContent');
+        if (container && fullWeatherData) {
+            let html = "";
+            for (let i = hr; i < h.time.length && i < hr + 48; i++) {
+                const speed = h.windspeed_10m[i];
+                const color = speed < 6 ? "#30d158" : speed < 12 ? "#ffd60a" : "#ff453a";
+                html += `<div class="prognos-row" style="border-left-color: ${color}">
+                    <div style="font-weight:900;">${h.time[i].slice(11, 16)}</div>
+                    <div style="font-size:22px;">${icons[h.weathercode[i]] || "🌤️"}</div>
+                    <div style="font-weight:800; color:${color}">${speed.toFixed(1)} m/s</div>
+                    <div style="transform: rotate(${(h.winddirection_10m[i]+180)%360}deg); display:flex; justify-content:center;"><svg width="18" height="18" viewBox="0 0 22 22"><path d="M11 2 L16 17 L11 13 L6 17 Z" fill="${color}"/></svg></div>
+                    <div style="font-weight:800; text-align:right;">${h.temperature_2m[i].toFixed(1)}°C</div>
+                </div>`;
+            }
+            container.innerHTML = html;
+        }
     } catch (e) {}
+}
+
+function toggleOverlay(id, show) {
+    document.getElementById(id).style.display = show ? 'flex' : 'none';
+    if (show && id === 'statsOverlay') renderLogs();
+    if (show && id === 'weatherOverlay') fetchWeather();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -273,25 +286,49 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   db.ref('config/watlev').on('value', snap => {
-    if (snap.val()) {
+    const data = snap.val();
+    if (data) {
         const disp = document.getElementById('waterDisplay');
-        if (disp) disp.textContent = (snap.val().value > 0 ? '+' : '') + snap.val().value + ' CM';
+        if (disp) {
+            disp.textContent = (data.value > 0 ? '+' : '') + data.value + ' CM';
+            disp.style.color = (data.value < -20 || data.value > 20) ? 'var(--accent)' : 'var(--safe)';
+        }
     }
   });
 
   navigator.geolocation.watchPosition(pos => {
     const kn = pos.coords.speed * 1.94384 || 0;
     const acc = Math.round(pos.coords.accuracy);
-    document.getElementById('mainSpeedNum').textContent = kn.toFixed(1);
-    document.getElementById('speedArc').style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
+    // Main Dash Speedo
+    const mNum = document.getElementById('mainSpeedNum');
+    const mArc = document.getElementById('speedArc');
+    if(mNum) mNum.textContent = kn.toFixed(1);
+    if(mArc) mArc.style.strokeDasharray = `${(Math.min(kn, 10) / 10) * 400} 1000`;
+    
+    // Telemetry
+    const ga = document.getElementById('gpsAccTel');
+    const gs = document.getElementById('gpsStatusTel');
+    if(ga) ga.textContent = acc + 'M';
+    if(gs) gs.textContent = acc < 20 ? 'LOCKED' : 'SEARCH';
+
+    // Max Speed & Distance
     if (kn > maxSpeedKn) maxSpeedKn = kn;
     document.getElementById('statMaxSpeed').textContent = maxSpeedKn.toFixed(1) + " kn";
-    document.getElementById('statPos').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-    document.getElementById('megaNeedleGroup').setAttribute('transform', `rotate(${(Math.min(kn, 6) / 6 * 240) - 120} 100 110)`);
+    document.getElementById('statDistance').textContent = totalDistanceNM.toFixed(2) + " NM";
+    
+    // Overlay Mega Gauge
+    const mega = document.getElementById('megaNeedleGroup');
+    if(mega) mega.setAttribute('transform', `rotate(${(Math.min(kn, 6) / 6 * 240) - 120} 100 110)`);
+
+    // AUTO DEPARTURE LOGIC
+    if (autoLogActive && kn >= 1.5 && (Date.now() - lastDepartureTs > 300000)) {
+        db.ref('turer/' + new Date().toISOString().slice(0, 10)).push({ ts: Date.now(), from: 'AUTO' });
+    }
   }, null, { enableHighAccuracy: true });
 
-  fetchWeather();
-  setInterval(checkReminder, 10000);
+  fetchWeather(); updateWaterLevel();
+  setInterval(fetchWeather, 1800000); 
+  setInterval(updateWaterLevel, 900000);
 });
 </script>
 </body>
