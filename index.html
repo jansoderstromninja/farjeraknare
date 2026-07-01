@@ -879,7 +879,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "7.9";
+const APP_VERSION = "8.0";
 const KEY = 'farjeraknare_v1';
 const LANG_KEY = 'farjeraknare_lang';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
@@ -897,6 +897,8 @@ const GPS_WARMUP_MS        = 30000;         // ms – GPS lyssnar men registrera
 const GPS_DEPARTURE_GAP_MS    = 5 * 60 * 1000; // ms – minsta tid mellan två GPS-detekterade avgångar
 const TRIP_VEHICLE_WINDOW_MS  = 3 * 60 * 1000; // ms – fordon loggade inom ±3 min räknas till avgången
 const DEPARTURE_REMINDER_MS   = 22 * 60 * 1000; // ms – påminnelse om ingen ny avgång efter 22 min
+const BREAK_TIMES               = ['08:30', '11:00', '16:30', '19:00'];
+const BREAK_REMINDER_OFFSETS_MIN = [15, 10, 5];
 const MODE_KEY             = 'farjeraknare_mode';
 const WEATHER_FALLBACK_LAT = 60.3333;
 const WEATHER_FALLBACK_LON = 24.3333;
@@ -1244,6 +1246,7 @@ function checkDateRollover() {
   currentRefDate = today;
   logsRef  = db.ref('days/' + today + '/logs');
   tripsRef = db.ref('turer/' + today);
+  firedReminders = new Set();
   attachListeners();
 }
 
@@ -2021,6 +2024,7 @@ function tick() {
     n.toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' });
   updateKorTomLock();
   checkDepartureReminder();
+  checkBreakReminders();
 }
 
 // ── PIER MATCHING ──
@@ -2143,6 +2147,7 @@ let lastDepartureFbDate = null;
 let lastKnownGpsPos     = null;
 let currentGpsSpeedMs   = 0;
 let reminderFired       = false;
+let firedReminders      = new Set();
 
 function playPing() {
   try {
@@ -2184,6 +2189,32 @@ function checkDepartureReminder() {
   playPing();
   showReminderBanner('Kolla ' + last.from + ' 👀');
   console.log('[Påminnelse] 22 min sedan avgång från', last.from);
+}
+
+function checkBreakReminders() {
+  if (mode !== 'ferry') return;
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  for (const breakTime of BREAK_TIMES) {
+    const [bh, bm] = breakTime.split(':').map(Number);
+    const breakMin = bh * 60 + bm;
+    for (const offset of BREAK_REMINDER_OFFSETS_MIN) {
+      const key = breakTime + '_' + offset;
+      if (firedReminders.has(key)) continue;
+      if (nowMin !== breakMin - offset) continue;
+      firedReminders.add(key);
+      playPing();
+      let atPettu = false;
+      if (lastKnownGpsPos) {
+        atPettu = getNearestBrygga(lastKnownGpsPos.lat, lastKnownGpsPos.lng) === 'Pettu';
+      }
+      const msg = atPettu
+        ? '✓ På Pettu inför paus ' + breakTime
+        : 'Var på Pettu om ' + offset + ' min — paus ' + breakTime;
+      showReminderBanner(msg);
+      console.log('[Paus] Påminnelse ' + key + (atPettu ? ' (på Pettu)' : ''));
+    }
+  }
 }
 
 function startGpsWatch() {

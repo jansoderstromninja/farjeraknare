@@ -1,5 +1,13 @@
 # Changelog
 
+## v7.9 – 2026-07-01
+- Pauspåminnelser i Färjeläge: 15, 10 och 5 min före varje paus (08:30, 11:00, 16:30, 19:00)
+- Påminnelse spelar playPing() och visar banner: "Var på Pettu om X min — paus HH:MM"
+- Om GPS-position är inom 50 m från Pettu visas istället "✓ På Pettu inför paus HH:MM"
+- Varje påminnelse triggas bara en gång per dag — firedReminders (Set) nollställs vid midnatt
+- Fungerar bara i Färjeläge, tyst i Testläge
+- Nya konstanter: BREAK_TIMES, BREAK_REMINDER_OFFSETS_MIN
+
 ## v7.8 – 2026-06-30
 - Bugg fixad: Open-Meteo timprognos visades inte trots att FMI-vattenståndskortet fungerade
 - Promise.all ersatt med Promise.allSettled — ett misslyckat API-anrop blockerar inte längre det andra
