@@ -172,7 +172,9 @@ async function loadWeather() {
   if (mode === 'ferry' && lastKnownGpsPos) {
     lat = lastKnownGpsPos.lat; lon = lastKnownGpsPos.lng; gpsUsed = true;
   }
-  const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=windspeed_10m,windgusts_10m,winddirection_10m,temperature_2m,cape,weathercode&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
+  // Aktuella parameternamn — legacy-aliaset windgusts_10m accepteras av API:et men
+  // returnerar bara null sedan Open-Meteo släppte det (windspeed/winddirection funkar än)
+  const omUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=wind_speed_10m,wind_gusts_10m,wind_direction_10m,temperature_2m,cape,weather_code&wind_speed_unit=ms&forecast_days=2&timezone=Europe%2FHelsinki`;
 
   // allSettled: ett misslyckat anrop blockerar inte det andra
   const [omResult, fmiResult] = await Promise.allSettled([
@@ -246,13 +248,18 @@ async function loadWeather() {
     const times  = weatherData.hourly.time;
     let idx = times.findIndex(s => s.slice(0, 10) === hDate && s.slice(11, 13) === hHour);
     if (idx < 0) idx = 0;
+    console.log('[OM] Rå wind_gusts_10m (från', times[idx].slice(11, 16) + '):',
+      JSON.stringify(weatherData.hourly.wind_gusts_10m.slice(idx, idx + 6)));
+    console.log('[OM] Riktning', times[idx].slice(11, 16), '=',
+      weatherData.hourly.wind_direction_10m[idx], '° → pilrotation',
+      (weatherData.hourly.wind_direction_10m[idx] + 180) % 360, '°');
     let html = '';
     for (let i = idx; i < idx + 48 && i < times.length; i++) {
-      const speed = weatherData.hourly.windspeed_10m[i] ?? 0;
-      const gusts = weatherData.hourly.windgusts_10m[i] ?? 0;
-      const dir   = weatherData.hourly.winddirection_10m[i];
+      const speed = weatherData.hourly.wind_speed_10m[i] ?? 0;
+      const gusts = weatherData.hourly.wind_gusts_10m[i] ?? 0;
+      const dir   = weatherData.hourly.wind_direction_10m[i];
       const temp  = weatherData.hourly.temperature_2m[i];
-      const wcode = weatherData.hourly.weathercode?.[i];
+      const wcode = weatherData.hourly.weather_code?.[i];
       const color = windColor(speed);
       const bold  = speed >= 12 ? 'font-weight:800;' : '';
       html +=

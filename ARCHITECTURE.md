@@ -152,7 +152,7 @@ Aktiveras när användaren byter till ferry-läge (`applyMode()`). Startar `navi
 
 ### Väder- och havsdatasystemet
 
-Väderfliken hämtar data parallellt från två källor via `Promise.all`.
+Väderfliken hämtar data parallellt från två källor via `Promise.allSettled` — ett misslyckat anrop blockerar inte det andra.
 
 **FMI (Finnish Meteorological Institute):**
 - Källa: `opendata.fmi.fi` WFS API, stored query `fmi::observations::mareograph::instant::simple`
@@ -169,7 +169,7 @@ Efter rendering sparas aktuellt värde till `config/watlev`.
 
 **Open-Meteo:**
 - Källa: `api.open-meteo.com` (gratis, ingen API-nyckel)
-- Frågan: 2 dagars timdata, tidzon Europe/Helsinki: `windspeed_10m`, `windgusts_10m`, `winddirection_10m`, `temperature_2m`, `cape`, `weathercode`
+- Frågan: 2 dagars timdata, tidzon Europe/Helsinki: `wind_speed_10m`, `wind_gusts_10m`, `wind_direction_10m`, `temperature_2m`, `cape`, `weather_code` (aktuella parameternamn — legacy-aliaset `windgusts_10m` returnerar bara null)
 - Koordinater: `lastKnownGpsPos` i ferry-läge, annars Nummela (60.333°N, 24.333°E)
 
 **Vindvisning:** 48 timmar framåt som färgkodade rader (grön < 3 m/s → mörkröd ≥ 12) med WMO-väderikon per timme.
@@ -214,7 +214,7 @@ Efter rendering sparas aktuellt värde till `config/watlev`.
 | `OPERATING_RADIUS_M` | `1 000 m` | Geofence-radie: avgångar registreras bara inom detta avstånd från en känd brygga. Fångar hela hamnområdet utan att kräva exakt bryggnärvaro. |
 | `WEATHER_FALLBACK_LAT/LON` | `60.333°N, 24.333°E` | Nummela, Finland — fallback om GPS-position saknas i testläge. |
 | `CAPE >= 500 J/kg` | — | Standardtröskel för åskarisk i meteorologi. |
-| `CO2_PER_TRIP` | `8.7 kg` | Uppskattad CO2-emission per dieseldriven färjeöverfart. |
+| `CO2_PER_TRIP` | `5.4 kg` | CO2 per färjeöverfart enligt bränslelogg 2022–2026: snitt 12.2 L/h, ~2.0 L/tur × 2.68 kg CO2/L diesel. |
 
 ### Övriga designbeslut
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## v8.1 – 2026-07-02
+- Bugg fixad: vindbyar visade 0 m/s — Open-Meteo har släppt legacy-aliaset windgusts_10m (API:et ekar nyckeln men alla värden är null; ?? 0-guarden gjorde null → 0)
+- Alla OM-parametrar migrerade till aktuella namn: wind_speed_10m, wind_gusts_10m, wind_direction_10m, weather_code
+- Verifierat: byar ≥ vindhastighet för varje timme, samma tidsindex som tidigare
+- Vindriktning dubbelkollad: samma index i som vindhastighet (samma hourly-svar, opåverkad av allSettled); 180°-korrigeringen tillämpas korrekt (42° rå → 222° pilrotation, NO-vind pekar mot SV)
+- Ny debug-loggning: rå wind_gusts_10m-array (6 första timmarna) och riktning → pilrotation för första renderade timmen
+- CO2_PER_TRIP ändrad 8.7 → 5.4 kg per avgång, baserat på bränslelogg 2022–2026: snitt 12.2 L/h, ~2.0 L/tur, 2.68 kg CO2/L diesel
+- ARCHITECTURE.md uppdaterad: OM-parameternamn, Promise.allSettled, CO2-konstanten
+
 ## v8.0 – 2026-07-02
 - Ren omstrukturering: index.html uppdelad i separata filer, ingen funktionalitet ändrad
 - style.css: all CSS

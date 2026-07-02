@@ -45,12 +45,12 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.1";
+const APP_VERSION = "8.2";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
-// CO2 per avgång: 2 dieselmotorer, ~5 min, fast uppskattat värde (oavsett antal fordon)
-const CO2_PER_TRIP    = 8.7;
+// CO2 per avgång: bränslelogg 2022–2026 — snitt 12.2 L/h, ~2.0 L/tur, 2.68 kg CO2/L diesel
+const CO2_PER_TRIP    = 5.4;
 const CO2_PER_KM_CAR  = 0.12;  // kg CO2/km, förbränningsmotor
 const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
 const CO2_PER_TRIP_EV = 0.1;   // kg CO2/avgång, hypotetisk elfärja (uppskattad)
