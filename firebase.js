@@ -102,6 +102,7 @@ function initFirebase() {
 
     attachListeners();
     initBryggorListener();
+    initDriftstatusListener();
     checkVersion();
   } catch (e) {
     db = null; logsRef = null; tripsRef = null; currentRefDate = null;
@@ -128,17 +129,17 @@ function geoDistMeters(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getNearestBrygga(lat, lng) {
+function getNearestBrygga(lat, lng, quiet) {
   let nearest = null, minDist = Infinity;
   bryggorConfig.forEach(b => {
     const d = geoDistMeters(lat, lng, b.lat, b.lng);
     if (d < minDist) { minDist = d; nearest = b; }
   });
   if (nearest && minDist <= BRYGGA_RADIUS_M) {
-    console.log('[Bryggor] Närmaste brygga:', nearest.name, '–', minDist.toFixed(0), 'm');
+    if (!quiet) console.log('[Bryggor] Närmaste brygga:', nearest.name, '–', minDist.toFixed(0), 'm');
     return nearest.name;
   }
-  console.log('[Bryggor] Ingen brygga inom', BRYGGA_RADIUS_M, 'm (närmast:', nearest?.name, minDist.toFixed(0), 'm)');
+  if (!quiet) console.log('[Bryggor] Ingen brygga inom', BRYGGA_RADIUS_M, 'm (närmast:', nearest?.name, minDist.toFixed(0), 'm)');
   return null;
 }
 
@@ -155,5 +156,24 @@ function initBryggorListener() {
       console.log('[Bryggor] Konfiguration laddad från Firebase:', JSON.stringify(bryggorConfig));
     }
     renderDepartureLog();
+  });
+}
+
+// ── DRIFTSTATUS ──
+// Manuell driftstatus i Firebase config/driftstatus: "normal" | "service".
+// Sätts manuellt i Firebase-konsolen; "service" stänger av avgångsprediktionen.
+let driftstatus = 'normal';
+
+function initDriftstatusListener() {
+  if (!db) return;
+  const ref = db.ref('config/driftstatus');
+  // Skapa noden med "normal" om den saknas (tyst om skrivregler blockerar)
+  ref.once('value').then(snap => {
+    if (snap.val() === null) ref.set('normal').catch(() => {});
+  }).catch(() => {});
+  ref.on('value', snap => {
+    driftstatus = snap.val() === 'service' ? 'service' : 'normal';
+    console.log('[Driftstatus]', driftstatus);
+    renderPrediction();
   });
 }

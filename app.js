@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.2";
+const APP_VERSION = "8.3";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -561,8 +561,100 @@ function renderCount() {
   renderDepartureLog();
 }
 
+// ── AVGÅNGSPREDIKTION (tillståndsmaskin — internt, visas i Statistik) ──
+const BREAK_DURATION_MIN = 30;        // min – paus räknas från BREAK_TIMES-start
+const CROSSING_MIN       = 5;         // min – normal överfartstid, ETA på väg
+const SUMMER_MONTHS      = [5, 6, 7]; // juni–augusti: sommarschema med 15-min-slottar
+
+function isSummerSchedule() {
+  return SUMMER_MONTHS.includes(new Date().getMonth());
+}
+
+function currentBreak(now) {
+  for (const bt of BREAK_TIMES) {
+    const [h, m] = bt.split(':').map(Number);
+    const start = new Date(now);
+    start.setHours(h, m, 0, 0);
+    const end = new Date(start.getTime() + BREAK_DURATION_MIN * 60 * 1000);
+    if (now >= start && now < end) return { start, end };
+  }
+  return null;
+}
+
+// Tillstånd: service > underway > break > atQuay > unknown.
+// "now"-parametern finns för testbarhet; produktionsanrop sker utan argument.
+function predictDeparture(now = new Date()) {
+  // 4. Service — manuellt satt i Firebase (config/driftstatus), överstyr allt
+  if (driftstatus === 'service') return { state: 'service', pier: null, eta: null };
+
+  const pier = lastKnownGpsPos
+    ? getNearestBrygga(lastKnownGpsPos.lat, lastKnownGpsPos.lng, true)
+    : null;
+
+  // 2. På väg — destination = motsatt brygga från senaste avgång, ETA = avgång + överfart
+  if (currentGpsSpeedMs > 0.5) {
+    const trips = load().trips;
+    const last  = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
+    const dest  = last?.from === 'Pettu' ? 'Utö' : last?.from === 'Utö' ? 'Pettu' : null;
+    const eta   = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
+    return { state: 'underway', pier: dest, eta };
+  }
+
+  // 3. Paus pågår — inom pausintervall och vid Pettu
+  const brk = currentBreak(now);
+  if (brk && pier === 'Pettu') return { state: 'break', pier, eta: brk.end };
+
+  // 1. Vid kaj, väntar — nästa jämna 15-min-slot i sommarschema, annars okänt
+  if (pier) {
+    const eta = isSummerSchedule()
+      ? new Date(Math.ceil(now.getTime() / 900000) * 900000)
+      : null;
+    return { state: 'atQuay', pier, eta };
+  }
+
+  return { state: 'unknown', pier: null, eta: null };
+}
+
+function renderPrediction() {
+  const el = document.getElementById('predictionCard');
+  if (!el) return;
+  const p  = predictDeparture();
+  const hm = d => d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  let stateStr, etaStr;
+  switch (p.state) {
+    case 'service':
+      stateStr = '🔧 ' + t('predService');
+      etaStr   = t('predNoEta');
+      break;
+    case 'underway':
+      stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
+      etaStr   = p.eta ? `${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}` : t('predNoEta');
+      break;
+    case 'break':
+      stateStr = '☕ ' + t('predBreak') + ' (Pettu)';
+      etaStr   = `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}`;
+      break;
+    case 'atQuay':
+      stateStr = '⚓ ' + t('predAtQuay') + ' (' + p.pier + ')';
+      etaStr   = p.eta
+        ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}`
+        : `${t('predNextDep')}: ${t('predUnknownTime')}`;
+      break;
+    default:
+      stateStr = '❔ ' + t('predUnknown');
+      etaStr   = t('predNoEta');
+  }
+  el.innerHTML =
+    `<div class="co2-card">` +
+      `<div class="sec-title" style="margin:0 0 8px">${t('predTitle')}</div>` +
+      `<div class="peak-val">${stateStr}</div>` +
+      `<div class="peak-lbl" style="margin-top:4px">${etaStr}</div>` +
+    `</div>`;
+}
+
 // ── RENDER: STATS VIEW ──
 function renderStats() {
+  renderPrediction();
   const c = counts();
   const total = Object.values(c).reduce((a, b) => a + b, 0);
   const h = hourlyData();
@@ -913,6 +1005,7 @@ function tick() {
   updateKorTomLock();
   checkDepartureReminder();
   checkBreakReminders();
+  if (currentView === 'Stats' && summaryTab === 'Idag') renderPrediction();
 }
 
 function renderDepartureLog() {

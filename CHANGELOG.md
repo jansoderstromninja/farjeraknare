@@ -1,5 +1,17 @@
 # Changelog
 
+## v8.2 – 2026-07-02
+- Tillståndsmaskin för avgångsprediktion (internt): predictDeparture() i app.js med fyra tillstånd
+- Vid kaj (känd brygga, fart ~0): nästa avgång = nästa jämna 15-min-slot i sommarschema (juni–aug), annars okänd
+- På väg (fart > 0.5 m/s): destination = motsatt brygga från senaste avgång, ankomst-ETA = avgångstid + 5 min
+- Paus pågår (inom BREAK_TIMES + 30 min och vid Pettu): nästa avgång = pausslut
+- Service: manuellt satt via nytt Firebase-fält config/driftstatus ("normal"/"service", skapas vid start om noden saknas), överstyr allt, ingen ETA
+- Prioritet: service > på väg > paus > vid kaj > okänt (utan GPS/testläge visas "Okänt tillstånd")
+- Nytt kort överst i Statistik → Idag: aktuellt tillstånd + ETA-text, uppdateras var 10:e sekund via tick()
+- Nya konstanter: BREAK_DURATION_MIN = 30, CROSSING_MIN = 5, SUMMER_MONTHS = juni–augusti
+- getNearestBrygga() har fått quiet-parameter så prediktionen inte spammar debug-panelen
+- i18n-nycklar (sv/fi) för alla tillstånds- och ETA-texter
+
 ## v8.1 – 2026-07-02
 - Bugg fixad: vindbyar visade 0 m/s — Open-Meteo har släppt legacy-aliaset windgusts_10m (API:et ekar nyckeln men alla värden är null; ?? 0-guarden gjorde null → 0)
 - Alla OM-parametrar migrerade till aktuella namn: wind_speed_10m, wind_gusts_10m, wind_direction_10m, weather_code
