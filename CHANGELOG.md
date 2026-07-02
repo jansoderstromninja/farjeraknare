@@ -407,3 +407,4 @@ Funktioner tillagda innan versionshanteringen infördes:
 - **Automatisk turdetektering och CO2-spårning** (2026-06-16): ny tur registreras automatiskt när en fordon läggs till efter ≥ 7 min paus; CO2-beräkning (8,7 kg/tur) visas i Summering
 - **Språkväxling svenska / finska** (2026-06-17): 🇸🇪/🇫🇮-knapp i headern, sparas i localStorage; CSS-klass `body.lang-fi` växlar etikettprioritering utan att DOM:en byggs om
 - **CO2-jämförelse två rader** (2026-06-17): 🚗 ICE (0,12 kg/km) och ⚡ EL (0,02 kg/km) visas som separata rader i Summering
+"- v8.6 retry deploy"
