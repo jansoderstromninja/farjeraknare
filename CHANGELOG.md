@@ -1,5 +1,16 @@
 # Changelog
 
+## v8.3 – 2026-07-02
+- Bugg fixad: avgångsprediktionen ignorerade pauser vid ETA-beräkning — en beräknad avgång kl 19:00 visades trots att pausen 19:00–19:30 börjat
+- Ny pausjustering (adjustForBreak): infaller nästa beräknade avgång i ett pausintervall skjuts den till pausslutet om fordon väntar, annars till nästa jämna kvart efter pausslutet
+- "Fordon väntar" = fordon registrerade sedan senaste avgång (vehiclesWaiting, samma princip som knapp-badgarna via tripCounts)
+- Gäller alla fyra pauser (08:30, 11:00, 16:30, 19:00) och alla tillstånd:
+  - Vid kaj: nästa 15-min-slot pausjusteras
+  - På väg: visar nu även nästa avgång (nästa kvart efter ankomst, pausjusterad) utöver ankomst-ETA
+  - Paus pågår: pausslut om fordon väntar, annars nästa jämna kvart efter
+- Pausjusterade avgångar märks "(Pettu)" i ETA-texten — avgångar efter paus startar alltid därifrån
+- Nya hjälpfunktioner: ceilQuarter, nextQuarterAfter, vehiclesWaiting, adjustForBreak
+
 ## v8.2 – 2026-07-02
 - Tillståndsmaskin för avgångsprediktion (internt): predictDeparture() i app.js med fyra tillstånd
 - Vid kaj (känd brygga, fart ~0): nästa avgång = nästa jämna 15-min-slot i sommarschema (juni–aug), annars okänd

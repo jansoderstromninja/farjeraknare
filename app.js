@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.3";
+const APP_VERSION = "8.4";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -581,6 +581,27 @@ function currentBreak(now) {
   return null;
 }
 
+function ceilQuarter(d)      { return new Date(Math.ceil(d.getTime() / 900000) * 900000); }
+function nextQuarterAfter(d) { return new Date(Math.floor(d.getTime() / 900000) * 900000 + 900000); }
+
+// Fordon väntar = registrerade sedan senaste avgång (samma princip som knapp-badgarna)
+function vehiclesWaiting() {
+  const c = tripCounts() || counts();
+  return Object.values(c).reduce((a, b) => a + b, 0) > 0;
+}
+
+// Infaller kandidattiden i ett pausintervall skjuts avgången till pausslutet
+// (om fordon väntar) eller nästa jämna kvart efter pausslutet.
+// Avgångar efter paus startar alltid från Pettu (pauserna sker där).
+function adjustForBreak(candidate) {
+  const brk = currentBreak(candidate);
+  if (!brk) return { time: candidate, afterBreak: false };
+  return {
+    time: vehiclesWaiting() ? brk.end : nextQuarterAfter(brk.end),
+    afterBreak: true,
+  };
+}
+
 // Tillstånd: service > underway > break > atQuay > unknown.
 // "now"-parametern finns för testbarhet; produktionsanrop sker utan argument.
 function predictDeparture(now = new Date()) {
@@ -591,25 +612,35 @@ function predictDeparture(now = new Date()) {
     ? getNearestBrygga(lastKnownGpsPos.lat, lastKnownGpsPos.lng, true)
     : null;
 
-  // 2. På väg — destination = motsatt brygga från senaste avgång, ETA = avgång + överfart
+  // 2. På väg — destination = motsatt brygga från senaste avgång, ankomst = avgång
+  //    + överfart. Nästa avgång = nästa jämna kvart efter ankomst, pausjusterad.
   if (currentGpsSpeedMs > 0.5) {
     const trips = load().trips;
     const last  = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
     const dest  = last?.from === 'Pettu' ? 'Utö' : last?.from === 'Utö' ? 'Pettu' : null;
     const eta   = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
-    return { state: 'underway', pier: dest, eta };
+    let nextDep = null, afterBreak = false;
+    if (eta && isSummerSchedule()) {
+      const adj  = adjustForBreak(ceilQuarter(eta));
+      nextDep    = adj.time;
+      afterBreak = adj.afterBreak;
+    }
+    return { state: 'underway', pier: dest, eta, nextDep, afterBreak };
   }
 
-  // 3. Paus pågår — inom pausintervall och vid Pettu
+  // 3. Paus pågår — nästa avgång = pausslut om fordon väntar, annars nästa jämna kvart
   const brk = currentBreak(now);
-  if (brk && pier === 'Pettu') return { state: 'break', pier, eta: brk.end };
+  if (brk && pier === 'Pettu') {
+    return { state: 'break', pier, eta: vehiclesWaiting() ? brk.end : nextQuarterAfter(brk.end) };
+  }
 
-  // 1. Vid kaj, väntar — nästa jämna 15-min-slot i sommarschema, annars okänt
+  // 1. Vid kaj, väntar — nästa jämna 15-min-slot i sommarschema (pausjusterad), annars okänt
   if (pier) {
-    const eta = isSummerSchedule()
-      ? new Date(Math.ceil(now.getTime() / 900000) * 900000)
-      : null;
-    return { state: 'atQuay', pier, eta };
+    if (isSummerSchedule()) {
+      const adj = adjustForBreak(ceilQuarter(now));
+      return { state: 'atQuay', pier, eta: adj.time, afterBreak: adj.afterBreak };
+    }
+    return { state: 'atQuay', pier, eta: null };
   }
 
   return { state: 'unknown', pier: null, eta: null };
@@ -629,6 +660,8 @@ function renderPrediction() {
     case 'underway':
       stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
       etaStr   = p.eta ? `${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}` : t('predNoEta');
+      if (p.nextDep)
+        etaStr += ` · ${t('predNextDep')} ${t('predCirca')} ${hm(p.nextDep)}${p.afterBreak ? ' (Pettu)' : ''}`;
       break;
     case 'break':
       stateStr = '☕ ' + t('predBreak') + ' (Pettu)';
@@ -637,7 +670,7 @@ function renderPrediction() {
     case 'atQuay':
       stateStr = '⚓ ' + t('predAtQuay') + ' (' + p.pier + ')';
       etaStr   = p.eta
-        ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}`
+        ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}${p.afterBreak ? ' (Pettu)' : ''}`
         : `${t('predNextDep')}: ${t('predUnknownTime')}`;
       break;
     default:
