@@ -1,5 +1,17 @@
 # Changelog
 
+## v8.0 – 2026-07-02
+- Ren omstrukturering: index.html uppdelad i separata filer, ingen funktionalitet ändrad
+- style.css: all CSS
+- i18n.js: översättningsobjektet T, t() och catName()
+- firebase.js: Firebase-init, sync, versionskontroll, bryggmatchning och geofence (isWithinOperatingArea)
+- gps.js: GPS-watch, avgångsdetektering, hastighetssampling, avgångs- och pauspåminnelser
+- weather.js: FMI-vattenstånd och Open-Meteo-prognos
+- app.js: state, UI-rendering, statistik, avgångshantering, bootstrap
+- index.html innehåller nu bara struktur, <link> till style.css och <script>-taggar i rätt laddningsordning
+- Pre-commit-hooken uppdaterad att leta efter APP_VERSION i app.js istället för index.html
+- Verifierat i webbläsare: räkning, avgångsdetektering, språkbyte, färje-/testläge, statistik och väderflik (FMI + Open-Meteo) fungerar identiskt med tidigare
+
 ## v7.9 – 2026-07-01
 - Pauspåminnelser i Färjeläge: 15, 10 och 5 min före varje paus (08:30, 11:00, 16:30, 19:00)
 - Påminnelse spelar playPing() och visar banner: "Var på Pettu om X min — paus HH:MM"
