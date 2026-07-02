@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.4";
+const APP_VERSION = "8.5";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -56,7 +56,19 @@ const CO2_PER_KM_EV   = 0.02;  // kg CO2/km, elbil
 const CO2_PER_TRIP_EV = 0.1;   // kg CO2/avgång, hypotetisk elfärja (uppskattad)
 const TRIP_GAP_MS          = 2 * 60 * 1000;
 const KORTOM_LOCK_MS       = 2 * 60 * 1000;
-const TRIP_VEHICLE_WINDOW_MS  = 3 * 60 * 1000; // ms – fordon loggade inom ±3 min räknas till avgången
+const TRIP_VEHICLE_WINDOW_MS  = 3 * 60 * 1000; // ms – efterslängsfönster: loggar ≤ 3 min efter en avgång räknas till den
+
+// Kronologisk fordonskoppling: en logg hör till första avgången vars ts +
+// TRIP_VEHICLE_WINDOW_MS ligger vid eller efter loggen. Fordon lastas före
+// avgång; fönstret efteråt fångar sena tryck när färjan redan lagt ut.
+// Ingen logg mellan två avgångar tappas eller dubbelräknas (gamla ±3 min-
+// fönstret tappade fordon loggade > 3 min före sin avgång → "tomma" rader).
+function tripTsForLog(logTs, sortedTripTs) {
+  for (const ts of sortedTripTs) {
+    if (logTs <= ts + TRIP_VEHICLE_WINDOW_MS) return ts;
+  }
+  return null; // efter sista avgången + fönster — väntar på nästa avgång
+}
 const MODE_KEY             = 'farjeraknare_mode';
 let mode = localStorage.getItem(MODE_KEY) || 'test';
 function co2CompareHtml(co2kg) {
@@ -374,6 +386,18 @@ function recordDeparture(ts, lat, lng) {
   reminderFired = false;
   const rb = document.getElementById('reminderBanner');
   if (rb) rb.classList.remove('show');
+  // Debug: visa vilka väntande fordon som kopplas till denna avgång
+  {
+    const d0 = load();
+    const tripTsAsc = d0.trips.map(tr => tr.ts).sort((a, b) => a - b);
+    const waiting = d0.logs.filter(l => tripTsForLog(l.ts, tripTsAsc) === null);
+    const hms = t2 => new Date(t2).toLocaleTimeString('sv-SE');
+    console.log('[Koppling] Ny avgång', hms(ts), '—', waiting.length, 'fordon kopplas');
+    waiting.forEach(l => {
+      console.log('[Koppling]', l.type, '(delta', (l.delta ?? 1) + ')', hms(l.ts),
+        '→ avgång', hms(ts), '– diff', Math.round((l.ts - ts) / 1000), 's');
+    });
+  }
   if (db) {
     const date = localDate();
     const data = { ts };
@@ -477,8 +501,9 @@ function deleteDeparture(tripId) {
   const trip = d.trips.find(t => t.id === tripId);
   if (!trip) return;
 
-  // Find and remove vehicle logs tied to this departure's time window
-  const linked = d.logs.filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS);
+  // Find and remove vehicle logs chronologically linked to this departure
+  const allTripTsAsc = d.trips.map(tr => tr.ts).sort((a, b) => a - b);
+  const linked = d.logs.filter(l => tripTsForLog(l.ts, allTripTsAsc) === trip.ts);
   const netVehicles = linked.reduce((s, l) => s + (l.delta ?? 1), 0);
   console.log('[deleteDeparture] tripId:', tripId, '— kopplade loggar:', linked.length, '(netto', netVehicles, 'fordon)');
   if (db && linked.length > 0) {
@@ -491,7 +516,7 @@ function deleteDeparture(tripId) {
       }
     });
   }
-  d.logs = d.logs.filter(l => Math.abs(l.ts - trip.ts) > TRIP_VEHICLE_WINDOW_MS);
+  d.logs = d.logs.filter(l => tripTsForLog(l.ts, allTripTsAsc) !== trip.ts);
 
   // Remove the departure itself
   if (db && tripId && !String(tripId).startsWith('local_')) {
@@ -872,13 +897,9 @@ function calcDepartureStats(logs, tripTs) {
   const buckets = new Array(sorted.length).fill(0);
   logs.forEach(l => {
     if ((l.delta || 1) <= 0) return;
-    // Assign to nearest departure within ±TRIP_VEHICLE_WINDOW_MS
-    let bestIdx = -1, bestDist = Infinity;
-    sorted.forEach((d, i) => {
-      const dist = Math.abs(d - l.ts);
-      if (dist <= TRIP_VEHICLE_WINDOW_MS && dist < bestDist) { bestDist = dist; bestIdx = i; }
-    });
-    if (bestIdx >= 0) buckets[bestIdx] += 1;
+    // Kronologisk koppling: första avgången vars ts + fönster >= loggen
+    const ts = tripTsForLog(l.ts, sorted);
+    if (ts !== null) buckets[sorted.indexOf(ts)] += 1;
   });
   const tripCount = sorted.length;
   const totalVeh = buckets.reduce((a, b) => a + b, 0);
@@ -1049,12 +1070,13 @@ function renderDepartureLog() {
   const trips = [...d.trips].sort((a, b) => b.ts - a.ts).slice(0, 10);
   if (!trips.length) { el.style.display = 'none'; return; }
 
+  const allTripTsAsc = d.trips.map(tr => tr.ts).sort((a, b) => a - b);
   const rows = trips.map(trip => {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const DEP_FROM_KEY = { Pettu: 'depFromPettu', Utö: 'depFromUto' };
     const dirStr = (trip.from && DEP_FROM_KEY[trip.from]) ? t(DEP_FROM_KEY[trip.from]) : '';
     const veh = Math.max(0, d.logs
-      .filter(l => Math.abs(l.ts - trip.ts) <= TRIP_VEHICLE_WINDOW_MS)
+      .filter(l => tripTsForLog(l.ts, allTripTsAsc) === trip.ts)
       .reduce((sum, l) => sum + (l.delta ?? 1), 0));
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`

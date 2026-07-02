@@ -1,5 +1,15 @@
 # Changelog
 
+## v8.4 – 2026-07-02
+- Bugg fixad: tomma avgångar i rad — fordon loggade > 3 min före sin avgång matchade inget ±3 min-fönster och tappades helt; vid täta avgångar kunde fordon dessutom fångas av fel avgångs fönster
+- Ny kronologisk fordonskoppling (tripTsForLog): en logg hör till första avgången vars ts + TRIP_VEHICLE_WINDOW_MS ≥ loggtiden — fönstret är nu enbart efterslängsgrace för sena tryck när färjan lagt ut
+- Ingen logg mellan två avgångar tappas eller dubbelräknas; fordon tillagda strax innan en GPS-avgång hamnar i rätt avgång (verifierat med testfixtur)
+- Samma regel överallt: avgångsloggens rader, deleteDeparture och calcDepartureStats (badges/vehiclesWaiting oförändrade — "sedan senaste avgång")
+- Debug-panel loggar vid varje ny avgång vilka väntande fordon som kopplas: typ, tidsstämpel, avgång och diff i sekunder
+- Vinddata: aktuell timme väljs nu via Intl.formatToParts i stället för locale-strängslicing — Safari kan formatera toLocaleString annorlunda än Chrome, vilket gav tyst fallback till idx 0 = midnattens vind i stället för aktuell timme
+- console.error i stället för tyst fallback om aktuell timme inte hittas i Open-Meteo-svaret
+- Debug-panel loggar vald timme (datum, timme, idx) och råvärden (vind, byar, riktning, temp) — verifierat att appens värden är identiska med API:ets för exakt aktuell timme
+
 ## v8.3 – 2026-07-02
 - Bugg fixad: avgångsprediktionen ignorerade pauser vid ETA-beräkning — en beräknad avgång kl 19:00 visades trots att pausen 19:00–19:30 börjat
 - Ny pausjustering (adjustForBreak): infaller nästa beräknade avgång i ett pausintervall skjuts den till pausslutet om fordon väntar, annars till nästa jämna kvart efter pausslutet

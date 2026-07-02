@@ -242,12 +242,32 @@ async function loadWeather() {
     console.log('[OM] JSON OK, timmar:', weatherData?.hourly?.time?.length);
     weatherLastFetch = Date.now();
 
-    const now    = new Date();
-    const locStr = now.toLocaleString('sv-SE', { timeZone: 'Europe/Helsinki' });
-    const hDate  = locStr.slice(0, 10), hHour = locStr.slice(11, 13);
-    const times  = weatherData.hourly.time;
+    const now = new Date();
+    // Helsinki-timme via formatToParts — locale-strängslicing är motorberoende
+    // (Safari kan formatera annorlunda än Chrome) och föll då tyst tillbaka
+    // till idx 0 = midnattens data i stället för aktuell timme
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Europe/Helsinki',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', hourCycle: 'h23',
+      }).formatToParts(now).map(p => [p.type, p.value])
+    );
+    const hDate = `${parts.year}-${parts.month}-${parts.day}`;
+    const hHour = parts.hour;
+    const times = weatherData.hourly.time;
     let idx = times.findIndex(s => s.slice(0, 10) === hDate && s.slice(11, 13) === hHour);
-    if (idx < 0) idx = 0;
+    if (idx < 0) {
+      console.error('[OM] Hittade inte aktuell timme', hDate, hHour,
+        '— times:', times[0], '…', times[times.length - 1]);
+      idx = 0;
+    }
+    console.log('[OM] Aktuell timme', hDate, hHour + ':xx → idx', idx, '=', times[idx]);
+    console.log('[OM] Råvärden för', times[idx] + ':',
+      'vind', weatherData.hourly.wind_speed_10m[idx], 'm/s,',
+      'byar', weatherData.hourly.wind_gusts_10m[idx], 'm/s,',
+      'riktning', weatherData.hourly.wind_direction_10m[idx], '°,',
+      'temp', weatherData.hourly.temperature_2m[idx], '°C');
     console.log('[OM] Rå wind_gusts_10m (från', times[idx].slice(11, 16) + '):',
       JSON.stringify(weatherData.hourly.wind_gusts_10m.slice(idx, idx + 6)));
     console.log('[OM] Riktning', times[idx].slice(11, 16), '=',
