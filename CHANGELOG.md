@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.1 – 2026-07-03
+- Bryggkoppling per fordonslogg: nya loggar får fältet brygga = getNearestBrygga() vid registreringstillfället (via ny hjälpfunktion bryggaAtLogTime), null om ingen brygga inom 50 m eller GPS saknas
+- Fältet sätts i både tap() och removeOne() (delta −1 bär också brygga så nettoräkning per plats stämmer) och läses tillbaka i Firebase-lyssnaren (saknat fält → null)
+- Ny funktion vehiclesWaitingAt(bryggaNamn): antal fordon loggade sedan senaste avgången med matchande brygga-fält; loggar med brygga null (inkl. alla äldre loggar) räknas i totalen men aldrig per plats
+- Prediktionen platsfiltrerar nu: tillstånd 1 (vid kaj) kräver fordon väntande vid nuvarande brygga, tillstånd 2 (på väg) vid destinationsbryggan — fordon vid fel brygga ger "Väntar på fordon"
+- adjustForBreak och paus-tillståndet använder fortsatt global vehiclesWaiting() — avgångar efter paus betjänar båda bryggorna
+- Verifierat: fordon med brygga Pettu ger ETA vid kaj Pettu men "Väntar på fordon" när bara Utö-fordon finns; på väg mot Pettu visas nästa möjliga avgång bara när destinationen har väntande fordon; gamla loggar utan fält påverkar inte platslogiken
+
 ## v9.0 – 2026-07-03
 - Pauslängder per paus (BREAK_DURATIONS_MIN): 08:30–08:50 och 16:30–16:50 är 20 min, 11:00–11:30 och 19:00–19:30 är 30 min (tidigare 30 min för alla)
 - Fix 1: fordon som väntar mitt i en pågående paus får pausslutet som nästa möjliga avgång — aldrig en "inom kort"-tid mitt i pausen; gäller nu även vid annan brygga än Pettu (brådskande korsning triggas inte under pågående paus)

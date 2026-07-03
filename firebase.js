@@ -42,7 +42,7 @@ function attachListeners() {
     const logs = [];
     snap.forEach(ch => {
       const v = ch.val();
-      logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta });
+      logs.push({ id: ch.key, type: v.type, ts: v.ts, delta: v.delta, brygga: v.brygga ?? null });
     });
     logs.sort((a, b) => a.ts - b.ts);
     const d = load();

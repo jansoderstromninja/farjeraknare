@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.3";
+const APP_VERSION = "9.4";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -328,6 +328,14 @@ function playClick() {
   } catch (e) {}
 }
 
+// Brygga vid registreringstillfället: närmaste brygga inom 50 m enligt aktuell
+// GPS-position, annars null (fordonet räknas i totalen men filtreras inte per plats)
+function bryggaAtLogTime() {
+  return lastKnownGpsPos
+    ? getNearestBrygga(lastKnownGpsPos.lat, lastKnownGpsPos.lng, true)
+    : null;
+}
+
 function tap(catId, btn) {
   if (navigator.vibrate) navigator.vibrate(12);
   playClick();
@@ -344,14 +352,15 @@ function tap(catId, btn) {
   }
 
   const d = load();
+  const brygga = bryggaAtLogTime();
   if (db && logsRef) {
     // push() returns the key synchronously → optimistic local write, then sync
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta: 1 });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: 1, brygga });
     save(d);
-    ref.set({ type: catId, ts, delta: 1 }).catch(() => {});
+    ref.set({ type: catId, ts, delta: 1, brygga }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1 });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1, brygga });
     save(d);
   }
   renderCount();
@@ -369,13 +378,14 @@ function removeOne(catId, btn) {
   checkDateRollover();
   const ts = Date.now();
   const d = load();
+  const brygga = bryggaAtLogTime();
   if (db && logsRef) {
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta: -1 });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga });
     save(d);
-    ref.set({ type: catId, ts, delta: -1 }).catch(() => {});
+    ref.set({ type: catId, ts, delta: -1, brygga }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1 });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga });
     save(d);
   }
   renderCount();
@@ -631,6 +641,16 @@ function vehiclesWaiting() {
   return Object.values(c).reduce((a, b) => a + b, 0) > 0;
 }
 
+// Antal fordon väntande vid en specifik brygga sedan senaste avgången.
+// Loggar utan brygga-fält (null/äldre data) räknas inte per plats.
+function vehiclesWaitingAt(bryggaNamn) {
+  const lastTs = lastDepartureTs();
+  const n = load().logs
+    .filter(l => l.ts >= lastTs && l.brygga === bryggaNamn)
+    .reduce((s, l) => s + (l.delta ?? 1), 0);
+  return Math.max(0, n);
+}
+
 // Infaller kandidattiden i ett pausintervall skjuts avgången till pausslutet
 // (om fordon väntar) eller nästa jämna kvart efter pausslutet.
 // Avgångar efter paus startar alltid från Pettu (pauserna sker där).
@@ -732,7 +752,8 @@ function predictDeparture(now = new Date()) {
     let nextDep = null, noVehicles = false;
     const urgent = (dest && eta) ? urgentCrossingPlan(dest, eta) : null;
     if (!urgent && last && dest && eta && isSummerSchedule()) {
-      if (!vehiclesWaiting()) {
+      // Tillstånd 2: väntande fordon räknas vid DESTINATIONSBRYGGAN
+      if (vehiclesWaitingAt(dest) === 0) {
         noVehicles = true;
       } else {
         const adj = adjustForBreak(ceilQuarter(eta));
@@ -758,11 +779,12 @@ function predictDeparture(now = new Date()) {
     if (isTrafficClosed(now, pier)) return { state: 'atQuay', pier, eta: null, closed: true };
     // Pågående paus (även vid annan brygga än Pettu): fordon som väntar får
     // pausslutet som nästa möjliga avgång — aldrig "inom kort" mitt i pausen
-    if (brk && vehiclesWaiting()) return { state: 'atQuay', pier, eta: brk.end, afterBreak: true };
+    // Tillstånd 1: väntande fordon räknas vid NUVARANDE brygga
+    if (brk && vehiclesWaitingAt(pier) > 0) return { state: 'atQuay', pier, eta: brk.end, afterBreak: true };
     const urgent = urgentCrossingPlan(pier, now);
     if (urgent) return { state: 'atQuay', pier, eta: null, urgent };
     if (!isSummerSchedule()) return { state: 'atQuay', pier, eta: null };
-    if (!vehiclesWaiting())  return { state: 'atQuay', pier, eta: null, noVehicles: true };
+    if (vehiclesWaitingAt(pier) === 0) return { state: 'atQuay', pier, eta: null, noVehicles: true };
     const adj = adjustForBreak(ceilQuarter(now));
     const eta = pier === 'Utö'
       ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
