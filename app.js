@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.1";
+const APP_VERSION = "9.2";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -698,10 +698,11 @@ function predictDeparture(now = new Date()) {
     : null;
 
   // 2. På väg — destination = motsatt brygga från senaste avgång, ankomst = avgång
-  //    + överfart. "Nästa avgång" avser bryggan båten just LÄMNADE (origin), inte
-  //    destinationen — det är den som är intressant för någon som väntar där.
-  //    Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1, och visas
-  //    bara om fordon väntar (annars vore det ett ogrundat löfte).
+  //    + överfart. "Nästa avgång" avser DESTINATIONEN (bryggan båten är på väg
+  //    till), inte ursprunget — det är den som är intressant för någon som
+  //    väntar där. Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1,
+  //    med ankomsttiden som referenspunkt, och visas bara om fordon väntar
+  //    (annars vore det ett ogrundat löfte).
   if (currentGpsSpeedMs > 0.5) {
     const trips  = load().trips;
     const last   = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
@@ -711,15 +712,12 @@ function predictDeparture(now = new Date()) {
 
     let nextDep = null, noVehicles = false;
     const urgent = (dest && eta) ? urgentCrossingPlan(dest, eta) : null;
-    if (!urgent && last && origin && isSummerSchedule()) {
+    if (!urgent && last && dest && eta && isSummerSchedule()) {
       if (!vehiclesWaiting()) {
         noVehicles = true;
       } else {
-        const originGridTs = origin === 'Utö'
-          ? new Date(last.ts - UTO_OFFSET_MIN * 60 * 1000)
-          : new Date(last.ts);
-        const adj = adjustForBreak(nextQuarterAfter(originGridTs));
-        nextDep = origin === 'Utö'
+        const adj = adjustForBreak(ceilQuarter(eta));
+        nextDep = dest === 'Utö'
           ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
           : adj.time;
       }
@@ -778,10 +776,10 @@ function renderPrediction() {
       if (p.urgent) {
         etaStr += ` · ${urgentPlanText(p.urgent, hm)}`;
       } else if (p.nextDep) {
-        const key = PRED_NEXT_DEP_FROM_KEY[p.origin];
+        const key = PRED_NEXT_DEP_FROM_KEY[p.pier];
         if (key) etaStr += ` · ${t(key)} ${t('predCirca')} ${hm(p.nextDep)}`;
       } else if (p.noVehicles) {
-        const key = PRED_WAITING_AT_KEY[p.origin];
+        const key = PRED_WAITING_AT_KEY[p.pier];
         if (key) etaStr += ` · ${t(key)}`;
       }
       break;

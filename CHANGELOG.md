@@ -1,5 +1,11 @@
 # Changelog
 
+## v8.9 – 2026-07-03
+- Bugg fixad: tillstånd "På väg" refererade fel brygga — vid avgång från Utö mot Pettu visades "Väntar på fordon vid Utö" (ursprunget) i stället för Pettu (destinationen)
+- Nästa-avgång-beräkningen bygger nu på destinationens rutnät + ankomsttiden (ceilQuarter(eta)) i stället för ursprungets rutnät + avgångstiden — samma Pettu/Utö-offsetlogik som tillstånd 1, fast räknad från ankomsten
+- Rendertexten (predNextDepFromX/predWaitingAtX) slår nu upp på p.pier (destination) i stället för p.origin
+- Verifierat båda riktningarna: Utö→Pettu visar nu "Nästa avgång från Pettu" / "Väntar på fordon vid Pettu"; Pettu→Utö ger fortsatt korrekt Utö-offset (+8 min)
+
 ## v8.8 – 2026-07-03
 - Ny regel "brådskande korsning innan paus": ett fordon loggat senast 15 min innan en paus (URGENT_CUTOFF_MIN) har rätt att korsa innan den, oavsett var färjan står
 - Ny funktion getBreakCutoff(breakStart) = breakStart − 15 min, samt nextUpcomingBreak() och earliestWaitingVehicleTs() (återanvänder tripTsForLog-definitionen av "obetjänat fordon")
