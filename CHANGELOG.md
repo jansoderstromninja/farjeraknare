@@ -4,6 +4,7 @@
 - Egen GitHub Actions-workflow för Pages-deploy (.github/workflows/deploy.yml) — ersätter standardbyggaren och dess gräns på 10 builds/timme
 - Standardmall: actions/checkout → configure-pages → upload-pages-artifact → deploy-pages; inga byggsteg, statiska filer laddas upp direkt
 - Triggas vid varje push till main samt manuellt (workflow_dispatch); concurrency-grupp avbryter pågående deploy vid ny push
+- Workflowen flippar själv Pages-källan till "GitHub Actions" via API:et (PUT /pages, build_type=workflow) — källan stod kvar på branchbygge, vilket fick första deployen att misslyckas och lämnade en legacy-build fast i kö
 
 ## v8.4 – 2026-07-02
 - Bugg fixad: tomma avgångar i rad — fordon loggade > 3 min före sin avgång matchade inget ±3 min-fönster och tappades helt; vid täta avgångar kunde fordon dessutom fångas av fel avgångs fönster

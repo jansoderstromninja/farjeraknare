@@ -26,6 +26,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # Flippar Pages-källan till "GitHub Actions" om den står på branchbygge —
+      # configure-pages uppdaterar inte build_type på en befintlig sajt.
+      # Informativt steg: fäller inte jobbet, PUT är no-op när källan redan är rätt.
+      - name: Säkerställ att Pages-källan är GitHub Actions
+        run: |
+          curl -sS -o /tmp/pages-resp.txt -w "Pages API HTTP %{http_code}\n" -X PUT \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" \
+            -d '{"build_type":"workflow"}'
+          cat /tmp/pages-resp.txt || true
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
