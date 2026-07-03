@@ -82,6 +82,10 @@ const T = {
     predNoEta:      'Ingen ETA',
     predUnknownTime:'okänd',
     predWaitingVehicles: 'Väntar på fordon',
+    predNextDepFromPettu: 'Nästa avgång från Pettu',
+    predNextDepFromUto:   'Nästa avgång från Utö',
+    predWaitingAtPettu:   'Väntar på fordon vid Pettu',
+    predWaitingAtUto:     'Väntar på fordon vid Utö',
     locale:         'sv-SE',
   },
   fi: {
@@ -162,6 +166,10 @@ const T = {
     predNoEta:      'Ei arviota',
     predUnknownTime:'tuntematon',
     predWaitingVehicles: 'Odottaa ajoneuvoja',
+    predNextDepFromPettu: 'Seuraava lähtö Petusta',
+    predNextDepFromUto:   'Seuraava lähtö Ulkoluodosta',
+    predWaitingAtPettu:   'Odottaa ajoneuvoja Petussa',
+    predWaitingAtUto:     'Odottaa ajoneuvoja Ulkoluodossa',
     locale:         'fi-FI',
   }
 };

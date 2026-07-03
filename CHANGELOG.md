@@ -1,5 +1,12 @@
 # Changelog
 
+## v8.7 – 2026-07-03
+- Tillstånd "På väg": nästa avgång avser nu bryggan båten just LÄMNADE (origin), inte destinationen — det är den bilister vid bryggan faktiskt vill veta
+- Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1: nästa jämna kvart efter avgångens egen slot, pausjusterad, plus 8 min om origin är Utö
+- Kräver fordon väntande (samma vehiclesWaiting-logik) innan en tid visas — annars "Väntar på fordon vid Pettu/Utö" i stället för ett ogrundat löfte
+- Nya i18n-nycklar: predNextDepFromPettu/Uto, predWaitingAtPettu/Uto (sv/fi)
+- Verifierat: avgång 08:15 från Pettu → nästa avgång 08:30, men om pausen 08:30–09:00 ligger i vägen skjuts den till 09:00 (paus tar över, precis den ursprungliga bugg-observationen)
+
 ## v8.6 – 2026-07-03
 - Bugg fixad: tillstånd "Vid kaj, väntar" visade Pettu-schemat (jämn kvart) även vid Utö
 - Ny konstant UTO_OFFSET_MIN = 8: från Utö är nästa avgång = motsvarande Pettu-slot (jämn kvart, pausjusterad) + 8 min

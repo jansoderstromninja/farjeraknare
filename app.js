@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.9";
+const APP_VERSION = "9.0";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -639,19 +639,32 @@ function predictDeparture(now = new Date()) {
     : null;
 
   // 2. På väg — destination = motsatt brygga från senaste avgång, ankomst = avgång
-  //    + överfart. Nästa avgång = nästa jämna kvart efter ankomst, pausjusterad.
+  //    + överfart. "Nästa avgång" avser bryggan båten just LÄMNADE (origin), inte
+  //    destinationen — det är den som är intressant för någon som väntar där.
+  //    Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1, och visas
+  //    bara om fordon väntar (annars vore det ett ogrundat löfte).
   if (currentGpsSpeedMs > 0.5) {
-    const trips = load().trips;
-    const last  = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
-    const dest  = last?.from === 'Pettu' ? 'Utö' : last?.from === 'Utö' ? 'Pettu' : null;
-    const eta   = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
-    let nextDep = null, afterBreak = false;
-    if (eta && isSummerSchedule()) {
-      const adj  = adjustForBreak(ceilQuarter(eta));
-      nextDep    = adj.time;
-      afterBreak = adj.afterBreak;
+    const trips  = load().trips;
+    const last   = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
+    const origin = last?.from ?? null;
+    const dest   = origin === 'Pettu' ? 'Utö' : origin === 'Utö' ? 'Pettu' : null;
+    const eta    = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
+
+    let nextDep = null, noVehicles = false;
+    if (last && origin && isSummerSchedule()) {
+      if (!vehiclesWaiting()) {
+        noVehicles = true;
+      } else {
+        const originGridTs = origin === 'Utö'
+          ? new Date(last.ts - UTO_OFFSET_MIN * 60 * 1000)
+          : new Date(last.ts);
+        const adj = adjustForBreak(nextQuarterAfter(originGridTs));
+        nextDep = origin === 'Utö'
+          ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
+          : adj.time;
+      }
     }
-    return { state: 'underway', pier: dest, eta, nextDep, afterBreak };
+    return { state: 'underway', pier: dest, origin, eta, nextDep, noVehicles };
   }
 
   // 3. Paus pågår — nästa avgång = pausslut om fordon väntar, annars nästa jämna kvart
@@ -676,6 +689,9 @@ function predictDeparture(now = new Date()) {
   return { state: 'unknown', pier: null, eta: null };
 }
 
+const PRED_NEXT_DEP_FROM_KEY = { Pettu: 'predNextDepFromPettu', Utö: 'predNextDepFromUto' };
+const PRED_WAITING_AT_KEY    = { Pettu: 'predWaitingAtPettu',   Utö: 'predWaitingAtUto' };
+
 function renderPrediction() {
   const el = document.getElementById('predictionCard');
   if (!el) return;
@@ -690,8 +706,13 @@ function renderPrediction() {
     case 'underway':
       stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
       etaStr   = p.eta ? `${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}` : t('predNoEta');
-      if (p.nextDep)
-        etaStr += ` · ${t('predNextDep')} ${t('predCirca')} ${hm(p.nextDep)}${p.afterBreak ? ' (Pettu)' : ''}`;
+      if (p.nextDep) {
+        const key = PRED_NEXT_DEP_FROM_KEY[p.origin];
+        if (key) etaStr += ` · ${t(key)} ${t('predCirca')} ${hm(p.nextDep)}`;
+      } else if (p.noVehicles) {
+        const key = PRED_WAITING_AT_KEY[p.origin];
+        if (key) etaStr += ` · ${t(key)}`;
+      }
       break;
     case 'break':
       stateStr = '☕ ' + t('predBreak') + ' (Pettu)';
