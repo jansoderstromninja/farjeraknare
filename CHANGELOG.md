@@ -1,5 +1,15 @@
 # Changelog
 
+## v8.8 – 2026-07-03
+- Ny regel "brådskande korsning innan paus": ett fordon loggat senast 15 min innan en paus (URGENT_CUTOFF_MIN) har rätt att korsa innan den, oavsett var färjan står
+- Ny funktion getBreakCutoff(breakStart) = breakStart − 15 min, samt nextUpcomingBreak() och earliestWaitingVehicleTs() (återanvänder tripTsForLog-definitionen av "obetjänat fordon")
+- Om ett väntande fordon loggades före cutoff och färjan står/kommer stå på motsatt brygga: prediktionstexten visar en hämta → leverera → positionera-sekvens i stället för att skjuta allt till efter pausen
+- Sekvensen har 3 ben när färjan inte redan står vid Pettu efter leveransen (positionering krävs), annars 2 ben (leveransen slutar redan vid Pettu, där pauserna sker)
+- Gäller både tillstånd 1 (vid kaj) och tillstånd 2 (på väg, applicerat på ankomstbryggan)
+- Fordonsloggar saknar GPS/bryggfält — regeln antar att det väntande fordonet står på bryggan mittemot färjan, den enda tolkning som gör sekvensen meningsfull med nuvarande datamodell
+- Nya i18n-nycklar: predUrgentTitle, predUrgentFetch, predUrgentDeliver, predUrgentPosition (sv/fi)
+- Verifierat: färja vid Utö, paus 08:30, fordon loggat 08:13 → "Hämtar Pettu ca 08:21 → Levererar Utö ca 08:26 → Positionerar Pettu ca 08:31"; fordon loggat efter cutoff (08:20) → normal pauslogik (skjuts till 09:08); omvänd riktning (färja vid Pettu) → 2-benssekvens utan positioneringssteg
+
 ## v8.7 – 2026-07-03
 - Tillstånd "På väg": nästa avgång avser nu bryggan båten just LÄMNADE (origin), inte destinationen — det är den bilister vid bryggan faktiskt vill veta
 - Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1: nästa jämna kvart efter avgångens egen slot, pausjusterad, plus 8 min om origin är Utö

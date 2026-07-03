@@ -86,6 +86,10 @@ const T = {
     predNextDepFromUto:   'Nästa avgång från Utö',
     predWaitingAtPettu:   'Väntar på fordon vid Pettu',
     predWaitingAtUto:     'Väntar på fordon vid Utö',
+    predUrgentTitle:      'Brådskande korsning före paus',
+    predUrgentFetch:      'Hämtar',
+    predUrgentDeliver:    'Levererar',
+    predUrgentPosition:   'Positionerar',
     locale:         'sv-SE',
   },
   fi: {
@@ -170,6 +174,10 @@ const T = {
     predNextDepFromUto:   'Seuraava lähtö Ulkoluodosta',
     predWaitingAtPettu:   'Odottaa ajoneuvoja Petussa',
     predWaitingAtUto:     'Odottaa ajoneuvoja Ulkoluodossa',
+    predUrgentTitle:      'Kiireellinen ylitys ennen taukoa',
+    predUrgentFetch:      'Noutaa',
+    predUrgentDeliver:    'Toimittaa',
+    predUrgentPosition:   'Siirtyy',
     locale:         'fi-FI',
   }
 };
