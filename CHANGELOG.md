@@ -1,5 +1,10 @@
 # Changelog
 
+## v8.5 – 2026-07-03
+- Egen GitHub Actions-workflow för Pages-deploy (.github/workflows/deploy.yml) — ersätter standardbyggaren och dess gräns på 10 builds/timme
+- Standardmall: actions/checkout → configure-pages → upload-pages-artifact → deploy-pages; inga byggsteg, statiska filer laddas upp direkt
+- Triggas vid varje push till main samt manuellt (workflow_dispatch); concurrency-grupp avbryter pågående deploy vid ny push
+
 ## v8.4 – 2026-07-02
 - Bugg fixad: tomma avgångar i rad — fordon loggade > 3 min före sin avgång matchade inget ±3 min-fönster och tappades helt; vid täta avgångar kunde fordon dessutom fångas av fel avgångs fönster
 - Ny kronologisk fordonskoppling (tripTsForLog): en logg hör till första avgången vars ts + TRIP_VEHICLE_WINDOW_MS ≥ loggtiden — fönstret är nu enbart efterslängsgrace för sena tryck när färjan lagt ut
