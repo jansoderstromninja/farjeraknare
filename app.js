@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "8.8";
+const APP_VERSION = "8.9";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -590,6 +590,7 @@ function renderCount() {
 const BREAK_DURATION_MIN = 30;        // min – paus räknas från BREAK_TIMES-start
 const CROSSING_MIN       = 5;         // min – normal överfartstid, ETA på väg
 const SUMMER_MONTHS      = [5, 6, 7]; // juni–augusti: sommarschema med 15-min-slottar
+const UTO_OFFSET_MIN     = 8;         // min – Utö-avgång = motsvarande Pettu-slot + 8 min
 
 function isSummerSchedule() {
   return SUMMER_MONTHS.includes(new Date().getMonth());
@@ -659,13 +660,17 @@ function predictDeparture(now = new Date()) {
     return { state: 'break', pier, eta: vehiclesWaiting() ? brk.end : nextQuarterAfter(brk.end) };
   }
 
-  // 1. Vid kaj, väntar — nästa jämna 15-min-slot i sommarschema (pausjusterad), annars okänt
+  // 1. Vid kaj, väntar — nästa jämna 15-min-slot (Pettu-tid), pausjusterad.
+  //    Från Utö: samma Pettu-slot + UTO_OFFSET_MIN. Kräver fordon väntande
+  //    på någondera sidan, annars visas "Väntar på fordon" utan ETA.
   if (pier) {
-    if (isSummerSchedule()) {
-      const adj = adjustForBreak(ceilQuarter(now));
-      return { state: 'atQuay', pier, eta: adj.time, afterBreak: adj.afterBreak };
-    }
-    return { state: 'atQuay', pier, eta: null };
+    if (!isSummerSchedule()) return { state: 'atQuay', pier, eta: null };
+    if (!vehiclesWaiting())  return { state: 'atQuay', pier, eta: null, noVehicles: true };
+    const adj = adjustForBreak(ceilQuarter(now));
+    const eta = pier === 'Utö'
+      ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
+      : adj.time;
+    return { state: 'atQuay', pier, eta, afterBreak: adj.afterBreak };
   }
 
   return { state: 'unknown', pier: null, eta: null };
@@ -696,7 +701,9 @@ function renderPrediction() {
       stateStr = '⚓ ' + t('predAtQuay') + ' (' + p.pier + ')';
       etaStr   = p.eta
         ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}${p.afterBreak ? ' (Pettu)' : ''}`
-        : `${t('predNextDep')}: ${t('predUnknownTime')}`;
+        : p.noVehicles
+          ? t('predWaitingVehicles')
+          : `${t('predNextDep')}: ${t('predUnknownTime')}`;
       break;
     default:
       stateStr = '❔ ' + t('predUnknown');

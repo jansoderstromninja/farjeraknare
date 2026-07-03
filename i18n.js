@@ -81,6 +81,7 @@ const T = {
     predCirca:      'ca',
     predNoEta:      'Ingen ETA',
     predUnknownTime:'okänd',
+    predWaitingVehicles: 'Väntar på fordon',
     locale:         'sv-SE',
   },
   fi: {
@@ -160,6 +161,7 @@ const T = {
     predCirca:      'n.',
     predNoEta:      'Ei arviota',
     predUnknownTime:'tuntematon',
+    predWaitingVehicles: 'Odottaa ajoneuvoja',
     locale:         'fi-FI',
   }
 };

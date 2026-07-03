@@ -1,5 +1,13 @@
 # Changelog
 
+## v8.6 – 2026-07-03
+- Bugg fixad: tillstånd "Vid kaj, väntar" visade Pettu-schemat (jämn kvart) även vid Utö
+- Ny konstant UTO_OFFSET_MIN = 8: från Utö är nästa avgång = motsvarande Pettu-slot (jämn kvart, pausjusterad) + 8 min
+- Vid Pettu oförändrat: nästa jämna 15-min-slot, pausjusterad
+- Båda kräver nu fordon väntande sedan senaste avgången (vehiclesWaiting, samma logik som knapp-badgarna) — utan väntande fordon visas "Väntar på fordon" i stället för en tidsestimering
+- Pausexkludering (v8.3) återanvänd oförändrad — Pettu-slotten pausjusteras innan Utö-offsetten läggs på
+- Ny i18n-nyckel predWaitingVehicles (sv/fi)
+
 ## v8.5 – 2026-07-03
 - Egen GitHub Actions-workflow för Pages-deploy (.github/workflows/deploy.yml) — ersätter standardbyggaren och dess gräns på 10 builds/timme
 - Standardmall: actions/checkout → configure-pages → upload-pages-artifact → deploy-pages; inga byggsteg, statiska filer laddas upp direkt
