@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.2";
+const APP_VERSION = "9.3";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -587,11 +587,24 @@ function renderCount() {
 }
 
 // ── AVGÅNGSPREDIKTION (tillståndsmaskin — internt, visas i Statistik) ──
-const BREAK_DURATION_MIN = 30;        // min – paus räknas från BREAK_TIMES-start
+const BREAK_DURATION_MIN = 30;        // min – fallback för pauser utan egen längd
+const BREAK_DURATIONS_MIN = { '08:30': 20, '11:00': 30, '16:30': 20, '19:00': 30 }; // min – pauslängd per starttid
 const CROSSING_MIN       = 5;         // min – normal överfartstid, ETA på väg
 const SUMMER_MONTHS      = [5, 6, 7]; // juni–augusti: sommarschema med 15-min-slottar
 const UTO_OFFSET_MIN     = 8;         // min – Utö-avgång = motsvarande Pettu-slot + 8 min
 const URGENT_CUTOFF_MIN  = 15;        // min – fordon loggat inom denna marginal före en paus har rätt att korsa innan den
+const TRAFFIC_LAST_DEP   = { Pettu: '22:50', 'Utö': '22:45' }; // sista möjliga avgång per brygga
+const TRAFFIC_START      = '06:00';   // trafiken öppnar (arkisin-start)
+
+function timeToMin(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
+
+// Trafikstopp: mellan bryggans sista möjliga avgång och trafikstart 06:00
+// predikteras inga avgångar. Okänd brygga → den tidigaste stopptiden (Utö).
+function isTrafficClosed(now, pier) {
+  const lastDep = TRAFFIC_LAST_DEP[pier] ?? TRAFFIC_LAST_DEP['Utö'];
+  const mins = now.getHours() * 60 + now.getMinutes();
+  return mins >= timeToMin(lastDep) || mins < timeToMin(TRAFFIC_START);
+}
 
 function isSummerSchedule() {
   return SUMMER_MONTHS.includes(new Date().getMonth());
@@ -602,7 +615,8 @@ function currentBreak(now) {
     const [h, m] = bt.split(':').map(Number);
     const start = new Date(now);
     start.setHours(h, m, 0, 0);
-    const end = new Date(start.getTime() + BREAK_DURATION_MIN * 60 * 1000);
+    const dur = BREAK_DURATIONS_MIN[bt] ?? BREAK_DURATION_MIN;
+    const end = new Date(start.getTime() + dur * 60 * 1000);
     if (now >= start && now < end) return { start, end };
   }
   return null;
@@ -710,6 +724,11 @@ function predictDeparture(now = new Date()) {
     const dest   = origin === 'Pettu' ? 'Utö' : origin === 'Utö' ? 'Pettu' : null;
     const eta    = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
 
+    // Trafikstopp: efter destinationens sista möjliga avgång predikteras inget
+    if (dest && isTrafficClosed(now, dest)) {
+      return { state: 'underway', pier: dest, origin, eta, closed: true };
+    }
+
     let nextDep = null, noVehicles = false;
     const urgent = (dest && eta) ? urgentCrossingPlan(dest, eta) : null;
     if (!urgent && last && dest && eta && isSummerSchedule()) {
@@ -735,6 +754,11 @@ function predictDeparture(now = new Date()) {
   //    Från Utö: samma Pettu-slot + UTO_OFFSET_MIN. Kräver fordon väntande
   //    på någondera sidan, annars visas "Väntar på fordon" utan ETA.
   if (pier) {
+    // Trafikstopp: mellan sista möjliga avgång och 06:00 predikteras inget
+    if (isTrafficClosed(now, pier)) return { state: 'atQuay', pier, eta: null, closed: true };
+    // Pågående paus (även vid annan brygga än Pettu): fordon som väntar får
+    // pausslutet som nästa möjliga avgång — aldrig "inom kort" mitt i pausen
+    if (brk && vehiclesWaiting()) return { state: 'atQuay', pier, eta: brk.end, afterBreak: true };
     const urgent = urgentCrossingPlan(pier, now);
     if (urgent) return { state: 'atQuay', pier, eta: null, urgent };
     if (!isSummerSchedule()) return { state: 'atQuay', pier, eta: null };
@@ -773,7 +797,9 @@ function renderPrediction() {
     case 'underway':
       stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
       etaStr   = p.eta ? `${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}` : t('predNoEta');
-      if (p.urgent) {
+      if (p.closed) {
+        etaStr += ` · ${t('predClosed')}`;
+      } else if (p.urgent) {
         etaStr += ` · ${urgentPlanText(p.urgent, hm)}`;
       } else if (p.nextDep) {
         const key = PRED_NEXT_DEP_FROM_KEY[p.pier];
@@ -789,13 +815,15 @@ function renderPrediction() {
       break;
     case 'atQuay':
       stateStr = '⚓ ' + t('predAtQuay') + ' (' + p.pier + ')';
-      etaStr = p.urgent
-        ? urgentPlanText(p.urgent, hm)
-        : p.eta
-          ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}${p.afterBreak ? ' (Pettu)' : ''}`
-          : p.noVehicles
-            ? t('predWaitingVehicles')
-            : `${t('predNextDep')}: ${t('predUnknownTime')}`;
+      etaStr = p.closed
+        ? t('predClosed')
+        : p.urgent
+          ? urgentPlanText(p.urgent, hm)
+          : p.eta
+            ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}${p.afterBreak ? ' (Pettu)' : ''}`
+            : p.noVehicles
+              ? t('predWaitingVehicles')
+              : `${t('predNextDep')}: ${t('predUnknownTime')}`;
       break;
     default:
       stateStr = '❔ ' + t('predUnknown');

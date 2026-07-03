@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.0 – 2026-07-03
+- Pauslängder per paus (BREAK_DURATIONS_MIN): 08:30–08:50 och 16:30–16:50 är 20 min, 11:00–11:30 och 19:00–19:30 är 30 min (tidigare 30 min för alla)
+- Fix 1: fordon som väntar mitt i en pågående paus får pausslutet som nästa möjliga avgång — aldrig en "inom kort"-tid mitt i pausen; gäller nu även vid annan brygga än Pettu (brådskande korsning triggas inte under pågående paus)
+- Fix 2: "Nästa avgång" → "Nästa möjliga avgång" i alla prediktionstexter (predNextDep, predNextDepFromPettu/Uto) på båda språken
+- Fix 3: trafikstopp — sista möjliga avgång Pettu 22:50, Utö 22:45 (TRAFFIC_LAST_DEP); mellan bryggans sista avgång och trafikstart 06:00 (TRAFFIC_START) predikteras ingen avgång, i stället visas "Trafiken har avslutats för dagen" / "Liikenne on päättynyt tältä päivältä"
+- Trafikstoppet gäller vid kaj (per brygga) och på väg (destinationens gräns, ankomst-ETA visas fortfarande)
+- Ny i18n-nyckel predClosed (sv/fi); nya hjälpfunktioner timeToMin() och isTrafficClosed()
+
 ## v8.9 – 2026-07-03
 - Bugg fixad: tillstånd "På väg" refererade fel brygga — vid avgång från Utö mot Pettu visades "Väntar på fordon vid Utö" (ursprunget) i stället för Pettu (destinationen)
 - Nästa-avgång-beräkningen bygger nu på destinationens rutnät + ankomsttiden (ceilQuarter(eta)) i stället för ursprungets rutnät + avgångstiden — samma Pettu/Utö-offsetlogik som tillstånd 1, fast räknad från ankomsten
