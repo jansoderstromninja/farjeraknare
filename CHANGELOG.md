@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.2 – 2026-07-06
+- Avgångsloggens rader är nu klickbara: expanderad vy visar fordon per kategori för just den avgången med +/− per kategori — fel i historiska avgångar kan korrigeras direkt, inte bara den senaste
+- Ny funktion adjustTripVehicle(tripId, catId, delta): skriver en vanlig fordonslogg (delta ±1) till days/{datum}/logs/ med ts inne i avgångens fönster; totaler, per kategori-statistik och CO2 räknas om automatiskt eftersom allt redan summeras från logs/ (verifierat: footer och Statistik-vyn uppdateras direkt, ingen cache)
+- Ny hjälpfunktion correctionTsForTrip: korrigeringens ts är normalt avgångens egen, men flyttas förbi föregående avgångs efterslängsfönster vid täta avgångar så kopplingen alltid träffar rätt rad (verifierat med avgångar 2 min isär)
+- − under noll blockeras per kategori och avgång; korrigeringsloggar får brygga = avgångens from (inte nuvarande GPS-position)
+- ✕-knappen (radera avgång) stoppar nu klickbubbling så den inte expanderar raden
+- Ny CSS: .dep-detail, .dep-cat-row, .dep-adj-btn
+
 ## v9.1 – 2026-07-03
 - Bryggkoppling per fordonslogg: nya loggar får fältet brygga = getNearestBrygga() vid registreringstillfället (via ny hjälpfunktion bryggaAtLogTime), null om ingen brygga inom 50 m eller GPS saknas
 - Fältet sätts i både tap() och removeOne() (delta −1 bär också brygga så nettoräkning per plats stämmer) och läses tillbaka i Firebase-lyssnaren (saknat fält → null)

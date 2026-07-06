@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.4";
+const APP_VERSION = "9.5";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -1211,6 +1211,55 @@ function tick() {
   if (currentView === 'Stats' && summaryTab === 'Idag') renderPrediction();
 }
 
+// Expanderad avgångsrad (per kategori-redigering); null = ingen expanderad
+let expandedTripId = null;
+
+function toggleDepRow(tripId) {
+  expandedTripId = expandedTripId === tripId ? null : tripId;
+  renderDepartureLog();
+}
+
+// Tidsstämpel som garanterat kopplas kronologiskt till just denna avgång:
+// normalt avgångens egen ts, men om föregående avgångs efterslängsfönster
+// når över den (täta avgångar) flyttas stämpeln precis förbi fönstret.
+function correctionTsForTrip(trip, tripTsAsc) {
+  const prev = tripTsAsc.filter(ts => ts < trip.ts).pop();
+  return prev != null
+    ? Math.max(trip.ts, prev + TRIP_VEHICLE_WINDOW_MS + 1)
+    : trip.ts;
+}
+
+// Korrigering av historisk avgång: skriver en vanlig fordonslogg (delta ±1)
+// med ts inne i avgångens fönster — totaler/statistik/CO2 räknas om automatiskt
+// eftersom allt redan summeras från logs/.
+function adjustTripVehicle(tripId, catId, delta) {
+  const d = load();
+  const trip = d.trips.find(tr => tr.id === tripId);
+  if (!trip) return;
+  const tripTsAsc = d.trips.map(tr => tr.ts).sort((a, b) => a - b);
+  if (delta < 0) {
+    const cur = d.logs
+      .filter(l => tripTsForLog(l.ts, tripTsAsc) === trip.ts && l.type === catId)
+      .reduce((s, l) => s + (l.delta ?? 1), 0);
+    if (cur <= 0) return;
+  }
+  playClick();
+  const ts = correctionTsForTrip(trip, tripTsAsc);
+  const brygga = trip.from ?? null; // avgångens brygga, inte nuvarande GPS-position
+  console.log('[Korrigering]', catId, delta > 0 ? '+1' : '−1', 'på avgång',
+    new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }));
+  if (db && logsRef) {
+    const ref = logsRef.push();
+    d.logs.push({ id: ref.key, type: catId, ts, delta, brygga });
+    save(d);
+    ref.set({ type: catId, ts, delta, brygga }).catch(() => {});
+  } else {
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga });
+    save(d);
+  }
+  renderCount();
+}
+
 function renderDepartureLog() {
   const el = document.getElementById('departureLog');
   if (!el) return;
@@ -1224,13 +1273,27 @@ function renderDepartureLog() {
     const hm = new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
     const DEP_FROM_KEY = { Pettu: 'depFromPettu', Utö: 'depFromUto' };
     const dirStr = (trip.from && DEP_FROM_KEY[trip.from]) ? t(DEP_FROM_KEY[trip.from]) : '';
-    const veh = Math.max(0, d.logs
-      .filter(l => tripTsForLog(l.ts, allTripTsAsc) === trip.ts)
-      .reduce((sum, l) => sum + (l.delta ?? 1), 0));
+    const tripLogs = d.logs.filter(l => tripTsForLog(l.ts, allTripTsAsc) === trip.ts);
+    const veh = Math.max(0, tripLogs.reduce((sum, l) => sum + (l.delta ?? 1), 0));
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
-    return `<div class="dep-row"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><button class="dep-undo" onclick="deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
+    const row = `<div class="dep-row" onclick="toggleDepRow('${trip.id}')"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><button class="dep-undo" onclick="event.stopPropagation(); deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
+    if (trip.id !== expandedTripId) return row;
+
+    const detail = CATS.map(cat => {
+      const n = Math.max(0, tripLogs
+        .filter(l => l.type === cat.id)
+        .reduce((s, l) => s + (l.delta ?? 1), 0));
+      return `<div class="dep-cat-row">` +
+        `<span class="dep-cat-emoji">${cat.emoji}</span>` +
+        `<span class="dep-cat-name">${catName(cat)}</span>` +
+        `<span class="dep-cat-count">${n}</span>` +
+        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${trip.id}','${cat.id}',-1)"${n === 0 ? ' disabled' : ''}>−</button>` +
+        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${trip.id}','${cat.id}',1)">+</button>` +
+        `</div>`;
+    }).join('');
+    return row + `<div class="dep-detail">${detail}</div>`;
   }).join('');
 
   el.innerHTML = rows;

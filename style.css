@@ -185,8 +185,33 @@ body.lang-fi .v-btn-label-fi {
   border-bottom: 1px solid var(--border);
   font-size: 11px;
   min-height: 26px;
+  cursor: pointer;
 }
 .dep-row:last-child { border-bottom: none; }
+/* Expanderad radvy: per kategori-redigering av historisk avgång */
+.dep-detail {
+  padding: 4px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.dep-cat-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 12px; }
+.dep-cat-emoji { width: 20px; text-align: center; flex-shrink: 0; }
+.dep-cat-name  { flex: 1; color: var(--muted); }
+.dep-cat-count { min-width: 20px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dep-adj-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.dep-adj-btn:disabled { opacity: 0.3; pointer-events: none; }
 .dep-time  { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; flex-shrink: 0; }
 .dep-dir   { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dep-test  { color: #EF4444; font-weight: 700; font-size: 10px; letter-spacing: 0.05em; }
