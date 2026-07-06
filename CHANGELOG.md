@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.4 – 2026-07-06
+- Avgångsprediktionen kraftigt förenklad — all "nästa möjliga avgång"-logik borttagen (~200 rader): kvartsgrid (ceilQuarter/nextQuarterAfter/UTO_OFFSET_MIN/SUMMER_MONTHS), pausjustering (adjustForBreak/currentBreak/BREAK_DURATIONS_MIN), trafikstopp (isTrafficClosed/TRAFFIC_LAST_DEP), brådskande korsning (urgentCrossingPlan/getBreakCutoff m.fl.), vehiclesWaiting/vehiclesWaitingAt-koppling och service/paus-tillstånden
+- Kvar: två lägen + okänt-fallback. Vid kaj: "Vid Pettu"/"Vid Utö" utan avgångsgissning. På väg: "På väg → [destination]" + aktuell fart i knop + ankomst beräknad som bryggavstånd / aktuell hastighet (PIER_DISTANCE_M = 507 m från koordinaterna, beräknat en gång) — inte fast +5 min
+- Ingen ETA om farten är för låg (< 0.5 kn) eller senaste avgång saknas — då visas bara "På väg → X" resp. "På väg"
+- Verifierat: 2.1 m/s (4.1 kn) ger ankomst ~4 min efter avgång; kortet visar "På väg → Utö · 4.1 kn · Ankomst ca 20:35"
+- i18n rensad: 16 oanvända pred-nycklar borttagna per språk, predAtPettu/predAtUto tillagda ("Vid Pettu"/"Petussa")
+- BREAK_TIMES och pauspåminnelserna i gps.js är orörda — bara prediktionens schemalogik togs bort; brygga-fältet på fordonsloggar skrivs fortfarande
+
 ## v9.3 – 2026-07-06
 - Felsökning +/− på avgångsrader (rapporterat osynliga på Android Chrome och iPhone Safari): funktionen verifierad intakt i mobilviewport 375px — expansion via riktigt DOM-klick, alla 18 knappar renderade, synliga (32×26px), träffbara (elementFromPoint) och hela +/−-klickkedjan genom inline-handlers fungerar
 - Rotorsak: telefonerna körde gammal cachad kod — funktionen deployades 14:58 lokal tid samma dag, GitHub Pages serverar tillgångar med max-age=600 utan versionsparametrar, och iOS-hemskärmsappar cachar aggressivt; ingen mekanism tvingade fram ny JS vid omladdning

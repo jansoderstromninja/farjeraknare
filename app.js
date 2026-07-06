@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.6";
+const APP_VERSION = "9.7";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -596,214 +596,43 @@ function renderCount() {
   renderDepartureLog();
 }
 
-// ── AVGÅNGSPREDIKTION (tillståndsmaskin — internt, visas i Statistik) ──
-const BREAK_DURATION_MIN = 30;        // min – fallback för pauser utan egen längd
-const BREAK_DURATIONS_MIN = { '08:30': 20, '11:00': 30, '16:30': 20, '19:00': 30 }; // min – pauslängd per starttid
-const CROSSING_MIN       = 5;         // min – normal överfartstid, ETA på väg
-const SUMMER_MONTHS      = [5, 6, 7]; // juni–augusti: sommarschema med 15-min-slottar
-const UTO_OFFSET_MIN     = 8;         // min – Utö-avgång = motsvarande Pettu-slot + 8 min
-const URGENT_CUTOFF_MIN  = 15;        // min – fordon loggat inom denna marginal före en paus har rätt att korsa innan den
-const TRAFFIC_LAST_DEP   = { Pettu: '22:50', 'Utö': '22:45' }; // sista möjliga avgång per brygga
-const TRAFFIC_START      = '06:00';   // trafiken öppnar (arkisin-start)
+// ── AVGÅNGSPREDIKTION (förenklad — internt, visas i Statistik) ──
+// Visar bara läge: vid kaj (ingen avgångsgissning) eller på väg med aktuell
+// fart och fartbaserad ankomsttid. All schemalogik (kvartsgrid, pauser,
+// trafikstopp, brådskande korsning) är borttagen.
 
-function timeToMin(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
+// Avstånd mellan bryggorna, beräknat en gång från standardkoordinaterna
+const PIER_DISTANCE_M = geoDistMeters(
+  BRYGGOR_DEFAULT[0].lat, BRYGGOR_DEFAULT[0].lng,
+  BRYGGOR_DEFAULT[1].lat, BRYGGOR_DEFAULT[1].lng
+);
 
-// Trafikstopp: mellan bryggans sista möjliga avgång och trafikstart 06:00
-// predikteras inga avgångar. Okänd brygga → den tidigaste stopptiden (Utö).
-function isTrafficClosed(now, pier) {
-  const lastDep = TRAFFIC_LAST_DEP[pier] ?? TRAFFIC_LAST_DEP['Utö'];
-  const mins = now.getHours() * 60 + now.getMinutes();
-  return mins >= timeToMin(lastDep) || mins < timeToMin(TRAFFIC_START);
-}
-
-function isSummerSchedule() {
-  return SUMMER_MONTHS.includes(new Date().getMonth());
-}
-
-function currentBreak(now) {
-  for (const bt of BREAK_TIMES) {
-    const [h, m] = bt.split(':').map(Number);
-    const start = new Date(now);
-    start.setHours(h, m, 0, 0);
-    const dur = BREAK_DURATIONS_MIN[bt] ?? BREAK_DURATION_MIN;
-    const end = new Date(start.getTime() + dur * 60 * 1000);
-    if (now >= start && now < end) return { start, end };
+function predictDeparture() {
+  // På väg — destination = motsatt brygga från senaste avgång,
+  // överfartstid = bryggavstånd / aktuell hastighet
+  if (currentGpsSpeedMs > 0.5) {
+    const trips   = load().trips;
+    const last    = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
+    const origin  = last?.from ?? null;
+    const dest    = origin === 'Pettu' ? 'Utö' : origin === 'Utö' ? 'Pettu' : null;
+    const speedKn = currentGpsSpeedMs * 1.94384;
+    // För låg fart för rimlig uträkning → ingen ETA, bara riktning
+    const eta = (last && speedKn >= 0.5)
+      ? new Date(last.ts + (PIER_DISTANCE_M / currentGpsSpeedMs) * 1000)
+      : null;
+    return { state: 'underway', pier: dest, speedKn, eta };
   }
-  return null;
-}
 
-function ceilQuarter(d)      { return new Date(Math.ceil(d.getTime() / 900000) * 900000); }
-function nextQuarterAfter(d) { return new Date(Math.floor(d.getTime() / 900000) * 900000 + 900000); }
-
-// Fordon väntar = registrerade sedan senaste avgång (samma princip som knapp-badgarna)
-function vehiclesWaiting() {
-  const c = tripCounts() || counts();
-  return Object.values(c).reduce((a, b) => a + b, 0) > 0;
-}
-
-// Antal fordon väntande vid en specifik brygga sedan senaste avgången.
-// Loggar utan brygga-fält (null/äldre data) räknas inte per plats.
-function vehiclesWaitingAt(bryggaNamn) {
-  const lastTs = lastDepartureTs();
-  const n = load().logs
-    .filter(l => l.ts >= lastTs && l.brygga === bryggaNamn)
-    .reduce((s, l) => s + (l.delta ?? 1), 0);
-  return Math.max(0, n);
-}
-
-// Infaller kandidattiden i ett pausintervall skjuts avgången till pausslutet
-// (om fordon väntar) eller nästa jämna kvart efter pausslutet.
-// Avgångar efter paus startar alltid från Pettu (pauserna sker där).
-function adjustForBreak(candidate) {
-  const brk = currentBreak(candidate);
-  if (!brk) return { time: candidate, afterBreak: false };
-  return {
-    time: vehiclesWaiting() ? brk.end : nextQuarterAfter(brk.end),
-    afterBreak: true,
-  };
-}
-
-function getBreakCutoff(breakStart) {
-  return new Date(breakStart.getTime() - URGENT_CUTOFF_MIN * 60 * 1000);
-}
-
-// Nästa paus som ännu inte börjat, eller null om ingen återstår idag.
-function nextUpcomingBreak(now) {
-  let best = null;
-  for (const bt of BREAK_TIMES) {
-    const [h, m] = bt.split(':').map(Number);
-    const start = new Date(now);
-    start.setHours(h, m, 0, 0);
-    if (start > now && (!best || start < best)) best = start;
-  }
-  return best;
-}
-
-// Tidsstämpeln för det tidigast INTE ännu avgångskopplade fordonet (samma
-// definition som debug-loggen i recordDeparture) — null om inget väntar.
-function earliestWaitingVehicleTs() {
-  const d = load();
-  const tripTsAsc = d.trips.map(tr => tr.ts).sort((a, b) => a - b);
-  const waiting = d.logs.filter(l => tripTsForLog(l.ts, tripTsAsc) === null);
-  if (!waiting.length) return null;
-  return Math.min(...waiting.map(l => l.ts));
-}
-
-// Brådskande korsning: hämta → leverera → (positionera för paus vid Pettu,
-// bara om leveransen inte redan slutar där). Fordonsloggar saknar GPS, så
-// bryggan går inte att läsa av — den enda meningsfulla (och enda testbara)
-// tolkningen av regeln är att fordonet väntar på bryggan MITTEMOT färjan,
-// vilket också är exemplet den är specificerad mot.
-function urgentCrossingLegs(ferryPier, startTime) {
-  const vehiclePier = ferryPier === 'Pettu' ? 'Utö' : 'Pettu';
-  const fetchArrive   = new Date(startTime.getTime() + CROSSING_MIN * 60 * 1000);
-  const deliverArrive = new Date(fetchArrive.getTime() + CROSSING_MIN * 60 * 1000);
-  const legs = [
-    { label: 'predUrgentFetch',   from: ferryPier,   to: vehiclePier, arrive: fetchArrive },
-    { label: 'predUrgentDeliver', from: vehiclePier, to: ferryPier,   arrive: deliverArrive },
-  ];
-  if (ferryPier !== 'Pettu') {
-    legs.push({
-      label: 'predUrgentPosition', from: ferryPier, to: 'Pettu',
-      arrive: new Date(deliverArrive.getTime() + CROSSING_MIN * 60 * 1000),
-    });
-  }
-  return legs;
-}
-
-function urgentCrossingPlan(ferryPier, now) {
-  if (!ferryPier) return null;
-  const brkStart = nextUpcomingBreak(now);
-  if (!brkStart) return null;
-  const cutoff = getBreakCutoff(brkStart);
-  const vTs = earliestWaitingVehicleTs();
-  if (vTs === null || vTs > cutoff.getTime()) return null;
-  return { legs: urgentCrossingLegs(ferryPier, now), breakStart: brkStart };
-}
-
-// Tillstånd: service > underway > break > atQuay > unknown.
-// "now"-parametern finns för testbarhet; produktionsanrop sker utan argument.
-function predictDeparture(now = new Date()) {
-  // 4. Service — manuellt satt i Firebase (config/driftstatus), överstyr allt
-  if (driftstatus === 'service') return { state: 'service', pier: null, eta: null };
-
+  // Vid kaj — bara position, ingen avgångsgissning
   const pier = lastKnownGpsPos
     ? getNearestBrygga(lastKnownGpsPos.lat, lastKnownGpsPos.lng, true)
     : null;
+  if (pier) return { state: 'atQuay', pier };
 
-  // 2. På väg — destination = motsatt brygga från senaste avgång, ankomst = avgång
-  //    + överfart. "Nästa avgång" avser DESTINATIONEN (bryggan båten är på väg
-  //    till), inte ursprunget — det är den som är intressant för någon som
-  //    väntar där. Räknas på samma Pettu-rutnät + UTO_OFFSET_MIN som tillstånd 1,
-  //    med ankomsttiden som referenspunkt, och visas bara om fordon väntar
-  //    (annars vore det ett ogrundat löfte).
-  if (currentGpsSpeedMs > 0.5) {
-    const trips  = load().trips;
-    const last   = trips.length ? [...trips].sort((a, b) => b.ts - a.ts)[0] : null;
-    const origin = last?.from ?? null;
-    const dest   = origin === 'Pettu' ? 'Utö' : origin === 'Utö' ? 'Pettu' : null;
-    const eta    = last ? new Date(last.ts + CROSSING_MIN * 60 * 1000) : null;
-
-    // Trafikstopp: efter destinationens sista möjliga avgång predikteras inget
-    if (dest && isTrafficClosed(now, dest)) {
-      return { state: 'underway', pier: dest, origin, eta, closed: true };
-    }
-
-    let nextDep = null, noVehicles = false;
-    const urgent = (dest && eta) ? urgentCrossingPlan(dest, eta) : null;
-    if (!urgent && last && dest && eta && isSummerSchedule()) {
-      // Tillstånd 2: väntande fordon räknas vid DESTINATIONSBRYGGAN
-      if (vehiclesWaitingAt(dest) === 0) {
-        noVehicles = true;
-      } else {
-        const adj = adjustForBreak(ceilQuarter(eta));
-        nextDep = dest === 'Utö'
-          ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
-          : adj.time;
-      }
-    }
-    return { state: 'underway', pier: dest, origin, eta, nextDep, noVehicles, urgent };
-  }
-
-  // 3. Paus pågår — nästa avgång = pausslut om fordon väntar, annars nästa jämna kvart
-  const brk = currentBreak(now);
-  if (brk && pier === 'Pettu') {
-    return { state: 'break', pier, eta: vehiclesWaiting() ? brk.end : nextQuarterAfter(brk.end) };
-  }
-
-  // 1. Vid kaj, väntar — nästa jämna 15-min-slot (Pettu-tid), pausjusterad.
-  //    Från Utö: samma Pettu-slot + UTO_OFFSET_MIN. Kräver fordon väntande
-  //    på någondera sidan, annars visas "Väntar på fordon" utan ETA.
-  if (pier) {
-    // Trafikstopp: mellan sista möjliga avgång och 06:00 predikteras inget
-    if (isTrafficClosed(now, pier)) return { state: 'atQuay', pier, eta: null, closed: true };
-    // Pågående paus (även vid annan brygga än Pettu): fordon som väntar får
-    // pausslutet som nästa möjliga avgång — aldrig "inom kort" mitt i pausen
-    // Tillstånd 1: väntande fordon räknas vid NUVARANDE brygga
-    if (brk && vehiclesWaitingAt(pier) > 0) return { state: 'atQuay', pier, eta: brk.end, afterBreak: true };
-    const urgent = urgentCrossingPlan(pier, now);
-    if (urgent) return { state: 'atQuay', pier, eta: null, urgent };
-    if (!isSummerSchedule()) return { state: 'atQuay', pier, eta: null };
-    if (vehiclesWaitingAt(pier) === 0) return { state: 'atQuay', pier, eta: null, noVehicles: true };
-    const adj = adjustForBreak(ceilQuarter(now));
-    const eta = pier === 'Utö'
-      ? new Date(adj.time.getTime() + UTO_OFFSET_MIN * 60 * 1000)
-      : adj.time;
-    return { state: 'atQuay', pier, eta, afterBreak: adj.afterBreak };
-  }
-
-  return { state: 'unknown', pier: null, eta: null };
+  return { state: 'unknown', pier: null };
 }
 
-const PRED_NEXT_DEP_FROM_KEY = { Pettu: 'predNextDepFromPettu', Utö: 'predNextDepFromUto' };
-const PRED_WAITING_AT_KEY    = { Pettu: 'predWaitingAtPettu',   Utö: 'predWaitingAtUto' };
-
-function urgentPlanText(urgent, hm) {
-  const legs = urgent.legs
-    .map(leg => `${t(leg.label)} ${leg.to} ${t('predCirca')} ${hm(leg.arrive)}`)
-    .join(' → ');
-  return `${t('predUrgentTitle')}: ${legs}`;
-}
+const PRED_AT_KEY = { Pettu: 'predAtPettu', Utö: 'predAtUto' };
 
 function renderPrediction() {
   const el = document.getElementById('predictionCard');
@@ -812,50 +641,24 @@ function renderPrediction() {
   const hm = d => d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
   let stateStr, etaStr;
   switch (p.state) {
-    case 'service':
-      stateStr = '🔧 ' + t('predService');
-      etaStr   = t('predNoEta');
-      break;
     case 'underway':
       stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
-      etaStr   = p.eta ? `${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}` : t('predNoEta');
-      if (p.closed) {
-        etaStr += ` · ${t('predClosed')}`;
-      } else if (p.urgent) {
-        etaStr += ` · ${urgentPlanText(p.urgent, hm)}`;
-      } else if (p.nextDep) {
-        const key = PRED_NEXT_DEP_FROM_KEY[p.pier];
-        if (key) etaStr += ` · ${t(key)} ${t('predCirca')} ${hm(p.nextDep)}`;
-      } else if (p.noVehicles) {
-        const key = PRED_WAITING_AT_KEY[p.pier];
-        if (key) etaStr += ` · ${t(key)}`;
-      }
-      break;
-    case 'break':
-      stateStr = '☕ ' + t('predBreak') + ' (Pettu)';
-      etaStr   = `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}`;
+      etaStr   = p.speedKn.toFixed(1) + ' kn';
+      if (p.eta) etaStr += ` · ${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}`;
       break;
     case 'atQuay':
-      stateStr = '⚓ ' + t('predAtQuay') + ' (' + p.pier + ')';
-      etaStr = p.closed
-        ? t('predClosed')
-        : p.urgent
-          ? urgentPlanText(p.urgent, hm)
-          : p.eta
-            ? `${t('predNextDep')} ${t('predCirca')} ${hm(p.eta)}${p.afterBreak ? ' (Pettu)' : ''}`
-            : p.noVehicles
-              ? t('predWaitingVehicles')
-              : `${t('predNextDep')}: ${t('predUnknownTime')}`;
+      stateStr = '⚓ ' + t(PRED_AT_KEY[p.pier] ?? 'predUnknown');
+      etaStr   = '';
       break;
     default:
       stateStr = '❔ ' + t('predUnknown');
-      etaStr   = t('predNoEta');
+      etaStr   = '';
   }
   el.innerHTML =
     `<div class="co2-card">` +
       `<div class="sec-title" style="margin:0 0 8px">${t('predTitle')}</div>` +
       `<div class="peak-val">${stateStr}</div>` +
-      `<div class="peak-lbl" style="margin-top:4px">${etaStr}</div>` +
+      (etaStr ? `<div class="peak-lbl" style="margin-top:4px">${etaStr}</div>` : '') +
     `</div>`;
 }
 
