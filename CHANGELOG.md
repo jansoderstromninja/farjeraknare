@@ -1,5 +1,12 @@
 # Changelog
 
+## v9.3 – 2026-07-06
+- Felsökning +/− på avgångsrader (rapporterat osynliga på Android Chrome och iPhone Safari): funktionen verifierad intakt i mobilviewport 375px — expansion via riktigt DOM-klick, alla 18 knappar renderade, synliga (32×26px), träffbara (elementFromPoint) och hela +/−-klickkedjan genom inline-handlers fungerar
+- Rotorsak: telefonerna körde gammal cachad kod — funktionen deployades 14:58 lokal tid samma dag, GitHub Pages serverar tillgångar med max-age=600 utan versionsparametrar, och iOS-hemskärmsappar cachar aggressivt; ingen mekanism tvingade fram ny JS vid omladdning
+- Fix: cache-busting ?v=<version> på style.css och alla lokala .js-filer i index.html — ny version ger nya URL:er, så en vanlig omladdning alltid hämtar färsk kod (index.html själv är max 10 min gammal)
+- Pre-commit-hooken synkar nu ?v=-parametern med APP_VERSION automatiskt vid varje commit
+- Kontroll på enheten: headerns versionsnummer ska visa v9.6 eller senare — äldre nummer betyder cachad kod, ladda om
+
 ## v9.2 – 2026-07-06
 - Avgångsloggens rader är nu klickbara: expanderad vy visar fordon per kategori för just den avgången med +/− per kategori — fel i historiska avgångar kan korrigeras direkt, inte bara den senaste
 - Ny funktion adjustTripVehicle(tripId, catId, delta): skriver en vanlig fordonslogg (delta ±1) till days/{datum}/logs/ med ts inne i avgångens fönster; totaler, per kategori-statistik och CO2 räknas om automatiskt eftersom allt redan summeras från logs/ (verifierat: footer och Statistik-vyn uppdateras direkt, ingen cache)
