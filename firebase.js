@@ -162,6 +162,44 @@ function dropPendingForTrip(tripId) {
   }
 }
 
+// ── GPS-BREADCRUMBS (lagring) ──
+// Separat nod breadcrumbs/{datum}/{pushKey} = { lat, lng, speed, ts } — rå
+// spårdata för framtida kartfunktion. Anslutningsstatus (lever/död) läses
+// redan via .info/connected-lyssnaren och kräver ingen egen skrivning.
+let breadcrumbWriteWarned = false;
+function writeBreadcrumb(lat, lng, speed) {
+  if (!db) return;
+  // OBS: .catch() direkt på push-referensen registreras men körs aldrig i
+  // compat-SDK:n (verifierat) — .then(null, fn) fungerar, därav formen nedan
+  db.ref('breadcrumbs/' + localDate()).push({ lat, lng, speed, ts: Date.now() })
+    .then(null, e => {
+      // Engångsvarning — kräver ".read"/".write": true för breadcrumbs i databasreglerna
+      if (breadcrumbWriteWarned) return;
+      breadcrumbWriteWarned = true;
+      console.log('[Breadcrumbs] Skrivning nekades (kolla databasreglerna):', e?.message ?? String(e));
+    });
+}
+
+// Radera breadcrumbs äldre än 30 dagar vid appstart — datumnycklarna
+// (YYYY-MM-DD) är lexikografiskt kronologiska så orderByKey + endBefore
+// träffar exakt de gamla dagarna utan att läsa färsk data
+const BREADCRUMB_RETENTION_DAYS = 30;
+function cleanupBreadcrumbs() {
+  if (!db) return;
+  const c = new Date();
+  c.setDate(c.getDate() - BREADCRUMB_RETENTION_DAYS);
+  const cutoff = `${c.getFullYear()}-${pad(c.getMonth() + 1)}-${pad(c.getDate())}`;
+  db.ref('breadcrumbs').orderByKey().endBefore(cutoff).once('value').then(snap => {
+    const updates = {};
+    snap.forEach(ch => { updates[ch.key] = null; });
+    const n = Object.keys(updates).length;
+    if (!n) return;
+    db.ref('breadcrumbs').update(updates)
+      .then(() => console.log('[Breadcrumbs] Städade', n, 'dag(ar) äldre än', cutoff))
+      .catch(() => {});
+  }).catch(e => console.log('[Breadcrumbs] Städning nekades (kolla databasreglerna):', e?.message ?? String(e)));
+}
+
 function initFirebase() {
   if (typeof firebase === 'undefined') { setSyncStatus('local'); return; }
   try {
@@ -183,6 +221,7 @@ function initFirebase() {
     initDriftstatusListener();
     checkVersion();
     flushPending(); // poster köade före en omladdning synkas vid appstart
+    cleanupBreadcrumbs();
   } catch (e) {
     db = null; logsRef = null; tripsRef = null; currentRefDate = null;
     setSyncStatus('local');

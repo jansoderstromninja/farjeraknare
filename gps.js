@@ -37,6 +37,21 @@ function hideGpsAccuracy() {
   const wrapper = document.getElementById('gpsAccuracy');
   if (wrapper) wrapper.style.display = 'none';
 }
+// ── GPS-BREADCRUMBS ──
+// Rå spårpunkt var 15:e sekund, bara i rörelse (> 0.5 m/s) — aldrig vid kaj:
+// ingen heartbeat och inga ts-uppdateringar på befintliga poster. Datainsamling
+// för framtida kartfunktion; turer/ är helt orörd av detta.
+const BREADCRUMB_INTERVAL_MS = 15 * 1000;
+let lastBreadcrumbTs = 0;
+
+function maybeWriteBreadcrumb(lat, lng, speed) {
+  if (speed == null || speed <= 0.5) return;
+  const now = Date.now();
+  if (now - lastBreadcrumbTs < BREADCRUMB_INTERVAL_MS) return;
+  lastBreadcrumbTs = now;
+  writeBreadcrumb(lat, lng, speed);
+}
+
 // ── GPS DEPARTURE WATCH ──
 let geoWatchId = null;
 let gpsWarmupUntil = 0;
@@ -140,6 +155,8 @@ function startGpsWatch() {
         tripSpeedSamples.push(speed);
         console.log('[GPS] Speed sample:', speed.toFixed(2), 'm/s –', tripSpeedSamples.length, 'samplar totalt');
       }
+      // Spårpunkt i rörelse — oberoende av uppvärmning och avgångsdetektering
+      maybeWriteBreadcrumb(pos.coords.latitude, pos.coords.longitude, speed);
       // Departure detection only after warmup and with valid speed
       if (speed == null || Date.now() < gpsWarmupUntil) return;
       const now = Date.now();

@@ -1,5 +1,14 @@
 # Changelog
 
+## v9.6 – 2026-07-07
+- Ny Firebase-nod breadcrumbs/{datum}/{pushKey} = { lat, lng, speed, ts } — rå GPS-spårdata för framtida kartfunktion, insamling utan UI
+- Skrivs var 15:e sekund (BREADCRUMB_INTERVAL_MS) bara medan farten > 0.5 m/s — ingen skrivning vid kaj, ingen heartbeat, inga ts-uppdateringar på befintliga poster
+- Anslutningsstatus hanteras oförändrat via befintliga .info/connected-lyssnaren — ingen ny skrivning för lever/död
+- turer/ helt orörd — samma avgångslogik som tidigare
+- Städning vid appstart: breadcrumbs-dagar äldre än 30 dagar raderas (orderByKey + endBefore på datumnycklarna, som är lexikografiskt kronologiska)
+- OBS: databasreglerna måste uppdateras i Firebase-konsolen — breadcrumbs/ nekar idag både läs och skriv (".read": true, ".write": true krävs); appen varnar en gång i debug-panelen tills regeln finns
+- SDK-egenhet upptäckt och dokumenterad: .catch() direkt på en push-referens (ThennableReference) registreras men körs aldrig i compat 10.12.5 — .then(null, fn) används i stället
+
 ## v9.5 – 2026-07-07
 - Robust offline-synk för avgångshändelser: egen kö (farjeraknare_pending i localStorage) — posten skrivs till kön INNAN Firebase-anropet och tas bort först när skrivningen bekräftats (.then)
 - Undersökt: enablePersistence() finns inte i Realtime Database compat-SDK:n (Firestore-only, verifierat mot SDK-bundlen); RTDB:s interna skrivkö lever i minnet och tappas vid omladdning → egen kö krävs
