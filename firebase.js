@@ -85,6 +85,83 @@ function checkDateRollover() {
   attachListeners();
 }
 
+// ── OFFLINE-SYNKKÖ (avgångshändelser) ──
+// Realtime Database (compat) saknar diskpersistens på webben — enablePersistence()
+// finns bara i Firestore, och RTDB:s interna skrivkö lever i minnet. Skrivs en
+// avgång offline och sidan laddas om innan uppkopplingen återställts tappas den.
+// Därför egen kö: posten läggs i localStorage INNAN Firebase-anropet och tas bort
+// först när skrivningen bekräftats. Push-nyckeln (= sökvägen) genereras vid
+// köläggning och persistas före varje skrivförsök — samma path + samma data gör
+// varje retry idempotent, så en lyckad men obekräftad skrivning aldrig dubblas.
+const PENDING_KEY = 'farjeraknare_pending';
+
+function loadPending() {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY)) || []; }
+  catch { return []; }
+}
+
+function savePending(q) { localStorage.setItem(PENDING_KEY, JSON.stringify(q)); }
+
+// Lägg en avgångsskrivning i kön och försök flusha direkt. Returnerar
+// Firebase-nyckeln, eller null om Firebase aldrig initierats (path sätts
+// då först vid flush, när db finns).
+function enqueueDeparture(date, data) {
+  const key = db ? db.ref('turer/' + date).push().key : null;
+  const entry = {
+    id: 'dep_' + data.ts + '_' + Math.random().toString(36).slice(2, 7),
+    path: key ? 'turer/' + date + '/' + key : null,
+    date,
+    data,
+  };
+  const q = loadPending();
+  q.push(entry);
+  savePending(q);
+  console.log('[Synkkö] Köad', entry.id, '→', entry.path ?? '(path sätts vid flush)');
+  flushPending();
+  return key;
+}
+
+let flushInProgress = false;
+function flushPending() {
+  if (!db || flushInProgress) return;
+  const q = loadPending();
+  if (!q.length) return;
+  flushInProgress = true;
+  console.log('[Synkkö] Flush startar —', q.length, 'väntande post(er)');
+  let chain = Promise.resolve();
+  q.forEach(entry => {
+    chain = chain.then(() => {
+      // Saknas path (Firebase var nere vid köläggning): generera nyckel och
+      // persista den INNAN skrivförsöket så en avbruten flush återanvänder
+      // samma sökväg nästa gång — idempotent retry
+      if (!entry.path) {
+        entry.path = 'turer/' + entry.date + '/' + db.ref('turer/' + entry.date).push().key;
+        const cur = loadPending();
+        const i = cur.findIndex(e => e.id === entry.id);
+        if (i >= 0) { cur[i].path = entry.path; savePending(cur); }
+      }
+      return db.ref(entry.path).set(entry.data).then(() => {
+        savePending(loadPending().filter(e => e.id !== entry.id));
+        console.log('[Synkkö] Bekräftad', entry.id, '→', entry.path);
+      });
+    });
+  });
+  chain
+    .catch(e => console.log('[Synkkö] Skrivning misslyckades — posten ligger kvar i kön:', e?.message ?? String(e)))
+    .finally(() => { flushInProgress = false; });
+}
+
+// Ta bort oflushade köposter för en raderad avgång så flushen inte
+// återuppväcker den efter att den tagits bort ur Firebase
+function dropPendingForTrip(tripId) {
+  const q = loadPending();
+  const rest = q.filter(e => !(e.path && e.path.endsWith('/' + tripId)));
+  if (rest.length !== q.length) {
+    savePending(rest);
+    console.log('[Synkkö] Köpost borttagen för raderad avgång', tripId);
+  }
+}
+
 function initFirebase() {
   if (typeof firebase === 'undefined') { setSyncStatus('local'); return; }
   try {
@@ -95,20 +172,34 @@ function initFirebase() {
     tripsRef = db.ref('turer/' + currentRefDate);
     setSyncStatus('connecting');
 
-    // Connection state
+    // Connection state — vid återfått serveranslutning flushas synk-kön
     db.ref('.info/connected').on('value', s => {
       setSyncStatus(s.val() === true ? 'online' : 'connecting');
+      if (s.val() === true) flushPending();
     });
 
     attachListeners();
     initBryggorListener();
     initDriftstatusListener();
     checkVersion();
+    flushPending(); // poster köade före en omladdning synkas vid appstart
   } catch (e) {
     db = null; logsRef = null; tripsRef = null; currentRefDate = null;
     setSyncStatus('local');
   }
 }
+
+// Explicit anslutningshantering: webbläsarens nätverkshändelser styr RTDB-
+// anslutningen direkt i stället för att vänta på SDK:ns egen timeout
+window.addEventListener('online', () => {
+  console.log('[Synkkö] Nätverk åter — goOnline + flush');
+  if (db) firebase.database().goOnline();
+  flushPending();
+});
+window.addEventListener('offline', () => {
+  console.log('[Synkkö] Nätverk borta — goOffline');
+  if (db) firebase.database().goOffline();
+});
 // ── PIER MATCHING ──
 // Koordinater kan åsidosättas via Firebase config/bryggor/{id}: { name, lat, lng }
 // Firebase-regler måste tillåta läsning av config/: { ".read": true }

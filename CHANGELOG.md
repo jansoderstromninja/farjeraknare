@@ -1,5 +1,14 @@
 # Changelog
 
+## v9.5 – 2026-07-07
+- Robust offline-synk för avgångshändelser: egen kö (farjeraknare_pending i localStorage) — posten skrivs till kön INNAN Firebase-anropet och tas bort först när skrivningen bekräftats (.then)
+- Undersökt: enablePersistence() finns inte i Realtime Database compat-SDK:n (Firestore-only, verifierat mot SDK-bundlen); RTDB:s interna skrivkö lever i minnet och tappas vid omladdning → egen kö krävs
+- Idempotenta retries: push-nyckeln (= sökvägen) genereras vid köläggning och persistas före varje skrivförsök — samma path + samma data gör att en lyckad men obekräftad skrivning aldrig dubblas
+- Kön flushas vid appstart, vid window online-event och när .info/connected blir true; explicit goOnline()/goOffline() på webbläsarens nätverkshändelser för snabbare återanslutning
+- deleteDeparture rensar även köposter (dropPendingForTrip) så en flush inte återuppväcker en raderad avgång
+- Debug-panelen loggar köläggning, flush-start, bekräftelse och misslyckanden ([Synkkö])
+- Verifierat exakta scenariot: goOffline → avgång registrerad → sidan omladdad offline → nätverk åter → avgången synkad automatiskt till samma push-nyckel som genererades före omladdningen, kön tömd (test mot turer/2020-01-01, bortstädad efteråt)
+
 ## v9.4 – 2026-07-06
 - Avgångsprediktionen kraftigt förenklad — all "nästa möjliga avgång"-logik borttagen (~200 rader): kvartsgrid (ceilQuarter/nextQuarterAfter/UTO_OFFSET_MIN/SUMMER_MONTHS), pausjustering (adjustForBreak/currentBreak/BREAK_DURATIONS_MIN), trafikstopp (isTrafficClosed/TRAFFIC_LAST_DEP), brådskande korsning (urgentCrossingPlan/getBreakCutoff m.fl.), vehiclesWaiting/vehiclesWaitingAt-koppling och service/paus-tillstånden
 - Kvar: två lägen + okänt-fallback. Vid kaj: "Vid Pettu"/"Vid Utö" utan avgångsgissning. På väg: "På väg → [destination]" + aktuell fart i knop + ankomst beräknad som bryggavstånd / aktuell hastighet (PIER_DISTANCE_M = 507 m från koordinaterna, beräknat en gång) — inte fast +5 min

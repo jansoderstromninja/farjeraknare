@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.7";
+const APP_VERSION = "9.8";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -408,22 +408,26 @@ function recordDeparture(ts, lat, lng) {
         '→ avgång', hms(ts), '– diff', Math.round((l.ts - ts) / 1000), 's');
     });
   }
-  if (db) {
-    const date = localDate();
-    const data = { ts };
-    if (lat !== undefined) {
-      data.lat = lat;
-      data.lng = lng;
-      const brygga = getNearestBrygga(lat, lng);
-      if (brygga) data.from = brygga;
-    }
-    const ref = db.ref('turer/' + date).push(data);
-    ref.catch(() => setSyncStatus('error'));
-    lastDepartureFbKey  = ref.key;
+  const date = localDate();
+  const data = { ts };
+  if (lat !== undefined) {
+    data.lat = lat;
+    data.lng = lng;
+    const brygga = getNearestBrygga(lat, lng);
+    if (brygga) data.from = brygga;
+  }
+  // Skrivs alltid via offline-synk-kön: posten överlever omladdning och
+  // flushas idempotent vid appstart, online-event och återfått anslutning
+  const key = enqueueDeparture(date, data);
+  if (key) {
+    lastDepartureFbKey  = key;
     lastDepartureFbDate = date;
   } else {
+    // Firebase aldrig initierat — visa avgången lokalt; kön synkar när db finns
     const d = load();
-    d.trips.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts });
+    const local = { id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), ts };
+    if (data.from) local.from = data.from;
+    d.trips.push(local);
     save(d);
   }
 }
@@ -528,7 +532,9 @@ function deleteDeparture(tripId) {
   }
   d.logs = d.logs.filter(l => tripTsForLog(l.ts, allTripTsAsc) !== trip.ts);
 
-  // Remove the departure itself
+  // Remove the departure itself — även ur synk-kön så en senare flush
+  // inte återuppväcker den raderade avgången
+  dropPendingForTrip(tripId);
   if (db && tripId && !String(tripId).startsWith('local_')) {
     db.ref('turer/' + localDate() + '/' + tripId).remove().catch(() => {});
   }
