@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "10.0";
+const APP_VERSION = "10.1";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -89,6 +89,15 @@ function evStats(logs) {
 function evStatsLine(logs) {
   const s = evStats(logs);
   return `${t('evStat')}: <strong>${s.evs}</strong> ${t('evOfWord')} ${s.cars} (${s.pct}%)`;
+}
+
+// Elbil-flagga för en −1-borttagning: speglar det senast tillagda (LIFO)
+// fordonet av kategorin i det relevanta loggurvalet, så en borttagen elbil
+// drar ner elbilsräkningen — utan detta tappas elbil-flaggan vid borttagning
+function evFlagForRemoval(logs, catId) {
+  const adds = logs.filter(l => l.type === catId && (l.delta ?? 1) > 0);
+  if (!adds.length) return false;
+  return !!adds.reduce((a, b) => (b.ts >= a.ts ? b : a)).elbil;
 }
 
 function co2CompareHtml(co2kg) {
@@ -426,13 +435,15 @@ function removeOne(catId, btn) {
   const ts = Date.now();
   const d = load();
   const brygga = bryggaAtLogTime();
+  // Spegla det borttagna fordonets elbil-flagga så elbilsräkningen minskar rätt
+  const elbil = evFlagForRemoval(d.logs, catId);
   if (db && logsRef) {
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga, elbil: false });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta: -1, brygga, elbil: false }).catch(() => {});
+    ref.set({ type: catId, ts, delta: -1, brygga, elbil }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga, elbil: false });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga, elbil });
     save(d);
   }
   renderCount();
@@ -1106,15 +1117,18 @@ function adjustTripVehicle(tripId, catId, delta) {
   playClick();
   const ts = correctionTsForTrip(trip, tripTsAsc);
   const brygga = trip.from ?? null; // avgångens brygga, inte nuvarande GPS-position
+  // Vid −1: spegla flaggan från det senast tillagda fordonet i denna avgång
+  const tripLogs = d.logs.filter(l => tripTsForLog(l.ts, tripTsAsc) === trip.ts);
+  const elbil = delta < 0 ? evFlagForRemoval(tripLogs, catId) : false;
   console.log('[Korrigering]', catId, delta > 0 ? '+1' : '−1', 'på avgång',
     new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }));
   if (db && logsRef) {
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta, brygga, elbil: false });
+    d.logs.push({ id: ref.key, type: catId, ts, delta, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta, brygga, elbil: false }).catch(() => {});
+    ref.set({ type: catId, ts, delta, brygga, elbil }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga, elbil: false });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga, elbil });
     save(d);
   }
   renderCount();

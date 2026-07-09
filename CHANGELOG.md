@@ -1,5 +1,12 @@
 # Changelog
 
+## v9.8 – 2026-07-09
+- Bugg fixad: elbil-flaggan tappades vid borttagning — removeOne (långtryck) och adjustTripVehicle (−1 på avgångsrad) skrev alltid elbil: false på −1-posten, så en borttagen elbil minskade inte elbilsräkningen
+- Symptomet doldes i enfordonsfallet av evStats-klampningen (evs ≤ cars), men med flera fordon visades t.ex. "2 av 2" i stället för "1 av 2" efter att en av två elbilar tagits bort
+- Ny hjälpfunktion evFlagForRemoval(): −1-posten speglar nu det senast tillagda (LIFO) fordonet av kategorin i rätt loggurval (hela dagen för långtryck, avgångens loggar för avgångsrads-korrigering)
+- undoLast() (Ångra-knappen) var redan korrekt — den tar bort ursprungsposten inklusive dess flagga i stället för att skriva en −1
+- Verifierat i alla vyer: 1 elbil → ta bort → "0 av 0"; 2 elbilar + 1 gasbil → ta bort en elbil → "1 av 2 (50%)"; samma via avgångsradens −
+
 ## v9.7 – 2026-07-09
 - Elbils-flagga: ⚡-chip uppe till vänster på Personbil- och Paketbil-knapparna — ett tryck armerar (båda chipsen lyser gult), nästa registrering loggas som elbil
 - Läget nollställs automatiskt efter varje registrering oavsett kategori — inget kvarglömt armerat läge; standard är av och vanliga fordon kräver inget extra tryck
