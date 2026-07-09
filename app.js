@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "10.1";
+const APP_VERSION = "10.2";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -289,8 +289,9 @@ function showHourTip(cx, cy, label) {
 
 // ── BUILD BUTTONS ──
 // ── ELBILS-FLAGGA ──
-// ⚡-chip på Personbil/Paketbil: armeras med ett tryck, nästa registrering
-// loggas som elbil, och läget nollställs automatiskt efter varje registrering
+// ⚡-chip på Personbil/Paketbil: fungerar som ett läsläge (sticky). När det är
+// på loggas varje personbil/paketbil som elbil tills användaren själv slår av
+// det igen — nollställs inte automatiskt efter registrering.
 const EV_CATS = ['personbil', 'paketbil'];
 let evArmed = false;
 
@@ -302,6 +303,8 @@ function toggleEvArmed() {
 
 function updateEvToggle() {
   document.querySelectorAll('.ev-toggle').forEach(el => el.classList.toggle('armed', evArmed));
+  // Ringmarkering på hela Personbil/Paketbil-knappen så det sticky-läget syns tydligt
+  EV_CATS.forEach(id => document.getElementById('btn_' + id)?.classList.toggle('ev-on', evArmed));
 }
 
 function buildGrid() {
@@ -407,8 +410,8 @@ function tap(catId, btn) {
   const brygga = bryggaAtLogTime();
   // Elbil bara för personbil/paketbil när ⚡-chipet är armerat;
   // läget nollställs efter varje registrering oavsett kategori
+  // Sticky: läget behålls mellan registreringar, nollställs bara manuellt
   const elbil = evArmed && EV_CATS.includes(catId);
-  if (evArmed) { evArmed = false; updateEvToggle(); }
   if (db && logsRef) {
     // push() returns the key synchronously → optimistic local write, then sync
     const ref = logsRef.push();
