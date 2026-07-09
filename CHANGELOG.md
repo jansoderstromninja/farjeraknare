@@ -1,5 +1,13 @@
 # Changelog
 
+## v9.7 – 2026-07-09
+- Elbils-flagga: ⚡-chip uppe till vänster på Personbil- och Paketbil-knapparna — ett tryck armerar (båda chipsen lyser gult), nästa registrering loggas som elbil
+- Läget nollställs automatiskt efter varje registrering oavsett kategori — inget kvarglömt armerat läge; standard är av och vanliga fordon kräver inget extra tryck
+- Chipset stoppar klickbubbling — armering registrerar aldrig ett fordon av misstag
+- Nytt fält elbil: true/false på alla nya loggposter (tap, minus-korrigeringar och avgångsrads-korrigeringar sätter false om inte armerat + personbil/paketbil); gamla loggar utan fält räknas som false
+- Ny statistikrad "⚡ Elbilar: X av Y (Z%)" i Idag, Vecka och Månad — Y = netto Personbil+Paketbil, X = elbilar (sv "2 av 4", fi "2 / 4")
+- fetchDayLogsRaw och Firebase-lyssnaren läser tillbaka elbil-fältet (saknas → false)
+
 ## v9.6 – 2026-07-07
 - Ny Firebase-nod breadcrumbs/{datum}/{pushKey} = { lat, lng, speed, ts } — rå GPS-spårdata för framtida kartfunktion, insamling utan UI
 - Skrivs var 15:e sekund (BREADCRUMB_INTERVAL_MS) bara medan farten > 0.5 m/s — ingen skrivning vid kaj, ingen heartbeat, inga ts-uppdateringar på befintliga poster

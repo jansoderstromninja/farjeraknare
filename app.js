@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "9.9";
+const APP_VERSION = "10.0";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -71,6 +71,26 @@ function tripTsForLog(logTs, sortedTripTs) {
 }
 const MODE_KEY             = 'farjeraknare_mode';
 let mode = localStorage.getItem(MODE_KEY) || 'test';
+// Elbilsandel av Personbil + Paketbil (nettodeltan; gamla loggar utan
+// elbil-fält räknas som false och hamnar bara i totalen)
+function evStats(logs) {
+  let cars = 0, evs = 0;
+  logs.forEach(l => {
+    if (l.type !== 'personbil' && l.type !== 'paketbil') return;
+    const d = l.delta ?? 1;
+    cars += d;
+    if (l.elbil) evs += d;
+  });
+  cars = Math.max(0, cars);
+  evs = Math.max(0, Math.min(evs, cars));
+  return { evs, cars, pct: cars > 0 ? Math.round(evs / cars * 100) : 0 };
+}
+
+function evStatsLine(logs) {
+  const s = evStats(logs);
+  return `${t('evStat')}: <strong>${s.evs}</strong> ${t('evOfWord')} ${s.cars} (${s.pct}%)`;
+}
+
 function co2CompareHtml(co2kg) {
   const iceKm     = Math.round(co2kg / CO2_PER_KM_CAR);
   const evKm      = Math.round(co2kg / CO2_PER_KM_EV);
@@ -259,6 +279,22 @@ function showHourTip(cx, cy, label) {
 }
 
 // ── BUILD BUTTONS ──
+// ── ELBILS-FLAGGA ──
+// ⚡-chip på Personbil/Paketbil: armeras med ett tryck, nästa registrering
+// loggas som elbil, och läget nollställs automatiskt efter varje registrering
+const EV_CATS = ['personbil', 'paketbil'];
+let evArmed = false;
+
+function toggleEvArmed() {
+  evArmed = !evArmed;
+  if (navigator.vibrate) navigator.vibrate(8);
+  updateEvToggle();
+}
+
+function updateEvToggle() {
+  document.querySelectorAll('.ev-toggle').forEach(el => el.classList.toggle('armed', evArmed));
+}
+
 function buildGrid() {
   const grid = document.getElementById('btnGrid');
   CATS.forEach(cat => {
@@ -271,6 +307,13 @@ function buildGrid() {
       `<span class="v-btn-label">${cat.label}</span>` +
       `<span class="v-btn-label-fi">${cat.labelFi}</span>` +
       `<span class="v-btn-badge" id="b_${cat.id}">0</span>`;
+    if (EV_CATS.includes(cat.id)) {
+      const chip = document.createElement('span');
+      chip.className = 'ev-toggle';
+      chip.textContent = '⚡';
+      chip.addEventListener('click', e => { e.stopPropagation(); toggleEvArmed(); });
+      btn.appendChild(chip);
+    }
     btn.addEventListener('click', () => tap(cat.id, btn));
 
     let pressTimer = null;
@@ -353,14 +396,18 @@ function tap(catId, btn) {
 
   const d = load();
   const brygga = bryggaAtLogTime();
+  // Elbil bara för personbil/paketbil när ⚡-chipet är armerat;
+  // läget nollställs efter varje registrering oavsett kategori
+  const elbil = evArmed && EV_CATS.includes(catId);
+  if (evArmed) { evArmed = false; updateEvToggle(); }
   if (db && logsRef) {
     // push() returns the key synchronously → optimistic local write, then sync
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta: 1, brygga });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: 1, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta: 1, brygga }).catch(() => {});
+    ref.set({ type: catId, ts, delta: 1, brygga, elbil }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1, brygga });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1, brygga, elbil });
     save(d);
   }
   renderCount();
@@ -381,11 +428,11 @@ function removeOne(catId, btn) {
   const brygga = bryggaAtLogTime();
   if (db && logsRef) {
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga });
+    d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga, elbil: false });
     save(d);
-    ref.set({ type: catId, ts, delta: -1, brygga }).catch(() => {});
+    ref.set({ type: catId, ts, delta: -1, brygga, elbil: false }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga, elbil: false });
     save(d);
   }
   renderCount();
@@ -457,13 +504,13 @@ function fetchDayTrips(dStr) {
 
 function fetchDayLogsRaw(dStr) {
   if (!db) {
-    if (dStr === localDate()) return Promise.resolve(load().logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta })));
+    if (dStr === localDate()) return Promise.resolve(load().logs.map(l => ({ type: l.type, ts: l.ts, delta: l.delta, elbil: l.elbil ?? false })));
     return Promise.resolve([]);
   }
   return db.ref('days/' + dStr + '/logs').once('value')
     .then(snap => {
       const arr = [];
-      snap.forEach(ch => { const v = ch.val(); arr.push({ type: v.type, ts: v.ts, delta: v.delta || 1 }); });
+      snap.forEach(ch => { const v = ch.val(); arr.push({ type: v.type, ts: v.ts, delta: v.delta || 1, elbil: v.elbil ?? false }); });
       return arr;
     })
     .catch(() => []);
@@ -678,6 +725,8 @@ function renderStats() {
 
   // ── Summary cards ──
   document.getElementById('sumTotal').textContent = total;
+  const evRow = document.getElementById('sumEvRow');
+  if (evRow) evRow.innerHTML = evStatsLine(load().logs);
   if (hrs.length) {
     const peak = hrs.reduce((best, hr) => hourTotal(h[hr]) > hourTotal(h[best]) ? hr : best, hrs[0]);
     const pn = hourTotal(h[peak]);
@@ -920,6 +969,7 @@ function renderWeek() {
       `<div class="total-card">` +
         `<div class="total-big">${total}</div>` +
         `<div class="total-sub">${t('weekSub')}</div>` +
+        `<div class="total-avg">${evStatsLine(allLogs.flat())}</div>` +
         `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
         co2CompareHtml(co2) +
       `</div>` +
@@ -951,6 +1001,7 @@ function renderMonth() {
         `<div class="total-big">${total}</div>` +
         `<div class="total-sub">${monthSub}</div>` +
         `<div class="total-avg">${t('snitt')}: <strong>${Math.round(avg)}</strong> ${t('snittDag')}</div>` +
+        `<div class="total-avg">${evStatsLine(allLogs.flat())}</div>` +
         `<div class="total-avg">CO2: <strong>${co2.toFixed(1)} kg</strong></div>` +
         co2CompareHtml(co2) +
       `</div>` +
@@ -1059,11 +1110,11 @@ function adjustTripVehicle(tripId, catId, delta) {
     new Date(trip.ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' }));
   if (db && logsRef) {
     const ref = logsRef.push();
-    d.logs.push({ id: ref.key, type: catId, ts, delta, brygga });
+    d.logs.push({ id: ref.key, type: catId, ts, delta, brygga, elbil: false });
     save(d);
-    ref.set({ type: catId, ts, delta, brygga }).catch(() => {});
+    ref.set({ type: catId, ts, delta, brygga, elbil: false }).catch(() => {});
   } else {
-    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga });
+    d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga, elbil: false });
     save(d);
   }
   renderCount();
