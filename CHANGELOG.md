@@ -1,7 +1,7 @@
 # Changelog
 
 ## v9.9 – 2026-07-09
-- ⚡-toggle är nu sticky: läget behålls mellan registreringar och nollställs bara när användaren själv trycker av det (tidigare nollställdes det efter varje registrering)
+- ⚡-toggle är  nu sticky: läget behålls mellan registreringar och nollställs bara när användaren själv trycker av det (tidigare nollställdes det efter varje registrering)
 - Varje tryck på Personbil/Paketbil medan ⚡ är på loggar fordonet med elbil: true; andra kategorier påverkas inte och slår inte av läget
 - Tydligare visuell indikation: pulserande gult chip + glödande gul ram (ev-on) runt hela Personbil/Paketbil-knappen när läget är aktivt, så det inte glöms bort
 - Ny CSS: ev-pulse-animation och .v-btn.ev-on-ram; updateEvToggle sätter ev-on på båda EV-knapparna
