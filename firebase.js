@@ -290,20 +290,42 @@ function initBryggorListener() {
 }
 
 // ── DRIFTSTATUS ──
-// Manuell driftstatus i Firebase config/driftstatus: "normal" | "service".
-// Sätts manuellt i Firebase-konsolen; "service" stänger av avgångsprediktionen.
-let driftstatus = 'normal';
+// Driftlägesyta, helt frikopplad från GPS/avgångslogiken — rent
+// informativt (visas internt på Status-fliken, påverkar ingen körningslogik).
+// config/driftstatus = { status, beskrivning, timestamp } — aktuellt läge.
+// config/driftstatus_history/{pushKey} = samma form, append-only logg.
+let currentDriftstatus = null;
 
 function initDriftstatusListener() {
   if (!db) return;
-  const ref = db.ref('config/driftstatus');
-  // Skapa noden med "normal" om den saknas (tyst om skrivregler blockerar)
-  ref.once('value').then(snap => {
-    if (snap.val() === null) ref.set('normal').catch(() => {});
-  }).catch(() => {});
-  ref.on('value', snap => {
-    driftstatus = snap.val() === 'service' ? 'service' : 'normal';
-    console.log('[Driftstatus]', driftstatus);
-    renderPrediction();
-  });
+  db.ref('config/driftstatus').on('value', snap => {
+    currentDriftstatus = snap.val();
+    if (currentView === 'Driftstatus') renderCurrentDriftstatus();
+  }, () => { currentDriftstatus = null; });
+}
+
+// status: 'normal' | 'service' | 'tankning' | 'utryckning' | 'annat'
+// beskrivning: fritext, bara relevant för 'annat'
+function submitDriftstatus(status, beskrivning) {
+  const entry = { status, beskrivning: beskrivning || '', timestamp: Date.now() };
+  if (!db) {
+    console.log('[Driftstatus] Firebase ej tillgängligt — kunde inte spara', status);
+    return;
+  }
+  db.ref('config/driftstatus').set(entry)
+    .then(() => console.log('[Driftstatus] Satt till', status, entry.beskrivning ? '– ' + entry.beskrivning : ''))
+    .catch(e => console.log('[Driftstatus] Kunde inte spara (kolla databasreglerna):', e?.message ?? String(e)));
+  db.ref('config/driftstatus_history').push(entry).catch(() => {});
+}
+
+// Senaste 10 statusändringarna, nyast först
+function fetchDriftstatusHistory() {
+  if (!db) return Promise.resolve([]);
+  return db.ref('config/driftstatus_history').limitToLast(10).once('value')
+    .then(snap => {
+      const arr = [];
+      snap.forEach(ch => arr.push({ id: ch.key, ...ch.val() }));
+      return arr.reverse();
+    })
+    .catch(() => []);
 }

@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "10.2";
+const APP_VERSION = "10.3";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -148,7 +148,16 @@ function applyLang() {
   set('navCountLabel',    t('navCount'));
   set('navStatsLabel',    t('navStats'));
   set('navWeatherLabel',  t('navWeather'));
+  set('navDriftstatusLabel', t('navDriftstatus'));
   set('weatherTitle',     t('weatherTitle'));
+  set('statusCurrentTitle', t('statusCurrentTitle'));
+  set('statusChooseTitle',  t('statusChooseTitle'));
+  set('statusHistoryTitle', t('statusHistoryTitle'));
+  const otherText = document.getElementById('statusOtherText');
+  if (otherText) otherText.placeholder = t('statusOtherPlaceholder');
+  const otherSubmit = document.getElementById('statusOtherSubmit');
+  if (otherSubmit) otherSubmit.textContent = t('statusOtherSave');
+  if (currentView === 'Driftstatus') renderDriftstatusView();
   updateThunderWarning(lastThunderInfo);
   applyMode();
   // Re-sync the current sync status label
@@ -729,6 +738,91 @@ function renderPrediction() {
     `</div>`;
 }
 
+// ── RENDER: STATUS VIEW (driftläge — internt, ingen koppling till GPS/prediktion) ──
+const DRIFTSTATUS_CATS = [
+  { id: 'normal',     labelKey: 'statusNormal',     emoji: '✅' },
+  { id: 'service',    labelKey: 'statusService',    emoji: '🔧' },
+  { id: 'tankning',   labelKey: 'statusTankning',   emoji: '⛽' },
+  { id: 'utryckning', labelKey: 'statusUtryckning', emoji: '🚨' },
+  { id: 'annat',      labelKey: 'statusAnnat',      emoji: '✏️' },
+];
+
+function buildDriftstatusButtons() {
+  const grid = document.getElementById('statusBtnGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  DRIFTSTATUS_CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'status-btn';
+    btn.id = 'statusBtn_' + cat.id;
+    btn.innerHTML = `<span class="status-btn-emoji">${cat.emoji}</span><span>${t(cat.labelKey)}</span>`;
+    btn.addEventListener('click', () => {
+      const wrap = document.getElementById('statusOtherWrap');
+      if (cat.id === 'annat') {
+        wrap.style.display = wrap.style.display === 'none' ? '' : 'none';
+        if (wrap.style.display !== 'none') document.getElementById('statusOtherText').focus();
+        return;
+      }
+      wrap.style.display = 'none';
+      submitDriftstatus(cat.id, '');
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function submitOtherDriftstatus() {
+  const el = document.getElementById('statusOtherText');
+  const text = (el?.value ?? '').trim();
+  if (!text) { el?.focus(); return; }
+  submitDriftstatus('annat', text);
+  el.value = '';
+  document.getElementById('statusOtherWrap').style.display = 'none';
+}
+
+function driftstatusLabel(status) {
+  const cat = DRIFTSTATUS_CATS.find(c => c.id === status);
+  return cat ? `${cat.emoji} ${t(cat.labelKey)}` : t('statusNormal');
+}
+
+function renderCurrentDriftstatus() {
+  const el = document.getElementById('statusCurrentCard');
+  if (!el) return;
+  const cur = currentDriftstatus;
+  const hm = ts => new Date(ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+  if (!cur || !cur.status || cur.status === 'normal') {
+    el.innerHTML = `<div class="peak-val">${driftstatusLabel('normal')}</div>`;
+    return;
+  }
+  const sinceStr = cur.timestamp ? ` ${t('statusSince')} ${hm(cur.timestamp)}` : '';
+  const descStr = cur.beskrivning ? `<div class="peak-lbl" style="margin-top:4px">${cur.beskrivning}</div>` : '';
+  el.innerHTML =
+    `<div class="peak-val">${driftstatusLabel(cur.status)}${sinceStr}</div>` + descStr;
+}
+
+function renderDriftstatusHistory() {
+  const el = document.getElementById('statusHistoryList');
+  if (!el) return;
+  el.innerHTML = `<div class="empty">${t('hamtar')}</div>`;
+  fetchDriftstatusHistory().then(entries => {
+    if (currentView !== 'Driftstatus') return;
+    if (!entries.length) { el.innerHTML = `<div class="empty">${t('statusEmpty')}</div>`; return; }
+    const hm = ts => new Date(ts).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+    el.innerHTML = entries.map(e =>
+      `<div class="status-hist-row">` +
+        `<span class="status-hist-time">${hm(e.timestamp)}</span>` +
+        `<span class="status-hist-label">${driftstatusLabel(e.status)}</span>` +
+        (e.beskrivning ? `<span class="status-hist-desc">${e.beskrivning}</span>` : '') +
+      `</div>`
+    ).join('');
+  });
+}
+
+function renderDriftstatusView() {
+  buildDriftstatusButtons();
+  renderCurrentDriftstatus();
+  renderDriftstatusHistory();
+}
+
 // ── RENDER: STATS VIEW ──
 function renderStats() {
   renderPrediction();
@@ -1026,7 +1120,7 @@ function renderMonth() {
 }
 
 // ── VIEW SWITCHING ──
-const VIEWS = ['Count', 'Stats', 'Weather'];
+const VIEWS = ['Count', 'Stats', 'Weather', 'Driftstatus'];
 let currentView = 'Count';
 function goView(name) {
   currentView = name;
@@ -1034,8 +1128,9 @@ function goView(name) {
     document.getElementById('v' + v).classList.toggle('active', v === name);
     document.getElementById('nav' + v).classList.toggle('active', v === name);
   });
-  if (name === 'Stats')   goSummaryTab(summaryTab);
-  if (name === 'Weather') renderWeather();
+  if (name === 'Stats')       goSummaryTab(summaryTab);
+  if (name === 'Weather')     renderWeather();
+  if (name === 'Driftstatus') renderDriftstatusView();
 }
 
 const SUMMARY_TABS = ['Idag', 'Vecka', 'Manad'];

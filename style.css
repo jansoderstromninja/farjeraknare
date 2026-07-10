@@ -679,6 +679,67 @@ nav {
 .thunder-icon.yellow { color: #F59E0B; }
 @keyframes thunder-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
+/* ── STATUS VIEW (driftläge) ── */
+.status-wrap { padding: 14px 14px 32px; }
+.status-current {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.status-btn-grid { display: flex; flex-direction: column; gap: 8px; }
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.status-btn:active { filter: brightness(0.85); }
+.status-btn-emoji { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+#statusOtherWrap { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.status-other-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.status-other-submit {
+  background: #3B82F6;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.status-hist-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.status-hist-time  { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.status-hist-label { font-weight: 600; }
+.status-hist-desc  { color: var(--muted); flex-basis: 100%; }
+
 /* ── NARROW SCREEN (≤ 389px, e.g. iPhone SE 375px) ── */
 @media (max-width: 389px) {
   header { padding: 8px 10px; }

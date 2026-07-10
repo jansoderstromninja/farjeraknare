@@ -1,5 +1,15 @@
 # Changelog
 
+## v10.0 – 2026-07-10
+- Ny flik "Status" i navigeringen — driftläge, helt frikopplad från GPS/avgångslogiken (ren informationsyta; ingen konsumerar fältet i körningskoden)
+- Fem lägen: Normal drift, Service/underhåll, Tankning, Utryckningsfordon väntas, Annat (fritext). Normal drift är en vanlig, alltid synlig kategori-knapp — fungerar även som återgång till normalläge, ingen separat reset-knapp behövdes
+- Skriver till config/driftstatus = { status, beskrivning, timestamp } vid varje tryck; satt_av uteslutet — appen har ingen användaridentifiering
+- Ny historik-logg config/driftstatus_history/{pushKey}, append-only; Status-fliken visar senaste 10 (nyast överst)
+- "Nuvarande läge" högst upp uppdateras live via .on('value') och visar t.ex. "🔧 Service/underhåll sedan 14:32"
+- Ersatte den gamla sträng-baserade config/driftstatus-lyssnaren (från v8.2, "normal"/"service") som varit dödkod sedan v9.4 tog bort det prediktionssystem som läste den
+- Internt bara för nu — databasreglerna för config/ lämnade oförändrade (redan läs-nekade för publik åtkomst)
+- OBS: kunde inte köra live webbläsarverifiering denna gång (Chrome-tillägget frånkopplat, ingen node/JS-runtime i miljön) — verifierat statiskt: alla DOM-id, funktionsanrop och i18n-nycklar korsreferensade, parenteser/klamrar balanserade i samtliga ändrade filer. Rekommenderar en snabb manuell koll av fliken efter deploy
+
 ## v9.9 – 2026-07-09
 - ⚡-toggle är  nu sticky: läget behålls mellan registreringar och nollställs bara när användaren själv trycker av det (tidigare nollställdes det efter varje registrering)
 - Varje tryck på Personbil/Paketbil medan ⚡ är på loggar fordonet med elbil: true; andra kategorier påverkas inte och slår inte av läget

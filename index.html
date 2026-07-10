@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Fordonsräknare</title>
-<link rel="stylesheet" href="style.css?v=10.2">
+<link rel="stylesheet" href="style.css?v=10.3">
 </head>
 <body>
 
@@ -147,6 +147,25 @@
   </div>
 </div>
 
+<!-- STATUS VIEW -->
+<div class="view" id="vDriftstatus">
+  <div class="status-wrap">
+    <div class="sec-title" id="statusCurrentTitle">Nuvarande läge</div>
+    <div class="status-current" id="statusCurrentCard">—</div>
+
+    <div class="sec-title" id="statusChooseTitle" style="margin-top:18px">Sätt driftläge</div>
+    <div class="status-btn-grid" id="statusBtnGrid"></div>
+
+    <div id="statusOtherWrap" style="display:none">
+      <textarea id="statusOtherText" class="status-other-input" rows="2" placeholder=""></textarea>
+      <button class="status-other-submit" id="statusOtherSubmit" onclick="submitOtherDriftstatus()">Spara</button>
+    </div>
+
+    <div class="sec-title" id="statusHistoryTitle" style="margin-top:22px">Historik</div>
+    <div id="statusHistoryList"><div class="empty">Hämtar…</div></div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav>
   <button class="nav-btn active" id="navCount" onclick="goView('Count')">
@@ -160,6 +179,10 @@
   <button class="nav-btn" id="navWeather" onclick="goView('Weather')">
     <span class="nav-icon">🌬️</span>
     <span id="navWeatherLabel">Väder</span>
+  </button>
+  <button class="nav-btn" id="navDriftstatus" onclick="goView('Driftstatus')">
+    <span class="nav-icon">🚦</span>
+    <span id="navDriftstatusLabel">Status</span>
   </button>
 </nav>
 
@@ -194,10 +217,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 
-<script src="i18n.js?v=10.2"></script>
-<script src="firebase.js?v=10.2"></script>
-<script src="gps.js?v=10.2"></script>
-<script src="weather.js?v=10.2"></script>
-<script src="app.js?v=10.2"></script>
+<script src="i18n.js?v=10.3"></script>
+<script src="firebase.js?v=10.3"></script>
+<script src="gps.js?v=10.3"></script>
+<script src="weather.js?v=10.3"></script>
+<script src="app.js?v=10.3"></script>
 </body>
 </html>
