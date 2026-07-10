@@ -1,5 +1,23 @@
 # Changelog
 
+## v10.1 – 2026-07-10
+- Grundorsak till "Status-fliken skriver inte" bekräftad direkt mot Firebase RTDB REST API (curl, oberoende av webbläsare/app-kod): config/driftstatus och config/driftstatus_history ger HTTP 401 Permission denied på både läsning och skrivning för oautentiserad åtkomst
+- Omfattningen är STÖRRE än rapporterat: root (/), days/, turer/, breadcrumbs/, config/bryggor, config/watlev — samtliga ger samma 401 just nu. Hela databasen nekar all oautentiserad åtkomst, inte bara Status-fliken. Appen saknar inloggning, så detta slår mot alla användare just nu (allt kör i praktiken "Lokal"-läge)
+- Detta är INTE ett kodfel — kunde inte och fick inte fixas av mig: att ändra Firebase-säkerhetsregler räknas som att ändra säkerhetsinställningar, vilket jag är instruerad att aldrig göra själv. Användaren behöver uppdatera reglerna i Firebase-konsolen (Realtime Database → Rules)
+- Kodfel som ÄNDÅ hittades och fixades: config/driftstatus_history-skrivningen använde `.push(entry).catch()` — samma SDK-egenhet som i breadcrumbs (v9.6): `.catch()` direkt på en ThennableReference triggas aldrig i compat 10.12.5. Bytt till `.then(null, fn)`
+- Ny synlig UI-indikation: misslyckad skrivning till config/driftstatus visar nu ett rött felbanner på Status-fliken (statusErrorBanner) i stället för att bara synas i console.log/debug-panelen — gäller framöver oavsett vad databasreglerna säger
+- Chrome-tillägget var frånkopplat även denna gång (bekräftat, flera återförsök) — ingen live webbläsarverifiering kunde göras. Rotorsaken är dock verifierad med en oberoende metod (REST API mot produktionsdatabasen), vilket bedöms räcka för diagnosen
+- Föreslagen regel att klistra in i Firebase-konsolen (måste göras manuellt av användaren):
+  ```json
+  { "rules": {
+      "days": { ".read": true, ".write": true },
+      "turer": { ".read": true, ".write": true },
+      "config": { ".read": true, ".write": true },
+      "breadcrumbs": { ".read": true, ".write": true },
+      ".read": false, ".write": false
+  } }
+  ```
+
 ## v10.0 – 2026-07-10
 - Ny flik "Status" i navigeringen — driftläge, helt frikopplad från GPS/avgångslogiken (ren informationsyta; ingen konsumerar fältet i körningskoden)
 - Fem lägen: Normal drift, Service/underhåll, Tankning, Utryckningsfordon väntas, Annat (fritext). Normal drift är en vanlig, alltid synlig kategori-knapp — fungerar även som återgång till normalläge, ingen separat reset-knapp behövdes

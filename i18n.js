@@ -92,6 +92,7 @@ const T = {
     statusOtherSave:    'Spara',
     statusSince:        'sedan',
     statusEmpty:        'Ingen historik ännu.',
+    statusSaveError:    'Kunde inte spara — kontrollera anslutningen eller databasreglerna.',
     locale:         'sv-SE',
   },
   fi: {
@@ -182,6 +183,7 @@ const T = {
     statusOtherSave:    'Tallenna',
     statusSince:        'alkaen',
     statusEmpty:        'Ei historiaa vielä.',
+    statusSaveError:    'Tallennus epäonnistui — tarkista yhteys tai tietokantasäännöt.',
     locale:         'fi-FI',
   }
 };

@@ -310,12 +310,23 @@ function submitDriftstatus(status, beskrivning) {
   const entry = { status, beskrivning: beskrivning || '', timestamp: Date.now() };
   if (!db) {
     console.log('[Driftstatus] Firebase ej tillgängligt — kunde inte spara', status);
+    if (typeof showDriftstatusError === 'function') showDriftstatusError();
     return;
   }
   db.ref('config/driftstatus').set(entry)
-    .then(() => console.log('[Driftstatus] Satt till', status, entry.beskrivning ? '– ' + entry.beskrivning : ''))
-    .catch(e => console.log('[Driftstatus] Kunde inte spara (kolla databasreglerna):', e?.message ?? String(e)));
-  db.ref('config/driftstatus_history').push(entry).catch(() => {});
+    .then(() => {
+      console.log('[Driftstatus] Satt till', status, entry.beskrivning ? '– ' + entry.beskrivning : '');
+      if (typeof hideDriftstatusError === 'function') hideDriftstatusError();
+    })
+    // OBS: .set() ger en riktig Promise (till skillnad från .push(data), vars
+    // ThennableReference aldrig triggar .catch() i compat 10.12.5 — se nedan)
+    .catch(e => {
+      console.log('[Driftstatus] Kunde inte spara (kolla databasreglerna):', e?.message ?? String(e));
+      if (typeof showDriftstatusError === 'function') showDriftstatusError(e?.message ?? String(e));
+    });
+  // .push(entry).catch() skulle ALDRIG triggas (samma SDK-egenhet som i
+  // writeBreadcrumb, v9.6) — .then(null, fn) används därför här också
+  db.ref('config/driftstatus_history').push(entry).then(null, () => {});
 }
 
 // Senaste 10 statusändringarna, nyast först

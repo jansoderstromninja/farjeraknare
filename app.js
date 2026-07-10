@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "10.3";
+const APP_VERSION = "10.4";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -817,7 +817,23 @@ function renderDriftstatusHistory() {
   });
 }
 
+// Synligt felmeddelande i UI:t — utan detta var en misslyckad skrivning
+// (t.ex. nekad av databasreglerna) helt tyst för användaren; felet syntes
+// bara i console.log/debug-panelen, som ingen normalt har öppen
+function showDriftstatusError(detail) {
+  const el = document.getElementById('statusErrorBanner');
+  if (!el) return;
+  el.textContent = t('statusSaveError') + (detail ? ` (${detail})` : '');
+  el.style.display = '';
+}
+
+function hideDriftstatusError() {
+  const el = document.getElementById('statusErrorBanner');
+  if (el) el.style.display = 'none';
+}
+
 function renderDriftstatusView() {
+  hideDriftstatusError();
   buildDriftstatusButtons();
   renderCurrentDriftstatus();
   renderDriftstatusHistory();
