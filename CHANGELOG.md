@@ -1,5 +1,13 @@
 # Changelog
 
+## v10.3 – 2026-07-10 (incident löst, ingen kodändring)
+- Firebase-reglerna fixade och avgångssynk fungerar igen — bekräftat av användaren manuellt i webbläsaren (knapptryck på Status-fliken sparar, avgångar syncar) och oberoende av mig via REST just nu: days, turer, breadcrumbs, config/driftstatus och config/driftstatus_history läser alla 200 OK
+- Grundorsak (bekräftad av användaren, som har regelfilen): .read/.write fanns bara på $date-undernivån under days/, turer/ och breadcrumbs/ (t.ex. days/$date), inte på föräldranoden days/ själv — RTDB-regler ärvs nedåt men en läsning av en HEL föräldranod (vilket appens .on('value')-lyssnare på logsRef/tripsRef gör) kräver ett eget .read-grant på just den noden, inte bara på barnen. config/ saknades dessutom helt i regelfilen, vilket gjorde att alla config/*-noder (driftstatus, bryggor, watlev) nekades som standard
+- Lärdom för nästa toppnivånod: sätt .read/.write explicit på själva föräldranoden (inte bara på ett barnmönster som $date), och lägg till den nya noden i regelfilen redan vid design — annars nekas den tyst som standard tills någon märker det
+- Regeländringen gjordes manuellt av användaren direkt i Firebase-konsolen — INTE via kod, deploy eller CLI från mig. Jag har fortfarande ingen skrivåtkomst till reglerna
+- Kvarstående, ej akut: config/bryggor och config/watlev är fortsatt READ-nekade (401) — inte del av den här incidenten, var redan så innan v10.0. Bryggor-override och watlev-trend har graceful fallback och påverkar inte kärnfunktionaliteten, men värt att åtgärda i samma veva om regelfilen ändå redigeras
+- Chrome-tillägget fortsatt frånkopplat även denna gång (nytt försök gjort) — kunde inte köra den begärda live-verifieringen av Status-flikens knappar/historik/fritextfält i webbläsare. Bekräftelsen ovan bygger på REST mot produktionsdatabasen samt användarens egen manuella test
+
 ## v10.2 – 2026-07-10 (incidentrapport, ingen kodändring)
 - AKUT: days/ och turer/ bekräftat READ-nekat (401) via REST just nu — WRITE fungerar (200 OK, verifierat med skriv+städa-test). Detta förklarar "avgångar visas inte": attachListeners() i firebase.js lyssnar via logsRef.on('value')/tripsRef.on('value') — rena läsoperationer. Med läsning nekad kan appen aldrig hämta ner data från Firebase; enheter/sessioner utan färsk lokal cache visar ingenting
 - config/driftstatus, config/driftstatus_history, breadcrumbs/ och databasroten är fortsatt READ-nekade (samma läge som v10.1), config/driftstatus dessutom WRITE-nekat — matchar det röda felbannret användaren nu bekräftat ser i UI:t
