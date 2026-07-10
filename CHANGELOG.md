@@ -1,5 +1,19 @@
 # Changelog
 
+## v10.2 – 2026-07-10 (incidentrapport, ingen kodändring)
+- AKUT: days/ och turer/ bekräftat READ-nekat (401) via REST just nu — WRITE fungerar (200 OK, verifierat med skriv+städa-test). Detta förklarar "avgångar visas inte": attachListeners() i firebase.js lyssnar via logsRef.on('value')/tripsRef.on('value') — rena läsoperationer. Med läsning nekad kan appen aldrig hämta ner data från Firebase; enheter/sessioner utan färsk lokal cache visar ingenting
+- config/driftstatus, config/driftstatus_history, breadcrumbs/ och databasroten är fortsatt READ-nekade (samma läge som v10.1), config/driftstatus dessutom WRITE-nekat — matchar det röda felbannret användaren nu bekräftat ser i UI:t
+- Uteslutet att detta är en kodregression: attachListeners()/initFirebase()s days/turer-uppsättning rördes inte i v10.0/v10.1 — de ändringarna var uteslutande scopade till config/driftstatus (submitDriftstatus, initDriftstatusListener, en .then(null,fn)-fix). Mönstret skriv-tillåtet-men-läs-nekat pekar på en regeländring gjord direkt i Firebase-konsolen, inte i appkoden
+- Kunde INTE och fick INTE åtgärda detta själv: att skriva/deploya Firebase-säkerhetsregler räknas som att ändra säkerhetsinställningar/åtkomstkontroll, vilket är uteslutet även vid uttrycklig begäran. Jag har ingen Firebase CLI-inloggning, inget service account och ingen rules.json i repot att utgå från — bara beteendetester (REST-anrop)
+- Minsta möjliga fix att klistra in i Firebase-konsolen (Realtime Database → Rules), att lägga till/justera — rör bara .read där det saknas, .write på days/turer är redan korrekt och ska INTE ändras:
+  ```json
+  "days":  { ".read": true },
+  "turer": { ".read": true },
+  "config": { "driftstatus": { ".read": true, ".write": true },
+              "driftstatus_history": { ".read": true, ".write": true } }
+  ```
+- Chrome-tillägget fortsatt frånkopplat trots upprepade återförsök denna session — ingen live webbläsarverifiering kunde göras. Samtliga fynd ovan är verifierade direkt mot produktionsdatabasen via REST (curl), oberoende av appkod och webbläsare
+
 ## v10.1 – 2026-07-10
 - Grundorsak till "Status-fliken skriver inte" bekräftad direkt mot Firebase RTDB REST API (curl, oberoende av webbläsare/app-kod): config/driftstatus och config/driftstatus_history ger HTTP 401 Permission denied på både läsning och skrivning för oautentiserad åtkomst
 - Omfattningen är STÖRRE än rapporterat: root (/), days/, turer/, breadcrumbs/, config/bryggor, config/watlev — samtliga ger samma 401 just nu. Hela databasen nekar all oautentiserad åtkomst, inte bara Status-fliken. Appen saknar inloggning, så detta slår mot alla användare just nu (allt kör i praktiken "Lokal"-läge)
