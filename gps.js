@@ -37,20 +37,72 @@ function hideGpsAccuracy() {
   const wrapper = document.getElementById('gpsAccuracy');
   if (wrapper) wrapper.style.display = 'none';
 }
-// ── GPS-BREADCRUMBS ──
-// Rå spårpunkt var 15:e sekund, bara i rörelse (> 0.5 m/s) — aldrig vid kaj:
-// ingen heartbeat och inga ts-uppdateringar på befintliga poster. Datainsamling
-// för framtida kartfunktion; turer/ är helt orörd av detta.
-const BREADCRUMB_INTERVAL_MS = 15 * 1000;
-let lastBreadcrumbTs = 0;
+// ── GPS-BREADCRUMBS: HEARTBEAT ──
+// Färjappen (mottagaren) har en 5-min offline-timeout på breadcrumbs/pos.ts.
+// watchPosition slutar trigga när färjan ligger stilla vid kaj, vilket med
+// den gamla "bara vid rörelse"-logiken fick Färjappen att visa "Ingen
+// GPS-signal" trots att färjan bara låg still. Lösning: en egen intervall-
+// loop (oberoende av watchPosition-callbacken) som pulsar den SENAST kända
+// positionen med jämna mellanrum — tätare i rörelse, glesare stillastående,
+// men aldrig helt tyst så länge GPS-läge är aktivt.
+const HEARTBEAT_SPEED_THRESHOLD = 0.5;       // m/s – samma tröskel som övrig GPS-logik
+const HEARTBEAT_MOVING_MS       = 10 * 1000; // puls var 10:e sekund i rörelse
+const HEARTBEAT_STATIONARY_MS   = 60 * 1000; // puls var 60:e sekund stillastående — god marginal inom Färjappens 5 min
 
-function maybeWriteBreadcrumb(lat, lng, speed) {
-  if (speed == null || speed <= 0.5) return;
-  const now = Date.now();
-  if (now - lastBreadcrumbTs < BREADCRUMB_INTERVAL_MS) return;
-  lastBreadcrumbTs = now;
-  writeBreadcrumb(lat, lng, speed);
+let latestPosition   = null; // { lat, lng, speed, heading } — senaste giltiga GPS-fix
+let heartbeatTimer    = null;
+let heartbeatMode     = null; // 'moving' | 'stationary' | null (ingen loop igång)
+
+function updateLatestPosition(pos) {
+  latestPosition = {
+    lat: pos.coords.latitude,
+    lng: pos.coords.longitude,
+    speed: pos.coords.speed ?? 0,
+    heading: pos.coords.heading ?? -1,
+  };
+  reconcileHeartbeatMode();
 }
+
+// Byter takt direkt vid fartändring — väntar aldrig ut ett pågående,
+// för glest intervall innan den snabbare takten tar över
+function reconcileHeartbeatMode() {
+  if (!latestPosition) return;
+  const wantMode = latestPosition.speed > HEARTBEAT_SPEED_THRESHOLD ? 'moving' : 'stationary';
+  if (wantMode === heartbeatMode) return;
+  startHeartbeat(wantMode);
+}
+
+function startHeartbeat(mode) {
+  stopHeartbeat();
+  heartbeatMode = mode;
+  const intervalMs = mode === 'moving' ? HEARTBEAT_MOVING_MS : HEARTBEAT_STATIONARY_MS;
+  console.log('[Heartbeat] Växlar till', mode, '-takt (' + (intervalMs / 1000) + 's)');
+  sendHeartbeat(); // puls direkt vid växling, inte vid nästa tick
+  heartbeatTimer = setInterval(sendHeartbeat, intervalMs);
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer !== null) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  heartbeatMode = null;
+}
+
+function sendHeartbeat() {
+  if (!latestPosition) return; // ingen GPS-fix ännu — hoppa över, skriv aldrig tomt
+  writeBreadcrumb(latestPosition.lat, latestPosition.lng, latestPosition.speed, latestPosition.heading);
+}
+
+// Bakgrundsflik: pausa loopen (setInterval throttlas ändå hårt av webbläsaren
+// dolt, och 10s-takten skulle tappa sin mening) — återuppta vid återkomst
+function handleHeartbeatVisibility() {
+  if (document.hidden) {
+    stopHeartbeat();
+  } else if (geoWatchId !== null) {
+    reconcileHeartbeatMode();
+  }
+}
+document.addEventListener('visibilitychange', handleHeartbeatVisibility);
+window.addEventListener('pagehide', stopHeartbeat);
+window.addEventListener('beforeunload', stopHeartbeat);
 
 // ── GPS DEPARTURE WATCH ──
 let geoWatchId = null;
@@ -155,8 +207,9 @@ function startGpsWatch() {
         tripSpeedSamples.push(speed);
         console.log('[GPS] Speed sample:', speed.toFixed(2), 'm/s –', tripSpeedSamples.length, 'samplar totalt');
       }
-      // Spårpunkt i rörelse — oberoende av uppvärmning och avgångsdetektering
-      maybeWriteBreadcrumb(pos.coords.latitude, pos.coords.longitude, speed);
+      // Uppdaterar senaste kända position — heartbeat-loopen pulsar den
+      // oberoende av hur ofta watchPosition själv triggar (t.ex. stillastående)
+      updateLatestPosition(pos);
       // Departure detection only after warmup and with valid speed
       if (speed == null || Date.now() < gpsWarmupUntil) return;
       const now = Date.now();
@@ -200,6 +253,8 @@ function stopGpsWatch() {
     tripSpeedSamples  = [];
     lastDepartureFbKey  = null;
     lastDepartureFbDate = null;
+    stopHeartbeat();
+    latestPosition = null;
     console.log('[GPS] Testläge aktiverat');
   }
   hideGpsAccuracy();

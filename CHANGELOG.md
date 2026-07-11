@@ -1,5 +1,16 @@
 # Changelog
 
+## v10.4 – 2026-07-11
+- Löst: Färjappen (extern mottagare) visade felaktigt "Ingen GPS-signal" när färjan låg stilla vid kaj — watchPosition slutar trigga vid stillastående, så breadcrumbs/pos.ts blev för gammal för mottagarens 5-min offline-timeout
+- Ny heartbeat-loop i gps.js, oberoende av watchPosition-callbacken: pulsar senast kända position (latestPosition) via egen setInterval, oavsett om nya GPS-events kommer in eller ej
+- Adaptiv takt: 10 s i rörelse (fart > 0.5 m/s), 60 s stillastående — god marginal inom mottagarens 5-minuterströskel utan att gå glesare
+- Fartväxling byter takt omedelbart (stopHeartbeat + ny setInterval + direktpuls), väntar aldrig ut ett pågående 60 s-intervall
+- Edge case: ingen GPS-fix ännu → sendHeartbeat() hoppar över tyst, skriver aldrig tomt/null till breadcrumbs
+- Cleanup: stopHeartbeat() vid stopGpsWatch() (testläge/GPS av), samt vid visibilitychange (dold flik pausar loopen, återupptas vid återkomst om GPS fortfarande är aktivt) och pagehide/beforeunload
+- writeBreadcrumb() i firebase.js utökad med heading (fallback -1) och speed-fallback (0); samma nod breadcrumbs/{datum} som tidigare
+- Ersätter den gamla rörelseutlösta breadcrumb-throttlingen (maybeWriteBreadcrumb, v9.6) helt — den skrev aldrig vid stillastående, vilket var exakt grundorsaken till buggen. Ingen separat/parallell skrivväg kvar
+- Chrome-tillägget fortsatt frånkopplat denna session (nytt försök gjort) — ingen live-verifiering med riktig GPS-hårdvara möjlig, vilket ändå kräver fysisk enhet snarare än webbläsarautomation. Verifierat statiskt: symbolreferenser, anropssignaturer och parentesbalans i gps.js/firebase.js, samt logiskt spårat fartväxlingsscenariot för hand
+
 ## v10.3 – 2026-07-10 (incident löst, ingen kodändring)
 - Firebase-reglerna fixade och avgångssynk fungerar igen — bekräftat av användaren manuellt i webbläsaren (knapptryck på Status-fliken sparar, avgångar syncar) och oberoende av mig via REST just nu: days, turer, breadcrumbs, config/driftstatus och config/driftstatus_history läser alla 200 OK
 - Grundorsak (bekräftad av användaren, som har regelfilen): .read/.write fanns bara på $date-undernivån under days/, turer/ och breadcrumbs/ (t.ex. days/$date), inte på föräldranoden days/ själv — RTDB-regler ärvs nedåt men en läsning av en HEL föräldranod (vilket appens .on('value')-lyssnare på logsRef/tripsRef gör) kräver ett eget .read-grant på just den noden, inte bara på barnen. config/ saknades dessutom helt i regelfilen, vilket gjorde att alla config/*-noder (driftstatus, bryggor, watlev) nekades som standard

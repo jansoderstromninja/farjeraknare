@@ -163,15 +163,17 @@ function dropPendingForTrip(tripId) {
 }
 
 // ── GPS-BREADCRUMBS (lagring) ──
-// Separat nod breadcrumbs/{datum}/{pushKey} = { lat, lng, speed, ts } — rå
-// spårdata för framtida kartfunktion. Anslutningsstatus (lever/död) läses
-// redan via .info/connected-lyssnaren och kräver ingen egen skrivning.
+// Separat nod breadcrumbs/{datum}/{pushKey} = { lat, lng, speed, heading, ts }.
+// Skrivs av heartbeat-loopen i gps.js — både i rörelse och stillastående vid
+// kaj (så Färjappens 5-min offline-timeout på pos.ts aldrig löser ut i onödan).
+// Anslutningsstatus (lever/död) läses redan via .info/connected-lyssnaren.
 let breadcrumbWriteWarned = false;
-function writeBreadcrumb(lat, lng, speed) {
+function writeBreadcrumb(lat, lng, speed, heading) {
   if (!db) return;
+  const payload = { lat, lng, speed: speed ?? 0, heading: heading ?? -1, ts: Date.now() };
   // OBS: .catch() direkt på push-referensen registreras men körs aldrig i
   // compat-SDK:n (verifierat) — .then(null, fn) fungerar, därav formen nedan
-  db.ref('breadcrumbs/' + localDate()).push({ lat, lng, speed, ts: Date.now() })
+  db.ref('breadcrumbs/' + localDate()).push(payload)
     .then(null, e => {
       // Engångsvarning — kräver ".read"/".write": true för breadcrumbs i databasreglerna
       if (breadcrumbWriteWarned) return;
