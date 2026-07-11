@@ -167,38 +167,83 @@ function dropPendingForTrip(tripId) {
 // Skrivs av heartbeat-loopen i gps.js — både i rörelse och stillastående vid
 // kaj (så Färjappens 5-min offline-timeout på pos.ts aldrig löser ut i onödan).
 // Anslutningsstatus (lever/död) läses redan via .info/connected-lyssnaren.
+//
+// Rullande 60-minuters buffert, inte en logg: varje skrivning triggar en
+// rensning av poster äldre än BREADCRUMB_RETENTION_MS, och en tömd datum-nod
+// tas bort helt. En full sopning körs dessutom vid appstart (pruneAllBreadcrumbs)
+// så data från en session som aldrig skrev igen (appen stängd) inte blir kvar
+// för evigt — annars skulle bara framtida skrivningar trigga rensning.
 let breadcrumbWriteWarned = false;
+const BREADCRUMB_RETENTION_MS = 60 * 60 * 1000;
+
 function writeBreadcrumb(lat, lng, speed, heading) {
   if (!db) return;
   const payload = { lat, lng, speed: speed ?? 0, heading: heading ?? -1, ts: Date.now() };
-  // OBS: .catch() direkt på push-referensen registreras men körs aldrig i
-  // compat-SDK:n (verifierat) — .then(null, fn) fungerar, därav formen nedan
   db.ref('breadcrumbs/' + localDate()).push(payload)
-    .then(null, e => {
-      // Engångsvarning — kräver ".read"/".write": true för breadcrumbs i databasreglerna
-      if (breadcrumbWriteWarned) return;
-      breadcrumbWriteWarned = true;
-      console.log('[Breadcrumbs] Skrivning nekades (kolla databasreglerna):', e?.message ?? String(e));
-    });
+    .then(
+      () => pruneRecentBreadcrumbs(payload.ts),
+      // OBS: felfunktionen här är en riktig andra-then-arg (inte SDK-quirken
+      // med .catch() på push-referensen) eftersom vi har ett success-fall att köra
+      e => {
+        // Engångsvarning — kräver ".read"/".write": true för breadcrumbs i databasreglerna
+        if (breadcrumbWriteWarned) return;
+        breadcrumbWriteWarned = true;
+        console.log('[Breadcrumbs] Skrivning nekades (kolla databasreglerna):', e?.message ?? String(e));
+      }
+    );
 }
 
-// Radera breadcrumbs äldre än 30 dagar vid appstart — datumnycklarna
-// (YYYY-MM-DD) är lexikografiskt kronologiska så orderByKey + endBefore
-// träffar exakt de gamla dagarna utan att läsa färsk data
-const BREADCRUMB_RETENTION_DAYS = 30;
-function cleanupBreadcrumbs() {
+function dateStrFromTs(ts) {
+  const d = new Date(ts);
+  return dateStrFromParts(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+// Tar bort poster äldre än cutoff ur en redan hämtad datum-nod-snapshot, och
+// hela datum-noden om den blir tom efteråt.
+function pruneBreadcrumbSnapshot(dateStr, dateSnap, cutoff) {
+  if (!dateSnap.exists()) return;
+  const updates = {};
+  let remaining = 0;
+  dateSnap.forEach(ch => {
+    const v = ch.val();
+    if (v && typeof v.ts === 'number' && v.ts < cutoff) updates[ch.key] = null;
+    else remaining++;
+  });
+  const toDelete = Object.keys(updates).length;
+  if (!toDelete) return;
+  db.ref('breadcrumbs/' + dateStr).update(updates).then(() => {
+    console.log('[Breadcrumbs] Rensade', toDelete, 'post(er) äldre än 60 min i', dateStr);
+    if (remaining === 0) {
+      db.ref('breadcrumbs/' + dateStr).remove()
+        .then(() => console.log('[Breadcrumbs] Tom datum-nod borttagen:', dateStr))
+        .catch(() => {});
+    }
+  }).catch(() => {});
+}
+
+// Körs efter varje ny skrivning: rensar dagens nod, och gårdagens också om
+// 60-minutersfönstret just nu sträcker sig över en midnattsgräns
+function pruneRecentBreadcrumbs(nowTs) {
   if (!db) return;
-  const c = new Date();
-  c.setDate(c.getDate() - BREADCRUMB_RETENTION_DAYS);
-  const cutoff = `${c.getFullYear()}-${pad(c.getMonth() + 1)}-${pad(c.getDate())}`;
-  db.ref('breadcrumbs').orderByKey().endBefore(cutoff).once('value').then(snap => {
-    const updates = {};
-    snap.forEach(ch => { updates[ch.key] = null; });
-    const n = Object.keys(updates).length;
-    if (!n) return;
-    db.ref('breadcrumbs').update(updates)
-      .then(() => console.log('[Breadcrumbs] Städade', n, 'dag(ar) äldre än', cutoff))
+  const cutoff = nowTs - BREADCRUMB_RETENTION_MS;
+  const today = localDate();
+  const cutoffDateStr = dateStrFromTs(cutoff);
+  const dates = cutoffDateStr === today ? [today] : [cutoffDateStr, today];
+  dates.forEach(dateStr => {
+    db.ref('breadcrumbs/' + dateStr).once('value')
+      .then(snap => pruneBreadcrumbSnapshot(dateStr, snap, cutoff))
       .catch(() => {});
+  });
+}
+
+// Full sopning vid appstart — går igenom ALLA datum-noder (inte bara
+// idag/igår) så en session som aldrig skrev igen inte lämnar data kvar
+function pruneAllBreadcrumbs() {
+  if (!db) return;
+  const cutoff = Date.now() - BREADCRUMB_RETENTION_MS;
+  db.ref('breadcrumbs').once('value').then(snap => {
+    if (!snap.exists()) return;
+    snap.forEach(dateSnap => pruneBreadcrumbSnapshot(dateSnap.key, dateSnap, cutoff));
   }).catch(e => console.log('[Breadcrumbs] Städning nekades (kolla databasreglerna):', e?.message ?? String(e)));
 }
 
@@ -223,7 +268,7 @@ function initFirebase() {
     initDriftstatusListener();
     checkVersion();
     flushPending(); // poster köade före en omladdning synkas vid appstart
-    cleanupBreadcrumbs();
+    pruneAllBreadcrumbs();
   } catch (e) {
     db = null; logsRef = null; tripsRef = null; currentRefDate = null;
     setSyncStatus('local');

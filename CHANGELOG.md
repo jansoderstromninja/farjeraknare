@@ -1,5 +1,13 @@
 # Changelog
 
+## v10.5 – 2026-07-11
+- breadcrumbs är nu en rullande 60-minutersbuffert, inte en logg: varje ny skrivning (writeBreadcrumb) triggar pruneRecentBreadcrumbs(), som tar bort poster äldre än BREADCRUMB_RETENTION_MS (60 min) ur dagens datum-nod
+- Hanterar midnattsgränsen: om 60-minutersfönstret sträcker sig in i föregående dygn (dateStrFromTs(cutoff) !== dagens datum) rensas båda datum-noderna, inte bara dagens
+- En datum-nod som blir helt tom efter rensning tas bort helt (ref.remove())
+- Ny pruneAllBreadcrumbs() körs vid appstart och sopar igenom SAMTLIGA datum-noder (inte bara idag/igår) — fångar upp data från en session som stängdes och aldrig skrev igen, som annars aldrig hade rensats av skrivningstriggade pruneRecentBreadcrumbs()
+- Ersätter helt den gamla 30-dagars-rensningen (cleanupBreadcrumbs/BREADCRUMB_RETENTION_DAYS, v9.6) — en strikt 60-minutersgräns gör den överflödig, ingen post kan längre bli 30 dagar gammal
+- Verifierat mot produktionsdatabasen (REST, testnoder städade efteråt): PATCH med null på förfallna nycklar tar bort exakt rätt poster och lämnar färska orörda; en helt tömd nod kollapsar och remove() är ett säkert no-op på den. Chrome-tillägget fortsatt frånkopplat — ingen körning av den faktiska JS-koden kunde bekräftas, bara den underliggande datamanipulationen den bygger på
+
 ## v10.4 – 2026-07-11
 - Löst: Färjappen (extern mottagare) visade felaktigt "Ingen GPS-signal" när färjan låg stilla vid kaj — watchPosition slutar trigga vid stillastående, så breadcrumbs/pos.ts blev för gammal för mottagarens 5-min offline-timeout
 - Ny heartbeat-loop i gps.js, oberoende av watchPosition-callbacken: pulsar senast kända position (latestPosition) via egen setInterval, oavsett om nya GPS-events kommer in eller ej
