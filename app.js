@@ -1,3 +1,5 @@
+// HOOK-TEST: tillfällig rad för att verifiera att pre-commit-hooken höjer
+// APP_VERSION vid en riktig .js-ändring. Tas bort i nästa commit (git revert).
 // ── DEBUG PANEL ──
 const _debugLines = [];
 const _origLog = console.log.bind(console);
@@ -45,7 +47,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "11.0";
+const APP_VERSION = "11.1";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
