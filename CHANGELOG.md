@@ -1,5 +1,12 @@
 # Changelog
 
+## v11.0 – 2026-07-18 — Pre-commit-hooken höjer bara versionen vid kodändring
+- Hooken låg tidigare i .git/hooks/pre-commit — INTE spårad av git, kunde alltså aldrig pushas till GitHub. Flyttad till spårad .githooks/pre-commit, aktiverad lokalt via `git config core.hooksPath .githooks`
+- Ny logik: kollar `git diff --cached --name-only -- '*.html' '*.css' '*.js'` — om ingen stagad fil matchar, hoppas versionshöjningen (och index.html-cachebustern) helt över. En commit som bara rör CHANGELOG.md eller annan dokumentation ändrar alltså inte längre APP_VERSION
+- Detta var direkt orsaken till versionsdriften som upptäcktes nyss (CHANGELOG-rubriker hade tappat synk med det verkliga versionsnumret eftersom rena dokumentations-/incidentrapport-commits ändå höjde räknaren)
+- Verifierat med två riktiga testcommits (se git-loggen): en som bara rörde CHANGELOG.md/.githooks (APP_VERSION oförändrad — 11.0 kvar), och en som rörde app.js (höjde som vanligt, testcommiten sedan städad via git revert utan att lämna kvar testinnehåll i koden)
+- OBS: core.hooksPath är en lokal git-inställning per klon — ett nytt clone av repot måste själv köra `git config core.hooksPath .githooks` för att hooken ska aktiveras
+
 ## v10.9 – 2026-07-12 — Säkerhetsgranskning: fem fixar
 - **Versionsnotis:** denna post var tidigare felaktigt rubricerad "v10.6". Kontrollerat mot git-loggen (52684db..HEAD = 0 commits, dvs. samma commit): inget nytt har hänt sedan säkerhetsfixarna nedan, det är ett rent etikettfel från min sida. Pre-commit-hooken höjer APP_VERSION med +0.1 på VARJE commit (inklusive rena dokumentations-/incidentrapport-commits utan kodändring), medan CHANGELOG-rubrikerna är en manuellt vald löpnummer-etikett — de två räknarna hade tappat synk med 0.3 sedan tidigare i sessionen. Rätt versionsnummer för den här commiten (52684db) är 10.9, vilket är vad appens header faktiskt visar. Tidigare rubriker (v10.1–v10.5 etc.) är inte omnumrerade i efterhand — bara den här, senaste, posten är korrigerad
 - **KRITISK, fixad:** stored XSS via config/driftstatus.beskrivning (skrivbart utan autentisering, renderat oescapat via innerHTML i renderCurrentDriftstatus/renderDriftstatusHistory). Ny generisk escapeHtml() (escapar & < > " ') tillämpad överallt i kodbasen där extern/Firebase-data når innerHTML
