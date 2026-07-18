@@ -1,6 +1,7 @@
 # Changelog
 
-## v10.6 – 2026-07-12 — Säkerhetsgranskning: fem fixar
+## v10.9 – 2026-07-12 — Säkerhetsgranskning: fem fixar
+- **Versionsnotis:** denna post var tidigare felaktigt rubricerad "v10.6". Kontrollerat mot git-loggen (52684db..HEAD = 0 commits, dvs. samma commit): inget nytt har hänt sedan säkerhetsfixarna nedan, det är ett rent etikettfel från min sida. Pre-commit-hooken höjer APP_VERSION med +0.1 på VARJE commit (inklusive rena dokumentations-/incidentrapport-commits utan kodändring), medan CHANGELOG-rubrikerna är en manuellt vald löpnummer-etikett — de två räknarna hade tappat synk med 0.3 sedan tidigare i sessionen. Rätt versionsnummer för den här commiten (52684db) är 10.9, vilket är vad appens header faktiskt visar. Tidigare rubriker (v10.1–v10.5 etc.) är inte omnumrerade i efterhand — bara den här, senaste, posten är korrigerad
 - **KRITISK, fixad:** stored XSS via config/driftstatus.beskrivning (skrivbart utan autentisering, renderat oescapat via innerHTML i renderCurrentDriftstatus/renderDriftstatusHistory). Ny generisk escapeHtml() (escapar & < > " ') tillämpad överallt i kodbasen där extern/Firebase-data når innerHTML
   - Utöver den rapporterade platsen hittade genomsökningen två till: p.pier i renderPrediction (bryggnamn från config/bryggor, också oautentiserat skrivbart) och trip.id i tre onclick-attribut i renderDepartureLog — Firebase-nycklar är INTE teckenbegränsade mot citationstecken/vinkelparenteser vid direkt .set() på en godtycklig sökväg, så detta var en attribut-utbrytningsvektor även om appens egna push()-genererade nycklar alltid är säkra
   - Debug-panelens loggrendering uppgraderad från delvis escaping (bara `<`) till fullständig escapeHtml()
