@@ -4,7 +4,8 @@
 - Hooken låg tidigare i .git/hooks/pre-commit — INTE spårad av git, kunde alltså aldrig pushas till GitHub. Flyttad till spårad .githooks/pre-commit, aktiverad lokalt via `git config core.hooksPath .githooks`
 - Ny logik: kollar `git diff --cached --name-only -- '*.html' '*.css' '*.js'` — om ingen stagad fil matchar, hoppas versionshöjningen (och index.html-cachebustern) helt över. En commit som bara rör CHANGELOG.md eller annan dokumentation ändrar alltså inte längre APP_VERSION
 - Detta var direkt orsaken till versionsdriften som upptäcktes nyss (CHANGELOG-rubriker hade tappat synk med det verkliga versionsnumret eftersom rena dokumentations-/incidentrapport-commits ändå höjde räknaren)
-- Verifierat med två riktiga testcommits (se git-loggen): en som bara rörde CHANGELOG.md/.githooks (APP_VERSION oförändrad — 11.0 kvar), och en som rörde app.js (höjde som vanligt, testcommiten sedan städad via git revert utan att lämna kvar testinnehåll i koden)
+- Verifierat med två riktiga testcommits (se git-loggen): en som bara rörde CHANGELOG.md/.githooks (APP_VERSION oförändrad — 11.0 kvar), och en som rörde app.js (höjde som vanligt, 11.0→11.1, testcommiten sedan städad via git revert utan att lämna kvar testinnehåll i koden)
+- Sidofynd under verifieringen: `git revert` triggar INTE pre-commit-hooken i den här miljön (reproducerat två gånger) — en revert av en versionshöjande commit landar därför exakt på det återställda numret utan ny höjning ovanpå. Ingen åtgärd krävd, bara värt att känna till
 - OBS: core.hooksPath är en lokal git-inställning per klon — ett nytt clone av repot måste själv köra `git config core.hooksPath .githooks` för att hooken ska aktiveras
 
 ## v10.9 – 2026-07-12 — Säkerhetsgranskning: fem fixar
