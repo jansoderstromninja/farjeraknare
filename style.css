@@ -675,6 +675,16 @@ nav {
 .thunder-banner { background: #450a0a; border: 1px solid #b91c1c; color: #fca5a5; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 15px; font-weight: 700; }
 .thunder-banner-yellow { background: #422006; border-color: #ca8a04; color: #fcd34d; }
 .status-error-banner { background: #450a0a; border: 1px solid #b91c1c; color: #fca5a5; padding: 10px 14px; border-radius: 10px; margin-top: 10px; font-size: 13px; }
+.app-error-banner {
+  flex-shrink: 0;
+  background: #450a0a;
+  border-bottom: 1px solid #b91c1c;
+  color: #fca5a5;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
 .thunder-icon { font-size: 15px; animation: thunder-blink 1s step-start infinite; }
 .thunder-icon.red    { color: #EF4444; }
 .thunder-icon.yellow { color: #F59E0B; }

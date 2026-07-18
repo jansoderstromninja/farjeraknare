@@ -93,6 +93,7 @@ const T = {
     statusSince:        'sedan',
     statusEmpty:        'Ingen historik ännu.',
     statusSaveError:    'Kunde inte spara — kontrollera anslutningen eller databasreglerna.',
+    appSyncError:       'Synkfel — sparades lokalt men kunde inte synkas till servern',
     locale:         'sv-SE',
   },
   fi: {
@@ -184,6 +185,7 @@ const T = {
     statusSince:        'alkaen',
     statusEmpty:        'Ei historiaa vielä.',
     statusSaveError:    'Tallennus epäonnistui — tarkista yhteys tai tietokantasäännöt.',
+    appSyncError:       'Synkronointivirhe — tallennettiin paikallisesti, mutta ei palvelimelle',
     locale:         'fi-FI',
   }
 };

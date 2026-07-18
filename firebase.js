@@ -221,6 +221,41 @@ function pruneBreadcrumbSnapshot(dateStr, dateSnap, cutoff) {
   }).catch(() => {});
 }
 
+// Riktad rensning (säkerhets-/prestandafix): hämtar BARA poster äldre än
+// cutoff via orderByChild('ts').endAt(cutoff) i stället för att läsa in hela
+// datum-noden — avgörande eftersom detta anropas via heartbeaten var 10:e
+// till 60:e sekund, inte bara en gång vid appstart (se pruneAllBreadcrumbs).
+// KRÄVER "ts" .indexOn i databasreglerna för breadcrumbs/$date — verifierat
+// direkt mot produktionsdatabasen att frågan ger ETT HÅRT FEL utan indexet
+// (inte bara en varning), så tills regeln finns görs ingen riktad rensning
+// alls (pruneAllBreadcrumbs vid appstart fortsätter fungera som backstop,
+// den använder ingen orderBy-fråga).
+let breadcrumbIndexWarned = false;
+function pruneStaleBreadcrumbsQuery(dateStr, cutoff) {
+  const ref = db.ref('breadcrumbs/' + dateStr);
+  ref.orderByChild('ts').endAt(cutoff).once('value')
+    .then(staleSnap => {
+      if (!staleSnap.exists()) return null;
+      const updates = {};
+      staleSnap.forEach(ch => { updates[ch.key] = null; });
+      const toDelete = Object.keys(updates).length;
+      return ref.update(updates).then(() => {
+        console.log('[Breadcrumbs] Rensade', toDelete, 'post(er) äldre än 60 min i', dateStr, '(riktad query)');
+        return ref.limitToFirst(1).once('value'); // billig existens-check, ingen fulläsning
+      });
+    })
+    .then(remainSnap => {
+      if (remainSnap && !remainSnap.exists()) {
+        return ref.remove().then(() => console.log('[Breadcrumbs] Tom datum-nod borttagen:', dateStr));
+      }
+    })
+    .catch(e => {
+      if (breadcrumbIndexWarned) return;
+      breadcrumbIndexWarned = true;
+      console.log('[Breadcrumbs] Riktad rensning misslyckades — lägg till "ts": {".indexOn": true} under breadcrumbs/$date i databasreglerna:', e?.message ?? String(e));
+    });
+}
+
 // Körs efter varje ny skrivning: rensar dagens nod, och gårdagens också om
 // 60-minutersfönstret just nu sträcker sig över en midnattsgräns
 function pruneRecentBreadcrumbs(nowTs) {
@@ -229,11 +264,7 @@ function pruneRecentBreadcrumbs(nowTs) {
   const today = localDate();
   const cutoffDateStr = dateStrFromTs(cutoff);
   const dates = cutoffDateStr === today ? [today] : [cutoffDateStr, today];
-  dates.forEach(dateStr => {
-    db.ref('breadcrumbs/' + dateStr).once('value')
-      .then(snap => pruneBreadcrumbSnapshot(dateStr, snap, cutoff))
-      .catch(() => {});
-  });
+  dates.forEach(dateStr => pruneStaleBreadcrumbsQuery(dateStr, cutoff));
 }
 
 // Full sopning vid appstart — går igenom ALLA datum-noder (inte bara
@@ -256,6 +287,23 @@ function initFirebase() {
     logsRef  = db.ref('days/' + currentRefDate + '/logs');
     tripsRef = db.ref('turer/' + currentRefDate);
     setSyncStatus('connecting');
+
+    // ── Autentisering (säkerhetsfix) ──
+    // Anonym inloggning förbereder appen för databasregler som kräver
+    // auth != null i stället för true. Kräver att "Anonymous" aktiveras
+    // under Firebase-konsolen → Authentication → Sign-in method — ETT
+    // MANUELLT STEG SOM INTE KAN GÖRAS VIA KOD HÄRIFRÅN. Blockerar inte
+    // resten av initieringen: så länge reglerna fortfarande tillåter
+    // oautentiserad åtkomst fungerar appen som förut även om detta
+    // misslyckas, och redan uppsatta .on('value')-lyssnare återansluter
+    // automatiskt med ny auth-token när/om inloggningen lyckas senare.
+    if (typeof firebase.auth === 'function') {
+      firebase.auth().signInAnonymously().catch(e => {
+        console.log('[Auth] Anonym inloggning misslyckades — aktivera "Anonymous" i Firebase-konsolen (Authentication → Sign-in method):', e?.message ?? String(e));
+      });
+    } else {
+      console.log('[Auth] firebase-auth-compat.js saknas — ingen autentisering aktiv');
+    }
 
     // Connection state — vid återfått serveranslutning flushas synk-kön
     db.ref('.info/connected').on('value', s => {

@@ -12,7 +12,7 @@ console.log = function(...args) {
   if (log && document.getElementById('debugPanel').classList.contains('show')) {
     const el = document.createElement('div');
     el.className = 'dbg-line';
-    el.innerHTML = `<span class="dbg-ts">${ts}</span><span class="dbg-msg">${msg.replace(/</g,'&lt;')}</span>`;
+    el.innerHTML = `<span class="dbg-ts">${escapeHtml(ts)}</span><span class="dbg-msg">${escapeHtml(msg)}</span>`;
     log.appendChild(el);
     log.scrollTop = log.scrollHeight;
   }
@@ -25,7 +25,7 @@ function showDebugPanel() {
   _debugLines.forEach(({ ts, msg }) => {
     const el = document.createElement('div');
     el.className = 'dbg-line';
-    el.innerHTML = `<span class="dbg-ts">${ts}</span><span class="dbg-msg">${msg.replace(/</g,'&lt;')}</span>`;
+    el.innerHTML = `<span class="dbg-ts">${escapeHtml(ts)}</span><span class="dbg-msg">${escapeHtml(msg)}</span>`;
     log.appendChild(el);
   });
   log.scrollTop = log.scrollHeight;
@@ -45,7 +45,7 @@ const CATS = [
   { id: 'fyrhjuling', label: 'Fyrhjuling',  labelFi: 'Mönkijä',       emoji: '🏎️',  color: '#3730A3' },
 ];
 
-const APP_VERSION = "10.8";
+const APP_VERSION = "10.9";
 const KEY = 'farjeraknare_v1';
 localStorage.removeItem('farjeraknare_watlev'); // migrerat till Firebase config/watlev
 
@@ -218,6 +218,18 @@ function localDate() {
 }
 
 function pad(n) { return String(n).padStart(2, '0'); }
+
+// Säkerhetsfix: config/driftstatus.beskrivning (och andra Firebase-fält som
+// inte kräver autentisering för att skrivas) renderades oescapade via
+// innerHTML — stored XSS. Används på all text/nyckel som kan komma från
+// Firebase innan den infogas i en HTML-sträng, oavsett om målet är text-
+// innehåll eller ett citerat attribut (t.ex. onclick="fn('${id}')") — samma
+// teckenuppsättning (& < > " ') täcker båda kontexterna.
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
 
 function load() {
   try {
@@ -426,7 +438,7 @@ function tap(catId, btn) {
     const ref = logsRef.push();
     d.logs.push({ id: ref.key, type: catId, ts, delta: 1, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta: 1, brygga, elbil }).catch(() => {});
+    ref.set({ type: catId, ts, delta: 1, brygga, elbil }).catch(e => showAppError('tap', e?.message ?? String(e)));
   } else {
     d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: 1, brygga, elbil });
     save(d);
@@ -453,7 +465,7 @@ function removeOne(catId, btn) {
     const ref = logsRef.push();
     d.logs.push({ id: ref.key, type: catId, ts, delta: -1, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta: -1, brygga, elbil }).catch(() => {});
+    ref.set({ type: catId, ts, delta: -1, brygga, elbil }).catch(e => showAppError('removeOne', e?.message ?? String(e)));
   } else {
     d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta: -1, brygga, elbil });
     save(d);
@@ -596,7 +608,7 @@ function deleteDeparture(tripId) {
       if (l.id && !String(l.id).startsWith('local_')) {
         db.ref('days/' + dateStr + '/logs/' + l.id).remove()
           .then(() => console.log('[deleteDeparture] Borttagen log', l.id, l.type, 'delta:', l.delta))
-          .catch(() => {});
+          .catch(e => showAppError('deleteDeparture', e?.message ?? String(e)));
       }
     });
   }
@@ -606,7 +618,8 @@ function deleteDeparture(tripId) {
   // inte återuppväcker den raderade avgången
   dropPendingForTrip(tripId);
   if (db && tripId && !String(tripId).startsWith('local_')) {
-    db.ref('turer/' + localDate() + '/' + tripId).remove().catch(() => {});
+    db.ref('turer/' + localDate() + '/' + tripId).remove()
+      .catch(e => showAppError('deleteDeparture', e?.message ?? String(e)));
   }
   d.trips = d.trips.filter(t => t.id !== tripId);
   save(d);
@@ -638,7 +651,7 @@ function undoLast() {
   if (!d.logs.length) return;
   const last = d.logs[d.logs.length - 1];
   if (db && logsRef && last.id && !String(last.id).startsWith('local_')) {
-    logsRef.child(last.id).remove().catch(() => {});
+    logsRef.child(last.id).remove().catch(e => showAppError('undoLast', e?.message ?? String(e)));
   }
   d.logs.pop();
   save(d);
@@ -718,7 +731,8 @@ function renderPrediction() {
   let stateStr, etaStr;
   switch (p.state) {
     case 'underway':
-      stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + p.pier : '');
+      // p.pier kommer från config/bryggor.name (Firebase, ej autentiserad skrivning) — escapa
+      stateStr = '⛴ ' + t('predUnderway') + (p.pier ? ' → ' + escapeHtml(p.pier) : '');
       etaStr   = p.speedKn.toFixed(1) + ' kn';
       if (p.eta) etaStr += ` · ${t('predArrival')} ${t('predCirca')} ${hm(p.eta)}`;
       break;
@@ -794,7 +808,8 @@ function renderCurrentDriftstatus() {
     return;
   }
   const sinceStr = cur.timestamp ? ` ${t('statusSince')} ${hm(cur.timestamp)}` : '';
-  const descStr = cur.beskrivning ? `<div class="peak-lbl" style="margin-top:4px">${cur.beskrivning}</div>` : '';
+  // beskrivning är fritext skriven till Firebase utan autentisering — stored XSS om oescapad
+  const descStr = cur.beskrivning ? `<div class="peak-lbl" style="margin-top:4px">${escapeHtml(cur.beskrivning)}</div>` : '';
   el.innerHTML =
     `<div class="peak-val">${driftstatusLabel(cur.status)}${sinceStr}</div>` + descStr;
 }
@@ -811,7 +826,7 @@ function renderDriftstatusHistory() {
       `<div class="status-hist-row">` +
         `<span class="status-hist-time">${hm(e.timestamp)}</span>` +
         `<span class="status-hist-label">${driftstatusLabel(e.status)}</span>` +
-        (e.beskrivning ? `<span class="status-hist-desc">${e.beskrivning}</span>` : '') +
+        (e.beskrivning ? `<span class="status-hist-desc">${escapeHtml(e.beskrivning)}</span>` : '') +
       `</div>`
     ).join('');
   });
@@ -830,6 +845,21 @@ function showDriftstatusError(detail) {
 function hideDriftstatusError() {
   const el = document.getElementById('statusErrorBanner');
   if (el) el.style.display = 'none';
+}
+
+// Global variant av samma mönster, synlig oavsett aktiv flik — tidigare
+// svalde tap()/removeOne()/undoLast()/deleteDeparture()/adjustTripVehicle()/
+// doReset() alla Firebase-fel tyst (.catch(() => {})), så en misslyckad
+// synk (t.ex. nekad av databasreglerna) var osynlig för användaren
+let appErrorTimer = null;
+function showAppError(context, detail) {
+  console.error('[' + context + ']', detail);
+  const el = document.getElementById('appErrorBanner');
+  if (!el) return;
+  el.textContent = t('appSyncError') + (detail ? ` (${detail})` : '');
+  el.style.display = '';
+  clearTimeout(appErrorTimer);
+  appErrorTimer = setTimeout(() => { el.style.display = 'none'; }, 6000);
 }
 
 function renderDriftstatusView() {
@@ -1173,8 +1203,8 @@ function confirmReset() { document.getElementById('resetModal').classList.add('s
 function hideReset()    { document.getElementById('resetModal').classList.remove('show'); }
 function doReset() {
   if (db) {
-    db.ref('days/' + localDate()).remove().catch(() => {});
-    db.ref('turer/' + localDate()).remove().catch(() => {});
+    db.ref('days/' + localDate()).remove().catch(e => showAppError('doReset', e?.message ?? String(e)));
+    db.ref('turer/' + localDate()).remove().catch(e => showAppError('doReset', e?.message ?? String(e)));
   }
   save({ date: localDate(), logs: [], trips: [] });
   hideReset();
@@ -1240,7 +1270,7 @@ function adjustTripVehicle(tripId, catId, delta) {
     const ref = logsRef.push();
     d.logs.push({ id: ref.key, type: catId, ts, delta, brygga, elbil });
     save(d);
-    ref.set({ type: catId, ts, delta, brygga, elbil }).catch(() => {});
+    ref.set({ type: catId, ts, delta, brygga, elbil }).catch(e => showAppError('adjustTripVehicle', e?.message ?? String(e)));
   } else {
     d.logs.push({ id: 'local_' + ts + '_' + Math.random().toString(36).slice(2, 7), type: catId, ts, delta, brygga, elbil });
     save(d);
@@ -1266,7 +1296,12 @@ function renderDepartureLog() {
     const vehStr = veh === 0
       ? `0 <span class="dep-empty">(${t('depTom')})</span>`
       : `${veh}`;
-    const row = `<div class="dep-row" onclick="toggleDepRow('${trip.id}')"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><button class="dep-undo" onclick="event.stopPropagation(); deleteDeparture('${trip.id}')" title="${t('undoAvgang')}">✕</button></div>`;
+    // trip.id är en Firebase-nyckel — auto-ID:n från appens egen push() är
+    // säkra, men databasreglerna hindrar inte en direkt .set() på en
+    // godtycklig nyckel (citationstecken tillåtna i RTDB-nycklar), så
+    // attribut-utbrytning i onclick="..." är möjlig utan escaping
+    const tripIdSafe = escapeHtml(trip.id);
+    const row = `<div class="dep-row" onclick="toggleDepRow('${tripIdSafe}')"><span class="dep-time">${hm}</span><span class="dep-dir">${dirStr}</span><span class="dep-count">${vehStr} ${t('depFordon')}</span><button class="dep-undo" onclick="event.stopPropagation(); deleteDeparture('${tripIdSafe}')" title="${t('undoAvgang')}">✕</button></div>`;
     if (trip.id !== expandedTripId) return row;
 
     const detail = CATS.map(cat => {
@@ -1277,8 +1312,8 @@ function renderDepartureLog() {
         `<span class="dep-cat-emoji">${cat.emoji}</span>` +
         `<span class="dep-cat-name">${catName(cat)}</span>` +
         `<span class="dep-cat-count">${n}</span>` +
-        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${trip.id}','${cat.id}',-1)"${n === 0 ? ' disabled' : ''}>−</button>` +
-        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${trip.id}','${cat.id}',1)">+</button>` +
+        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${tripIdSafe}','${cat.id}',-1)"${n === 0 ? ' disabled' : ''}>−</button>` +
+        `<button class="dep-adj-btn" onclick="event.stopPropagation(); adjustTripVehicle('${tripIdSafe}','${cat.id}',1)">+</button>` +
         `</div>`;
     }).join('');
     return row + `<div class="dep-detail">${detail}</div>`;

@@ -101,8 +101,20 @@ function handleHeartbeatVisibility() {
   }
 }
 document.addEventListener('visibilitychange', handleHeartbeatVisibility);
-window.addEventListener('pagehide', stopHeartbeat);
-window.addEventListener('beforeunload', stopHeartbeat);
+
+// Säkerhets-/resursfix: vid sidan-stängs (till skillnad från bara dold flik,
+// se ovan) ska GPS-bevakningen också stängas av — tidigare städades bara
+// heartbeat-intervallet, inte själva navigator.geolocation.watchPosition-
+// prenumerationen, vilket lämnade den aktiv i onödan
+function cleanupGpsOnUnload() {
+  stopHeartbeat();
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+  }
+}
+window.addEventListener('pagehide', cleanupGpsOnUnload);
+window.addEventListener('beforeunload', cleanupGpsOnUnload);
 
 // ── GPS DEPARTURE WATCH ──
 let geoWatchId = null;

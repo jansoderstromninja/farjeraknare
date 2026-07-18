@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Fordonsräknare</title>
-<link rel="stylesheet" href="style.css?v=10.8">
+<link rel="stylesheet" href="style.css?v=10.9">
 </head>
 <body>
 
@@ -18,6 +18,9 @@
     <button class="update-dismiss-btn" onclick="dismissUpdateBanner()">✕</button>
   </div>
 </div>
+
+<!-- GLOBAL FELBANNER: synlig oavsett aktiv flik -->
+<div class="app-error-banner" id="appErrorBanner" style="display:none"></div>
 
 <header>
   <div>
@@ -217,11 +220,12 @@
 <!-- Firebase SDK (compat build, loaded from CDN; app falls back to local-only if unavailable) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 
-<script src="i18n.js?v=10.8"></script>
-<script src="firebase.js?v=10.8"></script>
-<script src="gps.js?v=10.8"></script>
-<script src="weather.js?v=10.8"></script>
-<script src="app.js?v=10.8"></script>
+<script src="i18n.js?v=10.9"></script>
+<script src="firebase.js?v=10.9"></script>
+<script src="gps.js?v=10.9"></script>
+<script src="weather.js?v=10.9"></script>
+<script src="app.js?v=10.9"></script>
 </body>
 </html>
